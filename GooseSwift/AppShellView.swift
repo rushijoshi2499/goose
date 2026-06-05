@@ -2,7 +2,7 @@ import SwiftUI
 
 struct AppShellView: View {
   @EnvironmentObject private var router: AppRouter
-  @StateObject private var healthStore = HealthDataStore()
+  @State private var healthStore = HealthDataStore()
   @State private var homeHealthPath: [HealthRoute] = []
   @State private var homeSelectedDate = Date()
 

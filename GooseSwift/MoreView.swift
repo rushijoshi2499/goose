@@ -10,7 +10,7 @@ import HealthKit
 struct MoreView: View {
   @Environment(GooseAppModel.self) private var model
   @EnvironmentObject private var router: AppRouter
-  @ObservedObject private var healthStore: HealthDataStore
+  private var healthStore: HealthDataStore
   @StateObject private var store: MoreDataStore
   @AppStorage(OnboardingStorage.firstName) private var profileFirstName = ""
   @AppStorage(OnboardingStorage.unitSystem) private var profileUnitSystemRaw = "imperial"

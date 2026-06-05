@@ -4,7 +4,7 @@ import SwiftUI
 import UIKit
 
 struct SleepDataBridgeSection: View {
-  @ObservedObject var store: HealthDataStore
+  var store: HealthDataStore
   @ObservedObject var ble: GooseBLEClient
 
   var body: some View {

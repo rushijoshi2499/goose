@@ -3,7 +3,7 @@ import SwiftUI
 struct HomeDashboardView: View {
   @Environment(GooseAppModel.self) private var model
   @EnvironmentObject private var router: AppRouter
-  @ObservedObject var healthStore: HealthDataStore
+  var healthStore: HealthDataStore
   @Binding var selectedDate: Date
   let openHealthRoute: (HealthRoute) -> Void
   @State private var showingScoreDatePicker = false

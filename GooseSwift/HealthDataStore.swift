@@ -1,41 +1,42 @@
 import Darwin
 import Foundation
+import Observation
 import SwiftUI
 import UIKit
 
-@MainActor
-final class HealthDataStore: ObservableObject {
-  @Published var algorithmDefinitions: [HealthAlgorithmDefinition]
-  @Published var referenceDefinitions: [HealthAlgorithmDefinition]
-  @Published var selectedAlgorithmByFamily: [String: String]
-  @Published var catalogStatus = "Metric catalog not loaded"
-  @Published var catalogSource = HealthDataSource.unavailable("metric registry not loaded")
-  @Published var packetInputStatus = "No run"
-  @Published var packetScoreStatus = "No run"
-  @Published var bandSleepImportStatus = "No band sync yet"
-  @Published var externalSleepImportStatus = "External sleep imports disabled"
-  @Published var referenceRunStatusByFamily: [String: String] = [:]
-  @Published var primarySleepDetail: PrimarySleepDetail?
+@MainActor @Observable
+final class HealthDataStore {
+  var algorithmDefinitions: [HealthAlgorithmDefinition]
+  var referenceDefinitions: [HealthAlgorithmDefinition]
+  var selectedAlgorithmByFamily: [String: String]
+  var catalogStatus = "Metric catalog not loaded"
+  var catalogSource = HealthDataSource.unavailable("metric registry not loaded")
+  var packetInputStatus = "No run"
+  var packetScoreStatus = "No run"
+  var bandSleepImportStatus = "No band sync yet"
+  var externalSleepImportStatus = "External sleep imports disabled"
+  var referenceRunStatusByFamily: [String: String] = [:]
+  var primarySleepDetail: PrimarySleepDetail?
 
   // Apple Health fallback values — used when WHOOP packet data is unavailable
-  @Published var hkRestingHR: Double?
-  @Published var hkHRVSDNNMs: Double?
-  @Published var hkRespiratoryRate: Double?
-  @Published var hkSpO2Percent: Double?
-  @Published var hkSkinTempDeltaC: Double?
-  @Published var hkSteps: Int?
-  @Published var hkActiveKcal: Double?
-  @Published var hkWorkouts: [ActivityTimelineItem] = []
-  @Published var hkImportStatus = "Not imported"
+  var hkRestingHR: Double?
+  var hkHRVSDNNMs: Double?
+  var hkRespiratoryRate: Double?
+  var hkSpO2Percent: Double?
+  var hkSkinTempDeltaC: Double?
+  var hkSteps: Int?
+  var hkActiveKcal: Double?
+  var hkWorkouts: [ActivityTimelineItem] = []
+  var hkImportStatus = "Not imported"
   // 90-day history for WHOOP-style baseline recovery scoring
   var hkHRVHistory: [(sdnn: Double, date: Date)] = []
   var hkRHRHistory: [(bpm: Double, date: Date)] = []
 
-  @Published var calibrationTargetFamily = "recovery"
-  @Published var calibrationLabelsImported = false
-  @Published var calibrationRunComplete = false
-  @Published var heartRateHourlyRanges: [HeartRateHourlyRange] = []
-  @Published var heartRateTimelineStatus = "No HR samples stored"
+  var calibrationTargetFamily = "recovery"
+  var calibrationLabelsImported = false
+  var calibrationRunComplete = false
+  var heartRateHourlyRanges: [HeartRateHourlyRange] = []
+  var heartRateTimelineStatus = "No HR samples stored"
 
   let bridge = GooseRustBridge()
   let heartRateSeriesStore = HeartRateSeriesStore.shared
@@ -48,10 +49,10 @@ final class HealthDataStore: ObservableObject {
   var packetInputRunID: UUID?
   var packetInputIsRunning = false
   var heartRateTimelineRefreshID: UUID?
-  var heartRateSeriesUpdateObserver: NSObjectProtocol?
+  nonisolated(unsafe) var heartRateSeriesUpdateObserver: NSObjectProtocol?
   let packetInputQueue = DispatchQueue(label: "com.goose.swift.health.packet-inputs", qos: .utility)
   let heartRateTimelineQueue = DispatchQueue(label: "com.goose.swift.health.heart-rate-timeline", qos: .utility)
-  lazy var databasePath = HealthDataStore.defaultDatabasePath()
+  var databasePath: String
 
   // Cache for the 7-day rolling average strain computation (moved from extension — stored
   // properties are not allowed inside Swift extensions).
@@ -72,6 +73,7 @@ final class HealthDataStore: ObservableObject {
     referenceDefinitions = []
     selectedAlgorithmByFamily = [:]
     primarySleepDetail = nil
+    databasePath = HealthDataStore.defaultDatabasePath()
     refreshHeartRateTimeline()
     heartRateSeriesUpdateObserver = NotificationCenter.default.addObserver(
       forName: HeartRateSeriesStore.didUpdateNotification,

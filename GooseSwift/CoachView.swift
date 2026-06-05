@@ -3,7 +3,7 @@ import SwiftUI
 struct CoachView: View {
   @Environment(GooseAppModel.self) private var model
   @EnvironmentObject private var router: AppRouter
-  @ObservedObject var healthStore: HealthDataStore
+  var healthStore: HealthDataStore
   @StateObject private var chat = OpenAICoachChatModel()
   @State private var promptDraft = ""
   @State private var appliedCoachPromptRequestID = 0

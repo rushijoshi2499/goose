@@ -2,7 +2,7 @@ import SwiftUI
 
 struct CoachChatScreen: View {
   @ObservedObject var chat: OpenAICoachChatModel
-  @ObservedObject var healthStore: HealthDataStore
+  var healthStore: HealthDataStore
   var appModel: GooseAppModel
   @Binding var draft: String
   let scrollToBottomRequestID: Int

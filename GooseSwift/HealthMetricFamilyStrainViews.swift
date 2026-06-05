@@ -7,7 +7,7 @@ struct HealthMetricFamilyView: View {
   @Environment(GooseAppModel.self) private var model
   @EnvironmentObject private var router: AppRouter
   let route: HealthRoute
-  @ObservedObject var store: HealthDataStore
+  var store: HealthDataStore
   var externalSelectedDate: Binding<Date>? = nil
   @State private var selectedTrend: HealthMetricSnapshot?
   @State private var selectedPrimarySleep: PrimarySleepDetail?
@@ -395,7 +395,7 @@ struct StrainV2ActivityBackground: View {
 struct StrainV2OverviewPage: View {
   @EnvironmentObject private var router: AppRouter
   @Environment(GooseAppModel.self) private var model
-  @ObservedObject var store: HealthDataStore
+  var store: HealthDataStore
   @Binding var selectedDate: Date
   @Environment(\.colorScheme) private var colorScheme
   @State private var showingDatePicker = false
@@ -833,7 +833,7 @@ struct StrainV2EmptyStateCard: View {
 
 struct StrainV2InsightsSheet: View {
   let palette: SleepV2Palette
-  @ObservedObject var store: HealthDataStore
+  var store: HealthDataStore
   @Environment(\.dismiss) private var dismiss
 
   var body: some View {

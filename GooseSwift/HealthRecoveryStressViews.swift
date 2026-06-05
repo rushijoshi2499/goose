@@ -6,7 +6,7 @@ import UIKit
 struct RecoveryV2OverviewPage: View {
   @EnvironmentObject private var router: AppRouter
   @Environment(GooseAppModel.self) private var model
-  @ObservedObject var store: HealthDataStore
+  var store: HealthDataStore
   @Binding var selectedDate: Date
   @Environment(\.colorScheme) private var colorScheme
   @State private var showingDatePicker = false
@@ -219,7 +219,7 @@ struct RecoveryV2OverviewPage: View {
 struct StressV2OverviewPage: View {
   @EnvironmentObject private var router: AppRouter
   @Environment(GooseAppModel.self) private var model
-  @ObservedObject var store: HealthDataStore
+  var store: HealthDataStore
   @Binding var selectedDate: Date
   @Environment(\.colorScheme) private var colorScheme
   @State private var showingDatePicker = false
