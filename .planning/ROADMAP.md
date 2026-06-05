@@ -381,7 +381,11 @@ Plans:
   3. All views updated from `@EnvironmentObject var model` → `@Environment(GooseAppModel.self) var model`
   4. `Update NavigationRequestObserver tried to update multiple times per frame` no longer appears in logs during BLE capture
 
-**Plans**: TBD
+**Plans**: 4 plans (4 waves)
+- [ ] 17-01-PLAN.md — Wave 1: GooseAppModel @Observable migration + @Environment rewire + MoreDataStore Combine removal
+- [ ] 17-02-PLAN.md — Wave 2: HealthDataStore @Observable migration + @State ownership + @ObservedObject removal
+- [ ] 17-03-PLAN.md — Wave 3: GooseBLEClient @Observable migration (NSObject kept) + MoreView onChange route status
+- [ ] 17-04-PLAN.md — Wave 4: GooseSwiftApp injection sweep + full build verification + PERF-03 runtime check
 
 ### Phase 18: Coach Multi-Provider
 
@@ -412,5 +416,5 @@ Plans:
 | 14. pt-PT Localisation | v3.0 | 4/4 | Complete | 2026-06-05 |
 | 15. Recovery Formula V2 SDNN | v3.0 | 1/1 | Complete | 2026-06-05 |
 | 16. Deep Link Security | v4.0 | 1/0 | Complete    | 2026-06-05 |
-| 17. @Observable Migration | v4.0 | 0/? | Not started | - |
+| 17. @Observable Migration | v4.0 | 0/4 | Planned | - |
 | 18. Coach Multi-Provider | v4.0 | 0/? | Not started | - |
