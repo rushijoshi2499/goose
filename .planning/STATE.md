@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: milestone
 status: completed
-stopped_at: "Phase 14 Plan 01 complete — Localizable.xcstrings + pt-PT locale + String(localized:) migration"
-last_updated: "2026-06-05T18:53:55.377Z"
+stopped_at: Phase 17 Plan 02 complete — HealthDataStore @Observable Wave 2
+last_updated: "2026-06-05T20:00:00.000Z"
 last_activity: 2026-06-05
 progress:
-  total_phases: 12
+  total_phases: 13
   completed_phases: 8
-  total_plans: 17
-  completed_plans: 19
-  percent: 67
+  total_plans: 21
+  completed_plans: 20
+  percent: 62
 ---
 
 # Project State
@@ -26,8 +26,8 @@ See: .planning/PROJECT.md (updated 2026-06-04)
 ## Current Position
 
 Phase: 17
-Plan: 01 complete
-Status: Phase 17 Plan 01 complete — GooseAppModel @Observable migration (Wave 1); 52 @Published removed; all 27 view injection sites updated; MoreDataStore Combine removed; BUILD SUCCEEDED
+Plan: 02 complete
+Status: Phase 17 Plan 02 complete — HealthDataStore @Observable migration (Wave 2); 25 @Published removed; 16 consumer views rewired; AppShellView+HealthDashboardViews @State ownership; BUILD SUCCEEDED
 Last activity: 2026-06-05
 
 Progress: [░░░░░░░░░░] 0%
@@ -56,7 +56,7 @@ Progress: [░░░░░░░░░░] 0%
 | 14 | 4 | - | - |
 | 15 | 1 | - | - |
 | 16 | 1 | - | - |
-| 17 | 1 | ~25m | ~25m |
+| 17 | 2 | ~30m | ~15m |
 
 **Recent Trend:**
 
@@ -82,6 +82,7 @@ Recent decisions affecting current work:
 - Phase 14 Plan 01: Use String(localized:) instead of LocalizedStringKey for String-returning properties — preserves compatibility with String consumers (CoachTips, HealthScoreDateViews, HomeDashboardView)
 - Phase 14 Plan 01: xcstrings keys use full English literal strings to match source code exactly
 - Phase 14 Plan 03: Wave 3 added 328 entries (543 total); @Published status strings deferred to Wave 4
+- Phase 17 Plan 02: @Bindable required on CalibrationHealthView when @Observable class property needs Picker binding; nonisolated(unsafe) on NSObjectProtocol observer enables deinit cleanup; lazy var incompatible with @Observable — convert to init-assigned var
 
 ### Pending Todos
 
@@ -107,6 +108,6 @@ Items carried forward from v2.0 milestone close (2026-06-04):
 
 ## Session Continuity
 
-Last session: 2026-06-05T19:16:15Z
-Stopped at: Phase 17 Plan 01 complete — GooseAppModel @Observable Wave 1
-Resume file: .planning/phases/17-observable-migration/17-01-SUMMARY.md
+Last session: 2026-06-05T20:00:00Z
+Stopped at: Phase 17 Plan 02 complete — HealthDataStore @Observable Wave 2
+Resume file: .planning/phases/17-observable-migration/17-02-SUMMARY.md
