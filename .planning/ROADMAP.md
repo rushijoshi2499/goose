@@ -405,7 +405,7 @@ Plans:
 **Plans**: 6 plans (6 waves)
 **Wave 1**
 
-- [ ] 18-01-PLAN.md — Wave 1: CoachProvider protocol + CoachProviderRegistry + CoachChatModel refactor + ChatGPTCoachProvider + Wave 0 test stubs (COACH-01, COACH-06)
+- [x] 18-01-PLAN.md — Wave 1: CoachProvider protocol + CoachProviderRegistry + CoachChatModel refactor + ChatGPTCoachProvider + Wave 0 test stubs (COACH-01, COACH-06)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -441,4 +441,4 @@ Plans:
 | 15. Recovery Formula V2 SDNN | v3.0 | 1/1 | Complete | 2026-06-05 |
 | 16. Deep Link Security | v4.0 | 1/0 | Complete    | 2026-06-05 |
 | 17. @Observable Migration | v4.0 | 4/4 | Complete | 2026-06-05 |
-| 18. Coach Multi-Provider | v4.0 | 0/6 | Planned | - |
+| 18. Coach Multi-Provider | v4.0 | 1/6 | In Progress|  |
