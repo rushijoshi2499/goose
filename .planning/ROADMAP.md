@@ -56,7 +56,7 @@ Full details: `.planning/milestones/v3.0-ROADMAP.md`
 
 **Milestone Goal:** Block state-changing debug deep links (security), eliminate ObservableObject re-render overhead via @Observable migration (performance), and expand Coach to support multiple AI providers.
 
-- [ ] **Phase 16: Deep Link Security** — Block state-changing `gooseswift://` commands from external callers (PR #15)
+- [x] **Phase 16: Deep Link Security** — Block state-changing `gooseswift://` commands from external callers (PR #15) (completed 2026-06-05)
 - [ ] **Phase 17: @Observable Migration** — Migrate GooseAppModel + HealthDataStore to @Observable, eliminate NavigationRequestObserver warnings
 - [ ] **Phase 18: Coach Multi-Provider** — CoachProvider protocol, Claude + custom endpoint support, provider picker UI
 
@@ -411,6 +411,6 @@ Plans:
 | 13. Recovery V2 Dashboard | v3.0 | 1/1 | Complete | 2026-06-05 |
 | 14. pt-PT Localisation | v3.0 | 4/4 | Complete | 2026-06-05 |
 | 15. Recovery Formula V2 SDNN | v3.0 | 1/1 | Complete | 2026-06-05 |
-| 16. Deep Link Security | v4.0 | 0/? | Not started | - |
+| 16. Deep Link Security | v4.0 | 1/0 | Complete    | 2026-06-05 |
 | 17. @Observable Migration | v4.0 | 0/? | Not started | - |
 | 18. Coach Multi-Provider | v4.0 | 0/? | Not started | - |

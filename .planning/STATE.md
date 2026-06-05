@@ -4,14 +4,14 @@ milestone: v3.0
 milestone_name: milestone
 status: completed
 stopped_at: "Phase 14 Plan 01 complete — Localizable.xcstrings + pt-PT locale + String(localized:) migration"
-last_updated: "2026-06-05T18:52:39.736Z"
+last_updated: "2026-06-05T18:53:55.377Z"
 last_activity: 2026-06-05
 progress:
-  total_phases: 11
+  total_phases: 12
   completed_phases: 8
   total_plans: 17
-  completed_plans: 17
-  percent: 73
+  completed_plans: 18
+  percent: 67
 ---
 
 # Project State
@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-06-04)
 
 ## Current Position
 
-Phase: 999.5
+Phase: 16
 Plan: Not started
 Status: Phase 14 Plan 04 complete — dynamic @Published status localisation (Wave 4); 597 xcstrings entries; BUILD SUCCEEDED
 Last activity: 2026-06-05
@@ -36,7 +36,7 @@ Progress: [░░░░░░░░░░] 0%
 
 **Velocity:**
 
-- Total plans completed: 30 (v1.0 + v2.0 combined)
+- Total plans completed: 31 (v1.0 + v2.0 combined)
 - Average duration: —
 - Total execution time: —
 
@@ -55,6 +55,7 @@ Progress: [░░░░░░░░░░] 0%
 | 13 | 1 | - | - |
 | 14 | 4 | - | - |
 | 15 | 1 | - | - |
+| 16 | 1 | - | - |
 
 **Recent Trend:**
 
