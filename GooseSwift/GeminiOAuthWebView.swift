@@ -34,6 +34,7 @@ struct GeminiOAuthWebView: UIViewRepresentable {
   }
 
   func updateUIView(_ webView: WKWebView, context: Context) {
+    guard webView.url == nil else { return }
     let request = URLRequest(url: authURL)
     webView.load(request)
   }

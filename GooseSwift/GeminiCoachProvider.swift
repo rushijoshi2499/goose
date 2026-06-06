@@ -164,7 +164,9 @@ final class GeminiCoachProvider: CoachProvider {
     let token = try await validToken()
     let modelID = preset.geminiModelID ?? "gemini-2.5-flash"
     let urlString = "https://generativelanguage.googleapis.com/v1beta/models/\(modelID):streamGenerateContent?alt=sse"
-    let url = URL(string: urlString)!
+    guard let url = URL(string: urlString) else {
+      throw GeminiProviderError.invalidResponse
+    }
 
     var request = URLRequest(url: url)
     request.httpMethod = "POST"
