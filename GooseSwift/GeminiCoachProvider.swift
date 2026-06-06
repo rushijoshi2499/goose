@@ -119,9 +119,10 @@ final class GeminiCoachProvider: CoachProvider {
   let availablePresets: [CoachModelPreset] = [.gemini25Pro, .gemini25Flash]
 
   private(set) var isExchangingToken = false
+  private(set) var isAuthenticated: Bool
 
-  var isAuthenticated: Bool {
-    (try? GeminiKeychain.load()) != nil
+  init() {
+    isAuthenticated = (try? GeminiKeychain.load()) != nil
   }
 
   var oauthClientId: String {
@@ -152,6 +153,7 @@ final class GeminiCoachProvider: CoachProvider {
 
   func signOut() {
     try? GeminiKeychain.delete()
+    isAuthenticated = false
   }
 
   func send(
@@ -223,6 +225,7 @@ final class GeminiCoachProvider: CoachProvider {
 
     let token = try await exchangeToken(params: params)
     try GeminiKeychain.save(token)
+    isAuthenticated = true
   }
 
   // MARK: - Internal helpers

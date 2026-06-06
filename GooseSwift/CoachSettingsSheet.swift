@@ -259,7 +259,7 @@ private struct ClaudeConfigView: View {
 
   private func saveClaudeKey() {
     guard !apiKey.isEmpty else { return }
-    try? ClaudeCredentialStore.save(apiKey)
+    try? provider.saveAPIKey(apiKey)
     apiKey = ""
     keyStatus = "saved"
   }
@@ -422,11 +422,14 @@ private struct CustomEndpointConfigView: View {
       return
     }
     provider.baseURL = baseURL
-    if !apiKey.isEmpty {
-      try? CustomEndpointCredentialStore.save(apiKey)
-      apiKey = ""
-    }
     provider.modelID = modelID
+    if !apiKey.isEmpty {
+      try? provider.saveEndpoint(apiKey: apiKey)
+      apiKey = ""
+    } else {
+      // Re-evaluate isAuthenticated with updated URL even if no new key provided
+      try? provider.saveEndpoint(apiKey: CustomEndpointCredentialStore.currentKey())
+    }
     savedLabel = true
     Task {
       try? await Task.sleep(for: .seconds(2))

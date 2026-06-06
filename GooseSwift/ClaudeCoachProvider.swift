@@ -89,17 +89,26 @@ enum ClaudeProviderError: Error {
 
 // MARK: - ClaudeCoachProvider
 
+@Observable
 final class ClaudeCoachProvider: CoachProvider {
   let id = "claude"
   let displayName = "Claude"
   let availablePresets: [CoachModelPreset] = [.claudeOpus48, .claudeSonnet46, .claudeHaiku45]
 
-  var isAuthenticated: Bool {
-    (try? ClaudeKeychain.load()) != nil
+  private(set) var isAuthenticated: Bool
+
+  init() {
+    isAuthenticated = (try? ClaudeKeychain.load()) != nil
+  }
+
+  func saveAPIKey(_ key: String) throws {
+    try ClaudeKeychain.save(key)
+    isAuthenticated = true
   }
 
   func signOut() {
     try? ClaudeKeychain.delete()
+    isAuthenticated = false
   }
 
   func send(

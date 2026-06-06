@@ -79,6 +79,10 @@ enum CustomEndpointCredentialStore {
   static func delete() throws {
     try CustomEndpointKeychain.delete()
   }
+
+  static func currentKey() -> String {
+    (try? CustomEndpointKeychain.load()) ?? ""
+  }
 }
 
 // MARK: - CustomEndpointProviderError
@@ -90,6 +94,7 @@ enum CustomEndpointProviderError: Error {
 
 // MARK: - CustomEndpointCoachProvider
 
+@Observable
 final class CustomEndpointCoachProvider: CoachProvider {
   let id = "custom"
   let displayName = "Custom"
@@ -121,15 +126,25 @@ final class CustomEndpointCoachProvider: CoachProvider {
 
   // MARK: - CoachProvider
 
-  var isAuthenticated: Bool {
-    (try? CustomEndpointKeychain.load()) != nil
-      && Self.validateBaseURL(baseURL)
+  private(set) var isAuthenticated: Bool
+
+  init() {
+    let hasKey = (try? CustomEndpointKeychain.load()) != nil
+    let savedURL = UserDefaults.standard.string(forKey: Self.baseURLKey) ?? ""
+    isAuthenticated = hasKey && RemoteServerURLValidator.validate(savedURL)
+  }
+
+  func saveEndpoint(apiKey: String) throws {
+    try CustomEndpointKeychain.save(apiKey)
+    let savedURL = UserDefaults.standard.string(forKey: Self.baseURLKey) ?? ""
+    isAuthenticated = !apiKey.isEmpty && Self.validateBaseURL(savedURL)
   }
 
   func signOut() {
     try? CustomEndpointKeychain.delete()
     UserDefaults.standard.removeObject(forKey: Self.baseURLKey)
     UserDefaults.standard.removeObject(forKey: Self.modelIDKey)
+    isAuthenticated = false
   }
 
   func send(
