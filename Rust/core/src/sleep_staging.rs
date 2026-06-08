@@ -1045,3 +1045,126 @@ mod tests {
         );
     }
 }
+
+// ---------------------------------------------------------------------------
+// Sleep staging parity validation (VAL-02 / ALG-SLP-04 synthetic gate)
+// ---------------------------------------------------------------------------
+// These tests verify that stage_sleep_four_class produces well-formed,
+// physiologically plausible output on synthetic fixtures. They serve as a
+// code-level regression guard for the cross-validation gate ALG-SLP-04.
+//
+// Human gate status (ALG-SLP-04):
+//   OPEN — requires >= 5 real overnight sessions from a WHOOP device with
+//   epoch-level agreement >= 70% vs WHOOP official staging. This is a MANUAL
+//   gate. Record results in Phase 44 SUMMARY.md when available.
+
+#[cfg(test)]
+mod sleep_staging_parity_tests {
+    use super::*;
+
+    const BASE_TS: f64 = 1_700_000_000.0_f64;
+
+    fn make_gravity(n_hours: f64, pattern: &str) -> Vec<(f64, f64, f64, f64)> {
+        // Generate gravity rows at 25 Hz covering the sleep window.
+        // ts starts at BASE_TS and goes for n_hours * 3600 seconds.
+        let total_seconds = n_hours * 3600.0;
+        let sample_rate = 25_usize; // Hz
+        let total = (total_seconds as usize) * sample_rate;
+        (0..total)
+            .map(|i| {
+                let t = BASE_TS + i as f64 / sample_rate as f64;
+                match pattern {
+                    "still" => (t, 0.0, 0.0, 1.0),
+                    "active" => {
+                        let angle = (i as f64 * 0.4).sin();
+                        (t, angle, 0.0, (1.0 - angle * angle).sqrt().max(0.0))
+                    }
+                    _ => (t, 0.0, 0.0, 1.0),
+                }
+            })
+            .collect()
+    }
+
+    fn simple_input(n_hours: f64) -> SleepStagingInput {
+        SleepStagingInput {
+            device_id: "test-device".to_string(),
+            sleep_start_ts: BASE_TS,
+            sleep_end_ts: BASE_TS + n_hours * 3600.0,
+        }
+    }
+
+    // VAL-02 Fixture 1: still night → predominantly sleep epochs.
+    #[test]
+    fn test_staging_parity_still_night_mostly_sleep() {
+        let n_hours = 7.0;
+        let input = simple_input(n_hours);
+        let tuples = make_gravity(n_hours, "still");
+        let hr_feats: Vec<EpochHrFeature> = vec![];
+        let output = stage_sleep_four_class(&input, &tuples, &hr_feats, false);
+
+        let total_epochs = output.epochs.len();
+        assert!(total_epochs > 0, "must produce epochs for 7-hour window");
+
+        let wake_count = output.epochs.iter().filter(|e| e.stage == "wake").count();
+        let sleep_count = total_epochs - wake_count;
+        let sleep_fraction = sleep_count as f64 / total_epochs as f64;
+
+        // A still night should yield >= 80% sleep epochs.
+        assert!(
+            sleep_fraction >= 0.80,
+            "still night: sleep fraction {:.3} must be >= 0.80",
+            sleep_fraction
+        );
+
+        // AASM metrics must be non-negative.
+        assert!(output.tst_minutes >= 0.0, "TST must be >= 0");
+        assert!(output.sol_minutes >= 0.0, "SOL must be >= 0");
+        assert!(output.waso_minutes >= 0.0, "WASO must be >= 0");
+        assert!(
+            output.sleep_efficiency_fraction >= 0.0 && output.sleep_efficiency_fraction <= 1.0,
+            "efficiency must be in [0,1]: {}",
+            output.sleep_efficiency_fraction
+        );
+    }
+
+    // VAL-02 Fixture 2: stage_minutes sums to ≈ TST (non-wake epochs).
+    #[test]
+    fn test_staging_parity_stage_minutes_sum_equals_tst() {
+        let n_hours = 6.0;
+        let input = simple_input(n_hours);
+        let gravity = make_gravity(n_hours, "still");
+        let hr_feats: Vec<EpochHrFeature> = vec![];
+        let output = stage_sleep_four_class(&input, &gravity, &hr_feats, true);
+
+        // stage_minutes should sum to TST (within float rounding).
+        let stage_sum: f64 = output.stage_minutes.values().sum();
+        let tst = output.tst_minutes;
+        assert!(
+            (stage_sum - tst).abs() < 1.0,
+            "stage_minutes sum {:.3} must equal tst_minutes {:.3} within 1 min",
+            stage_sum,
+            tst
+        );
+    }
+
+    // VAL-02 Fixture 3: epoch 30s resolution check — each epoch is COLE_KRIPKE_EPOCH_MINUTES.
+    #[test]
+    fn test_staging_parity_epoch_duration_is_30s() {
+        let n_hours = 4.0;
+        let input = simple_input(n_hours);
+        let gravity = make_gravity(n_hours, "still");
+        let hr_feats: Vec<EpochHrFeature> = vec![];
+        let output = stage_sleep_four_class(&input, &gravity, &hr_feats, false);
+
+        // Expected total epochs for 4h window = 4*60/0.5 = 480
+        let expected_epochs = (n_hours * 60.0 / COLE_KRIPKE_EPOCH_MINUTES).round() as usize;
+        // Allow ±1 for boundary handling.
+        let actual = output.epochs.len();
+        assert!(
+            (actual as i64 - expected_epochs as i64).abs() <= 1,
+            "4h window must yield ~{} 30s epochs, got {}",
+            expected_epochs,
+            actual
+        );
+    }
+}
