@@ -74,6 +74,10 @@ final class HealthDataStore {
   // Always quality_flag="uncalibrated". Stored here (extensions cannot add stored properties).
   var v24BiometricsResult: V24BiometricsResult?
 
+  // Exercise sessions from the last 7 days, sorted newest-first.
+  // Stored here (extensions cannot add stored properties to @Observable classes).
+  var exerciseSessions: [ExerciseSessionDisplayItem] = []
+
   static let liveHRVRMSSDDefaultsKey = "goose.swift.liveHRVRMSSD"
   static let liveHRVRRIntervalCountDefaultsKey = "goose.swift.liveHRVRRIntervalCount"
   static let liveHRVRMSSDSampleCountDefaultsKey = "goose.swift.liveHRVRMSSDSampleCount"

@@ -485,13 +485,21 @@ struct StrainV2OverviewPage: View {
               energyText: store.strainEnergyDisplayText(for: selectedDate)
             )
 
-            SleepV2SectionHeader(title: "Activities", palette: palette)
-            StrainV2EmptyStateCard(
-              palette: palette,
-              systemImage: "figure.run.circle",
-              title: "No activities",
-              message: store.strainEmptyStateSummary()
-            )
+            SleepV2SectionHeader(title: "Actividades", palette: palette)
+            if store.exerciseSessions.isEmpty {
+              StrainV2EmptyStateCard(
+                palette: palette,
+                systemImage: "figure.run.circle",
+                title: "Sem actividades",
+                message: store.strainEmptyStateSummary()
+              )
+            } else {
+              VStack(spacing: 10) {
+                ForEach(store.exerciseSessions.prefix(7)) { session in
+                  ExerciseSessionCard(palette: palette, session: session)
+                }
+              }
+            }
 
             SleepV2SectionHeader(title: "Trends", palette: palette)
             if trendRows.isEmpty {
@@ -547,6 +555,12 @@ struct StrainV2OverviewPage: View {
     }
     .sheet(item: $selectedTrend) { snapshot in
       SleepV2BevelTrendSheet(snapshot: snapshot)
+    }
+    .onAppear {
+      store.runExerciseSessions()
+    }
+    .onChange(of: model.packetImportRevision) { _, _ in
+      store.runExerciseSessions()
     }
   }
 
@@ -926,6 +940,138 @@ struct RecoveryV2EmptyStateCard: View {
         Spacer(minLength: 8)
       }
       .frame(maxWidth: .infinity, alignment: .leading)
+    }
+  }
+}
+
+// MARK: - ExerciseSessionCard
+
+struct ExerciseSessionCard: View {
+  let palette: SleepV2Palette
+  let session: ExerciseSessionDisplayItem
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 12) {
+      HStack(alignment: .top) {
+        VStack(alignment: .leading, spacing: 3) {
+          Text(session.dateLabel)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(palette.mutedText)
+          HStack(spacing: 8) {
+            Image(systemName: "figure.run")
+              .font(.subheadline.weight(.semibold))
+              .foregroundStyle(palette.accent)
+            Text("Detectado automaticamente")
+              .font(.caption.weight(.semibold))
+              .foregroundStyle(palette.secondaryText)
+          }
+        }
+        Spacer()
+        Text(session.startTimeLabel)
+          .font(.subheadline.weight(.semibold))
+          .fontDesign(.rounded)
+          .foregroundStyle(palette.text)
+      }
+
+      HStack(spacing: 0) {
+        ExerciseMetricCell(palette: palette, icon: "timer", label: "Duração", value: session.durationText)
+        Divider().frame(maxHeight: 40).background(palette.separator.opacity(0.54))
+        ExerciseMetricCell(palette: palette, icon: "flame.fill", label: "Calorias", value: session.caloriesText)
+        Divider().frame(maxHeight: 40).background(palette.separator.opacity(0.54))
+        ExerciseMetricCell(palette: palette, icon: "bolt.heart.fill", label: "Strain", value: session.strainText)
+      }
+
+      if !session.zoneBreakdown.isEmpty {
+        ExerciseZoneBar(zones: session.zoneBreakdown, palette: palette)
+          .frame(height: 10)
+        HStack(spacing: 8) {
+          ForEach(session.zoneBreakdown, id: \.zone) { item in
+            HStack(spacing: 4) {
+              Circle()
+                .fill(zoneColor(item.zone))
+                .frame(width: 7, height: 7)
+              Text("\(item.label): \(Int((item.fraction * 100).rounded()))%")
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(palette.mutedText)
+            }
+          }
+        }
+      }
+    }
+    .padding(14)
+    .background(
+      RoundedRectangle(cornerRadius: 18, style: .continuous)
+        .fill(palette.surface)
+        .shadow(color: palette.shadow.opacity(0.28), radius: 6, x: 0, y: 2)
+    )
+    .overlay(
+      RoundedRectangle(cornerRadius: 18, style: .continuous)
+        .stroke(palette.separator.opacity(0.54), lineWidth: 1)
+    )
+  }
+
+  private func zoneColor(_ zone: String) -> Color {
+    switch zone {
+    case "z1": return Color(red: 0.22, green: 0.76, blue: 0.52)  // green
+    case "z2": return Color(red: 0.24, green: 0.62, blue: 0.88)  // blue
+    case "z3": return Color(red: 0.98, green: 0.78, blue: 0.10)  // yellow
+    case "z4": return Color(red: 0.96, green: 0.52, blue: 0.20)  // orange
+    case "z5": return Color(red: 0.92, green: 0.22, blue: 0.22)  // red
+    default:   return palette.accent
+    }
+  }
+}
+
+struct ExerciseMetricCell: View {
+  let palette: SleepV2Palette
+  let icon: String
+  let label: String
+  let value: String
+
+  var body: some View {
+    VStack(spacing: 4) {
+      Image(systemName: icon)
+        .font(.caption.weight(.semibold))
+        .foregroundStyle(palette.accent)
+      Text(value)
+        .font(.subheadline.weight(.semibold))
+        .fontDesign(.rounded)
+        .foregroundStyle(palette.text)
+        .lineLimit(1)
+        .minimumScaleFactor(0.72)
+      Text(label)
+        .font(.caption2.weight(.medium))
+        .foregroundStyle(palette.mutedText)
+    }
+    .frame(maxWidth: .infinity)
+    .padding(.vertical, 4)
+  }
+}
+
+struct ExerciseZoneBar: View {
+  let zones: [(zone: String, label: String, fraction: Double)]
+  let palette: SleepV2Palette
+
+  private func zoneColor(_ zone: String) -> Color {
+    switch zone {
+    case "z1": return Color(red: 0.22, green: 0.76, blue: 0.52)
+    case "z2": return Color(red: 0.24, green: 0.62, blue: 0.88)
+    case "z3": return Color(red: 0.98, green: 0.78, blue: 0.10)
+    case "z4": return Color(red: 0.96, green: 0.52, blue: 0.20)
+    case "z5": return Color(red: 0.92, green: 0.22, blue: 0.22)
+    default:   return palette.accent
+    }
+  }
+
+  var body: some View {
+    GeometryReader { proxy in
+      HStack(spacing: 2) {
+        ForEach(zones, id: \.zone) { item in
+          RoundedRectangle(cornerRadius: 4, style: .continuous)
+            .fill(zoneColor(item.zone))
+            .frame(width: max(proxy.size.width * CGFloat(item.fraction) - 2, 6))
+        }
+      }
     }
   }
 }
