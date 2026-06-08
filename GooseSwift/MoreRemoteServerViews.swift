@@ -119,6 +119,24 @@ struct MoreRemoteServerView: View {
             Text("\(model.pendingBatchCount)")
               .foregroundStyle(model.pendingBatchCount > 0 ? .orange : .secondary)
           }
+
+          // Row 4: Rows pending sync flag
+          LabeledContent("Sync pendente") {
+            HStack(spacing: 8) {
+              if model.syncPendingRowCount > 0 {
+                Text("\(model.syncPendingRowCount) rows")
+                  .foregroundStyle(.orange)
+              } else {
+                Text("0 rows")
+                  .foregroundStyle(.secondary)
+              }
+              Button("Backfill") {
+                model.triggerBackfillAndUpload()
+              }
+              .buttonStyle(.bordered)
+              .controlSize(.mini)
+            }
+          }
         }
       }
 
@@ -139,6 +157,9 @@ struct MoreRemoteServerView: View {
     .gooseListBackground()
     .alert("Settings saved", isPresented: $vm.saveSuccess) {
       Button("OK") {}
+    }
+    .onAppear {
+      model.refreshSyncPendingCount()
     }
   }
 }

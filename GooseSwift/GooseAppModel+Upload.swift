@@ -10,10 +10,25 @@ extension GooseAppModel {
 
   func configureUploadService() {
     uploadService.onStatusUpdate = { [weak self] status in
-      // Called on @MainActor via DispatchQueue.main.async in GooseUploadService
+      // Called on @MainActor via Task { @MainActor in ... } in GooseUploadService
       self?.lastUploadAt = status.lastUploadTimestamp
       self?.pendingBatchCount = status.pendingBatchCount
       self?.lastSyncedCount = status.lastSyncedCount
+      self?.syncPendingRowCount = status.pendingRowCount
+    }
+  }
+
+  func refreshSyncPendingCount() {
+    let service = uploadService
+    Task.detached(priority: .utility) {
+      service.refreshPendingRowCount()
+    }
+  }
+
+  func triggerBackfillAndUpload() {
+    let sinceTimestamp = lastUploadAt ?? Date().addingTimeInterval(-7 * 24 * 3600)
+    if let whoopID = ble.activeDeviceIdentifier {
+      uploadService.triggerBackfill(deviceID: whoopID, sinceTimestamp: sinceTimestamp)
     }
   }
 

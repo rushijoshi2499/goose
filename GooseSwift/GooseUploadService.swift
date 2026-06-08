@@ -7,6 +7,8 @@ struct GooseUploadStatus {
   let lastUploadTimestamp: Date?
   let pendingBatchCount: Int
   let lastSyncedCount: Int?
+  // Total rows with synced=0 across primary hr_samples stream.
+  var pendingRowCount: Int = 0
 }
 
 final class GooseUploadService: @unchecked Sendable {
@@ -18,6 +20,7 @@ final class GooseUploadService: @unchecked Sendable {
   private var lastUploadTimestamp: Date?
   private var pendingBatchCount: Int = 0
   private var lastSyncedCount: Int?
+  private var pendingRowCount: Int = 0
 
   var onStatusUpdate: (@MainActor (GooseUploadStatus) -> Void)?
 
@@ -118,10 +121,14 @@ final class GooseUploadService: @unchecked Sendable {
     if uploadSucceeded {
       lastUploadTimestamp = Date()
       lastSyncedCount = syncedCount
+      // Mark hr_samples rows as synced using the rowids from the recent decoded streams.
+      // We use sync.rows_pending_upload to get the rowids of hr_samples rows that were just uploaded.
+      markHrSamplesSynced(deviceID: deviceID, sinceTimestamp: sinceTimestamp)
     } else {
       logger.debug("upload failed after 3 attempts — discarding batch silently")
     }
     pendingBatchCount = max(0, pendingBatchCount - 1)
+    refreshPendingRowCount()
     publishStatus()
   }
 
@@ -179,11 +186,95 @@ final class GooseUploadService: @unchecked Sendable {
     }
   }
 
+  // Mark the hr_samples rows that were just uploaded as synced=1.
+  // Uses sync.rows_pending_upload to get rowids, then sync.mark_synced.
+  private func markHrSamplesSynced(deviceID: UUID, sinceTimestamp: Date) {
+    do {
+      let pendingReport = try rust.request(
+        method: "sync.rows_pending_upload",
+        args: [
+          "database_path": databasePath,
+          "stream": "hr_samples",
+          "limit": 500,
+        ]
+      )
+      let rows = pendingReport["rows"] as? [[String: Any]] ?? []
+      let sinceTs = sinceTimestamp.timeIntervalSince1970
+      let rowIds: [Int] = rows.compactMap { row in
+        // Only mark rows from this device and in the upload window.
+        guard let rowid = (row["rowid"] as? NSNumber)?.intValue ?? (row["rowid"] as? Int),
+              let ts = (row["ts"] as? NSNumber)?.doubleValue ?? (row["ts"] as? Double),
+              ts >= sinceTs else {
+          return nil
+        }
+        return rowid
+      }
+      guard !rowIds.isEmpty else { return }
+      _ = try rust.request(
+        method: "sync.mark_synced",
+        args: [
+          "database_path": databasePath,
+          "stream": "hr_samples",
+          "row_ids": rowIds,
+        ]
+      )
+      logger.debug("sync.mark_synced: marked \(rowIds.count) hr_samples rows")
+    } catch {
+      logger.debug("sync.mark_synced failed: \(error)")
+    }
+  }
+
+  // Query the total pending row count (hr_samples only) for the badge.
+  func refreshPendingRowCount() {
+    do {
+      let report = try rust.request(
+        method: "sync.rows_pending_upload",
+        args: [
+          "database_path": databasePath,
+          "stream": "hr_samples",
+          "limit": 10_000,
+        ]
+      )
+      let rows = report["rows"] as? [[String: Any]] ?? []
+      pendingRowCount = rows.count
+    } catch {
+      pendingRowCount = 0
+    }
+  }
+
+  // Trigger manual backfill + upload of all pending streams.
+  // Called from the More tab "Sync pendente" button.
+  func triggerBackfill(deviceID: UUID, sinceTimestamp: Date) {
+    Task.detached(priority: .utility) { [weak self] in
+      guard let self else { return }
+      // Call sync.backfill_streams to populate hr_samples/rr_intervals from decoded_frames.
+      let end = Date().timeIntervalSince1970
+      let start = sinceTimestamp.timeIntervalSince1970
+      do {
+        let report = try rust.request(
+          method: "sync.backfill_streams",
+          args: [
+            "database_path": databasePath,
+            "device_id": deviceID.uuidString,
+            "start_ts": start,
+            "end_ts": end,
+          ]
+        )
+        let hrInserted = (report["hr_inserted"] as? Int) ?? 0
+        logger.debug("sync.backfill_streams: hr_inserted=\(hrInserted)")
+      } catch {
+        logger.debug("sync.backfill_streams failed: \(error)")
+      }
+      await performUpload(deviceID: deviceID, deviceType: "GOOSE", sinceTimestamp: sinceTimestamp)
+    }
+  }
+
   private func publishStatus() {
     let status = GooseUploadStatus(
       lastUploadTimestamp: lastUploadTimestamp,
       pendingBatchCount: pendingBatchCount,
-      lastSyncedCount: lastSyncedCount
+      lastSyncedCount: lastSyncedCount,
+      pendingRowCount: pendingRowCount
     )
     Task { @MainActor [weak self] in
       self?.onStatusUpdate?(status)

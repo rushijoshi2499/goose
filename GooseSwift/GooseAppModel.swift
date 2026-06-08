@@ -56,6 +56,7 @@ final class GooseAppModel {
   var lastUploadAt: Date? = nil
   var pendingBatchCount: Int = 0
   var lastSyncedCount: Int? = nil
+  var syncPendingRowCount: Int = 0
   // SYNC-04: owned by the @MainActor GooseAppModel; only read and written on the main actor.
   // Set from connect/disconnect handling in GooseAppModel+Lifecycle.swift.
   // BLE-thread code must not touch this property directly.
