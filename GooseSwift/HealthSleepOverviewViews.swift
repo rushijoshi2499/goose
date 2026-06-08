@@ -89,6 +89,8 @@ struct SleepV2OverviewPage: View {
                 startBandSleepSync(automatic: false)
               }
 
+              SleepStagingCard(palette: palette, result: store.sleepStagingResult)
+
               SleepV2SectionHeader(title: "Timeline", palette: palette)
 
               SleepV2TimelineRow(
@@ -142,6 +144,7 @@ struct SleepV2OverviewPage: View {
     .onAppear {
       store.loadBridgeCatalogsIfNeeded()
       startBandSleepSyncIfReady()
+      store.runSleepStaging()
     }
     .onChange(of: ble.canSyncHistorical) { _, _ in
       startBandSleepSyncIfReady()
@@ -236,5 +239,190 @@ struct SleepV2OverviewPage: View {
     ble.syncHistoricalPackets(rangeFirst: true)
   }
 
+}
+
+// MARK: - SleepStagingCard
+
+struct SleepStagingCard: View {
+  let palette: SleepV2Palette
+  let result: SleepStagingResult?
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 14) {
+      HStack(spacing: 8) {
+        Image(systemName: "moon.stars.fill")
+          .font(.subheadline.weight(.semibold))
+          .foregroundStyle(palette.accent)
+        Text("Fases do Sono")
+          .font(.headline.weight(.semibold))
+          .foregroundStyle(palette.text)
+        Spacer()
+        if let r = result, !r.stagingMethod.contains("unknown") {
+          Text(r.stagingMethodLabel)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(palette.mutedText)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(.thinMaterial, in: Capsule())
+        }
+      }
+
+      if let r = result, !r.sortedStages.isEmpty {
+        SleepFourClassHypnogramBar(stages: r.sortedStages, palette: palette)
+          .frame(height: 22)
+
+        LazyVGrid(
+          columns: [GridItem(.flexible()), GridItem(.flexible())],
+          spacing: 10
+        ) {
+          ForEach(r.sortedStages, id: \.stage) { item in
+            SleepStagePill(
+              palette: palette,
+              stage: item.stage,
+              minutes: item.minutes
+            )
+          }
+        }
+
+        Divider()
+          .background(palette.separator.opacity(0.60))
+
+        HStack(spacing: 0) {
+          SleepStagingMetricCell(palette: palette, label: "Eficiência", value: r.sleepEfficiencyText)
+          Divider().frame(maxHeight: 36).background(palette.separator.opacity(0.54))
+          SleepStagingMetricCell(palette: palette, label: "Início do sono", value: r.solText)
+          Divider().frame(maxHeight: 36).background(palette.separator.opacity(0.54))
+          SleepStagingMetricCell(palette: palette, label: "Acordado após início", value: r.wasoText)
+        }
+
+        if !result!.respAvailable {
+          HStack(spacing: 6) {
+            Image(systemName: "info.circle")
+              .font(.caption.weight(.semibold))
+            Text("REM inferido sem dados respiratórios")
+              .font(.caption.weight(.medium))
+          }
+          .foregroundStyle(palette.mutedText)
+          .padding(.top, 2)
+        }
+      } else {
+        HStack(spacing: 8) {
+          Image(systemName: "moon.zzz")
+            .font(.subheadline.weight(.medium))
+            .foregroundStyle(palette.mutedText)
+          Text("Sem dados de staging — sem dados de acelerómetro ou sono")
+            .font(.subheadline.weight(.medium))
+            .foregroundStyle(palette.secondaryText)
+            .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.vertical, 8)
+      }
+    }
+    .padding(16)
+    .background(
+      RoundedRectangle(cornerRadius: 20, style: .continuous)
+        .fill(palette.surface)
+        .shadow(color: palette.shadow.opacity(0.30), radius: 8, x: 0, y: 3)
+    )
+    .overlay(
+      RoundedRectangle(cornerRadius: 20, style: .continuous)
+        .stroke(palette.separator.opacity(0.60), lineWidth: 1)
+    )
+  }
+}
+
+struct SleepFourClassHypnogramBar: View {
+  let stages: [(stage: String, minutes: Double)]
+  let palette: SleepV2Palette
+
+  var body: some View {
+    GeometryReader { proxy in
+      let total = max(stages.map(\.minutes).reduce(0, +), 1)
+      HStack(spacing: 3) {
+        ForEach(stages, id: \.stage) { item in
+          RoundedRectangle(cornerRadius: 6, style: .continuous)
+            .fill(stageColor(item.stage))
+            .frame(width: max(proxy.size.width * CGFloat(item.minutes / total) - 3, 10))
+        }
+      }
+    }
+  }
+
+  private func stageColor(_ stage: String) -> Color {
+    switch stage.lowercased() {
+    case "wake":  return Color(red: 0.72, green: 0.72, blue: 0.72)  // gray
+    case "light": return Color(red: 0.38, green: 0.62, blue: 0.88)  // light blue
+    case "deep":  return Color(red: 0.16, green: 0.36, blue: 0.78)  // dark blue
+    case "rem":   return Color(red: 0.62, green: 0.30, blue: 0.84)  // purple
+    default:      return palette.accent
+    }
+  }
+}
+
+struct SleepStagePill: View {
+  let palette: SleepV2Palette
+  let stage: String
+  let minutes: Double
+
+  var body: some View {
+    HStack(spacing: 8) {
+      RoundedRectangle(cornerRadius: 3, style: .continuous)
+        .fill(stageColor)
+        .frame(width: 12, height: 12)
+      VStack(alignment: .leading, spacing: 2) {
+        Text(stageLabel)
+          .font(.caption.weight(.semibold))
+          .foregroundStyle(palette.text)
+        Text(HealthDataStore.minutesText(minutes))
+          .font(.caption2.weight(.medium))
+          .foregroundStyle(palette.secondaryText)
+      }
+      Spacer(minLength: 0)
+    }
+  }
+
+  private var stageLabel: String {
+    switch stage.lowercased() {
+    case "wake":  return "Acordado"
+    case "light": return "Sono leve"
+    case "deep":  return "Sono profundo"
+    case "rem":   return "REM"
+    default:      return stage.capitalized
+    }
+  }
+
+  private var stageColor: Color {
+    switch stage.lowercased() {
+    case "wake":  return Color(red: 0.72, green: 0.72, blue: 0.72)
+    case "light": return Color(red: 0.38, green: 0.62, blue: 0.88)
+    case "deep":  return Color(red: 0.16, green: 0.36, blue: 0.78)
+    case "rem":   return Color(red: 0.62, green: 0.30, blue: 0.84)
+    default:      return .secondary
+    }
+  }
+}
+
+struct SleepStagingMetricCell: View {
+  let palette: SleepV2Palette
+  let label: String
+  let value: String
+
+  var body: some View {
+    VStack(spacing: 4) {
+      Text(value)
+        .font(.subheadline.weight(.semibold))
+        .fontDesign(.rounded)
+        .foregroundStyle(palette.text)
+        .lineLimit(1)
+        .minimumScaleFactor(0.72)
+      Text(label)
+        .font(.caption2.weight(.medium))
+        .foregroundStyle(palette.mutedText)
+        .lineLimit(1)
+        .minimumScaleFactor(0.72)
+    }
+    .frame(maxWidth: .infinity)
+    .padding(.vertical, 4)
+  }
 }
 

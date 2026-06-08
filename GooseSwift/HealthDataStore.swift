@@ -66,6 +66,10 @@ final class HealthDataStore {
   // Stored here because Swift extensions cannot add stored properties to @Observable classes.
   var readinessResult: ReadinessResult?
 
+  // 4-class sleep staging result from metrics.sleep_staging (Cole-Kripke + cardiorespiratory).
+  // Stored here because Swift extensions cannot add stored properties to @Observable classes.
+  var sleepStagingResult: SleepStagingResult?
+
   static let liveHRVRMSSDDefaultsKey = "goose.swift.liveHRVRMSSD"
   static let liveHRVRRIntervalCountDefaultsKey = "goose.swift.liveHRVRRIntervalCount"
   static let liveHRVRMSSDSampleCountDefaultsKey = "goose.swift.liveHRVRMSSDSampleCount"
@@ -296,6 +300,7 @@ final class HealthDataStore {
         return
       }
       self.runSleepScore()
+      self.runSleepStaging()
       self.bandSleepImportStatus = "Band sync captured \(packetCount) packets | \(self.packetScoreStatus)"
     }
   }
