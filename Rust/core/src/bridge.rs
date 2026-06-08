@@ -249,7 +249,6 @@ pub const BRIDGE_METHODS: &[&str] = &[
     "metrics.fit_strain_denominator",
     "metrics.goose_hrv_v0",
     "metrics.goose_readiness_v1",
-    "metrics.imu_step_count_v1",
     "metrics.goose_recovery_v0",
     "metrics.goose_recovery_v1",
     "metrics.goose_sleep_v0",
@@ -261,6 +260,7 @@ pub const BRIDGE_METHODS: &[&str] = &[
     "metrics.hourly_activity_metrics",
     "metrics.hrv_capture_validation",
     "metrics.hrv_features",
+    "metrics.imu_step_count_v1",
     "metrics.input_readiness",
     "metrics.motion_features",
     "metrics.oxygen_saturation_capture_validation",
@@ -3557,6 +3557,10 @@ struct RecoveryV1BridgeArgs {
     date_key: String,
     hrv_rmssd_ms: f64,
     resting_hr_bpm: f64,
+    #[serde(default)]
+    resp_rate_rpm: Option<f64>,
+    #[serde(default)]
+    sleep_performance_fraction: Option<f64>,
 }
 
 fn goose_recovery_v1_bridge(args: RecoveryV1BridgeArgs) -> GooseResult<serde_json::Value> {
@@ -3567,6 +3571,8 @@ fn goose_recovery_v1_bridge(args: RecoveryV1BridgeArgs) -> GooseResult<serde_jso
         date_key: args.date_key,
         hrv_rmssd_ms: args.hrv_rmssd_ms,
         resting_hr_bpm: args.resting_hr_bpm,
+        resp_rate_rpm: args.resp_rate_rpm,
+        sleep_performance_fraction: args.sleep_performance_fraction,
     };
     let output = goose_recovery_v1(&input, &baseline);
     serde_json::to_value(output)

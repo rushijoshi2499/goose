@@ -4,16 +4,18 @@
 /// SQLite table is introduced. Cold-start gate, trust levels, and idempotent update
 /// under BEGIN EXCLUSIVE are all implemented here.
 ///
-/// Alpha = 0.10 (10-night memory constant).
+/// Alpha = 0.0483 (14-night half-life: 1 - 0.5^(1/14) ≈ 0.0483).
+/// ALG-ALIGN-01: aligned with my-whoop EWMA_ALPHA = 0.0483.
 ///
 /// Recurrence:
-///   mean_new     = 0.9 × mean_old + 0.1 × x
-///   variance_new = 0.9 × variance_old + 0.1 × (x - mean_old)²
+///   mean_new     = (1 - α) × mean_old + α × x
+///   variance_new = (1 - α) × variance_old + α × (x - mean_old)²
 
 use crate::{GooseResult, store::GooseStore};
 
-/// EWMA alpha (10-night memory constant).
-pub const ALPHA: f64 = 0.10;
+/// EWMA alpha (14-night half-life constant: 1 - 0.5^(1/14) ≈ 0.0483).
+/// ALG-ALIGN-01: aligned with my-whoop EWMA_ALPHA = 0.0483.
+pub const ALPHA: f64 = 0.0483;
 
 /// Minimum nights before z-score is non-None (cold-start guard).
 pub const MIN_NIGHTS_SEED: usize = 4;
@@ -91,7 +93,7 @@ impl EwmaState {
     /// Fold one new observation `x` into the EWMA state.
     ///
     /// First observation: mean is initialised to x, variance starts at 0.
-    /// Subsequent: standard EWMA recurrence (alpha = 0.10).
+    /// Subsequent: standard EWMA recurrence (alpha = 0.0483 / 14-night half-life).
     pub fn fold(&mut self, x: f64) {
         if self.night_count == 0 {
             self.mean = x;
@@ -204,12 +206,11 @@ mod tests {
 
     #[test]
     fn test_ewma_mean_recurrence() {
-        // After first fold at 50, fold 60:
-        //   mean = 0.9*50 + 0.1*60 = 51.0
+        // After first fold at 50, fold 60: mean = (1-α)*50 + α*60
         let mut state = EwmaState::default();
         state.fold(50.0);
         state.fold(60.0);
-        let expected_mean = 0.9 * 50.0 + 0.1 * 60.0;
+        let expected_mean = (1.0 - ALPHA) * 50.0 + ALPHA * 60.0;
         assert!(
             (state.mean - expected_mean).abs() < 1e-9,
             "mean recurrence: got {}, expected {}",
@@ -220,12 +221,11 @@ mod tests {
 
     #[test]
     fn test_ewma_variance_recurrence() {
-        // After first fold at 50 (variance=0), fold 60:
-        //   variance = 0.9*0 + 0.1*(60-50)^2 = 10.0
+        // After first fold at 50 (variance=0), fold 60: variance = (1-α)*0 + α*(60-50)^2
         let mut state = EwmaState::default();
         state.fold(50.0);
         state.fold(60.0);
-        let expected_var = 0.9 * 0.0 + 0.1 * (60.0 - 50.0_f64).powi(2);
+        let expected_var = (1.0 - ALPHA) * 0.0 + ALPHA * (60.0 - 50.0_f64).powi(2);
         assert!(
             (state.variance - expected_var).abs() < 1e-9,
             "variance recurrence: got {}, expected {}",
@@ -236,7 +236,7 @@ mod tests {
 
     #[test]
     fn test_ewma_longer_sequence() {
-        // Hand-compute 5-night sequence
+        // Hand-compute 5-night sequence with ALPHA constant
         let observations = [60.0_f64, 58.0, 62.0, 55.0, 70.0];
         let mut mean = 0.0_f64;
         let mut variance = 0.0_f64;
@@ -246,8 +246,8 @@ mod tests {
                 variance = 0.0;
             } else {
                 let old_mean = mean;
-                mean = 0.9 * old_mean + 0.1 * x;
-                variance = 0.9 * variance + 0.1 * (x - old_mean).powi(2);
+                mean = (1.0 - ALPHA) * old_mean + ALPHA * x;
+                variance = (1.0 - ALPHA) * variance + ALPHA * (x - old_mean).powi(2);
             }
         }
 
@@ -458,7 +458,7 @@ mod tests {
         insert_test_recovery_row(&store, "2024-01-02", Some(58.0), Some(56.0));
         insert_test_recovery_row(&store, "2024-01-03", Some(62.0), Some(54.0));
 
-        // Compute expected EWMA by hand
+        // Compute expected EWMA by hand using the current ALPHA constant.
         let hrv_vals = [60.0_f64, 58.0, 62.0];
         let rhr_vals = [55.0_f64, 56.0, 54.0];
         let mut expected_hrv_mean = 0.0_f64;
@@ -468,8 +468,8 @@ mod tests {
                 expected_hrv_mean = hrv;
                 expected_rhr_mean = rhr;
             } else {
-                expected_hrv_mean = 0.9 * expected_hrv_mean + 0.1 * hrv;
-                expected_rhr_mean = 0.9 * expected_rhr_mean + 0.1 * rhr;
+                expected_hrv_mean = (1.0 - ALPHA) * expected_hrv_mean + ALPHA * hrv;
+                expected_rhr_mean = (1.0 - ALPHA) * expected_rhr_mean + ALPHA * rhr;
             }
         }
 

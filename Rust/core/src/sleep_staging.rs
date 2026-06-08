@@ -24,7 +24,9 @@ pub const COLE_KRIPKE_SCALE_FACTOR: f64 = 0.001;
 pub const COLE_KRIPKE_WAKE_THRESHOLD: f64 = 1.0;
 
 /// Duration of each actigraphy epoch in minutes.
-pub const COLE_KRIPKE_EPOCH_MINUTES: f64 = 1.0;
+/// ALG-ALIGN-01: 30 s epochs (0.5 min) — aligned with my-whoop and standard actigraphy.
+/// WASO and SOL resolution doubles vs the previous 1-min setting.
+pub const COLE_KRIPKE_EPOCH_MINUTES: f64 = 0.5;
 
 /// Staging method emitted in every output that has at least one epoch.
 pub const STAGING_METHOD_ACTIGRAPHY: &str = "actigraphy_uncalibrated";

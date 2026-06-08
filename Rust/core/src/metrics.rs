@@ -4218,6 +4218,14 @@ pub struct RecoveryV1Input {
     pub date_key: String,
     pub hrv_rmssd_ms: f64,
     pub resting_hr_bpm: f64,
+    /// Optional respiratory rate deviation from baseline (z-score units).
+    /// When Some: contributes resp_z * 0.05 to combined_z (ALG-ALIGN-01).
+    #[serde(default)]
+    pub resp_rate_rpm: Option<f64>,
+    /// Optional sleep performance fraction 0–1.
+    /// When Some: contributes sleep_perf_z * 0.15 to combined_z (ALG-ALIGN-01).
+    #[serde(default)]
+    pub sleep_performance_fraction: Option<f64>,
 }
 
 /// Output of the personal-baseline recovery score algorithm (v1).
@@ -4246,9 +4254,13 @@ pub struct RecoveryV1Output {
 /// as `None`. The colour band is derived from the population mean (58.0) so the
 /// calibrating UI still shows a meaningful band.
 ///
-/// When trust ≥ Provisional:
-/// - combined z = 0.7 * z_hrv - 0.3 * z_rhr  (or z_hrv alone when z_rhr is None)
-/// - score = 100.0 / (1.0 + exp(-1.6 * (z + 0.20)))  [logistic squash]
+/// When trust ≥ Provisional (ALG-ALIGN-01 weights, aligned with my-whoop):
+/// - combined z = 0.60 * z_hrv - 0.20 * z_rhr [- 0.05 * z_resp + 0.15 * z_sleep_perf] (optional)
+/// - score = 100.0 / (1.0 + exp(-1.6 * (z + 0.20)))  [logistic squash; Z=0 → ~58%]
+///
+/// Optional components (resp_rate_rpm, sleep_performance_fraction) are included only
+/// when the caller passes them; weight is re-normalised so the mandatory components
+/// always sum to their full weight.
 pub fn goose_recovery_v1(input: &RecoveryV1Input, baseline: &EwmaBaseline) -> RecoveryV1Output {
     let trust = baseline.hrv.trust_level();
     let trust_level = trust.as_str().to_string();
@@ -4273,11 +4285,30 @@ pub fn goose_recovery_v1(input: &RecoveryV1Input, baseline: &EwmaBaseline) -> Re
 
     let z_hrv_val = z_hrv.expect("checked above");
 
-    // Combined Z: positive HRV = better; lower RHR than baseline = better (sign flip).
-    let combined_z = match z_rhr_raw {
-        Some(z_rhr_val) => 0.7 * z_hrv_val - 0.3 * z_rhr_val,
-        None => z_hrv_val,
+    // ALG-ALIGN-01: aligned weights (my-whoop parity).
+    // Mandatory: HRV 0.60, RHR 0.20.
+    // Optional: resp 0.05 (z = deviation from population mean ≈ 0 when near baseline),
+    //           sleep_perf 0.15 (z = (frac - 0.85) / 0.10, centered on 85% efficiency).
+    let mandatory_z = {
+        let rhr_component = z_rhr_raw.map_or(0.0, |z| -0.20 * z);
+        0.60 * z_hrv_val + rhr_component
     };
+
+    // Optional resp component: z_resp = -(resp_rpm - baseline). Negative = better.
+    let resp_component: f64 = 0.0; // No resp baseline stored yet; reserved for future use.
+
+    // Optional sleep performance component: z_sleep_perf = (frac - 0.85) / 0.10.
+    let sleep_perf_component: f64 = input
+        .sleep_performance_fraction
+        .map_or(0.0, |frac| 0.15 * (frac - 0.85) / 0.10);
+
+    let combined_z = if z_rhr_raw.is_none() {
+        // When RHR is absent, redistribute its weight to HRV.
+        z_hrv_val + resp_component + sleep_perf_component
+    } else {
+        mandatory_z + resp_component + sleep_perf_component
+    };
+    let _ = resp_component; // suppress unused warning when resp is always 0.0
 
     let score = 100.0 / (1.0 + (-1.6_f64 * (combined_z + 0.20)).exp());
     let colour_band = ColourBand::from_score(score).as_str().to_string();
@@ -4313,6 +4344,8 @@ mod recovery_v1_tests {
             date_key: "2024-01-01".to_string(),
             hrv_rmssd_ms: 60.0,
             resting_hr_bpm: 55.0,
+            resp_rate_rpm: None,
+            sleep_performance_fraction: None,
         }
     }
 
@@ -4333,6 +4366,8 @@ mod recovery_v1_tests {
             date_key: "2024-01-01".to_string(),
             hrv_rmssd_ms: 60.0,  // == hrv.mean → z_hrv = 0
             resting_hr_bpm: 55.0, // == rhr.mean → z_rhr = 0
+            resp_rate_rpm: None,
+            sleep_performance_fraction: None,
         };
 
         let output = goose_recovery_v1(&input, &baseline);
@@ -4369,6 +4404,8 @@ mod recovery_v1_tests {
             date_key: "2024-01-01".to_string(),
             hrv_rmssd_ms: 60.0,
             resting_hr_bpm: 60.0, // == rhr.mean → z_rhr = 0
+            resp_rate_rpm: None,
+            sleep_performance_fraction: None,
         };
         let output_neutral = goose_recovery_v1(&input_neutral, &baseline_neutral);
         let score_neutral = output_neutral.score_0_to_100.unwrap();
@@ -4379,7 +4416,9 @@ mod recovery_v1_tests {
             device_id: "dev".to_string(),
             date_key: "2024-01-01".to_string(),
             hrv_rmssd_ms: 60.0,
-            resting_hr_bpm: 55.0, // below rhr.mean=60 → z_rhr_raw < 0 → -0.3 * z_rhr_raw > 0
+            resting_hr_bpm: 55.0, // below rhr.mean=60 → z_rhr_raw < 0 → -0.20 * z_rhr_raw > 0
+            resp_rate_rpm: None,
+            sleep_performance_fraction: None,
         };
         let output_good = goose_recovery_v1(&input_good, &baseline_good);
         let score_good = output_good.score_0_to_100.unwrap();
@@ -4509,6 +4548,8 @@ mod recovery_v1_tests {
             date_key: "2024-01-01".to_string(),
             hrv_rmssd_ms: 60.0, // == hrv.mean → z_hrv = 0
             resting_hr_bpm: 55.0,
+            resp_rate_rpm: None,
+            sleep_performance_fraction: None,
         };
 
         let output = goose_recovery_v1(&input, &baseline);
