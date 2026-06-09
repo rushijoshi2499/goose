@@ -489,9 +489,9 @@ The Rust bridge exposes all core logic — protocol parsing, metric computation,
 Declared in `Rust/core/include/goose_core_bridge.h` (included via `GooseSwift/GooseSwift-Bridging-Header.h`):
 
 ```c
-const char *goose_bridge_handle_json(const char *request_json);
-void        goose_bridge_free_string(char *value);
-const char *goose_core_version_json(void);
+char *goose_bridge_handle_json(const char *request_json);
+void  goose_bridge_free_string(char *value);
+char *goose_core_version_json(void);
 ```
 
 `goose_bridge_handle_json` is synchronous and blocks the calling thread until complete. Never call it from the main thread or any `@MainActor` context for expensive methods — always dispatch to a background queue first.

@@ -216,7 +216,7 @@ Three modules were added or significantly updated in v5.0. Developers working on
 | Module | File | Purpose |
 |---|---|---|
 | `exercise_detection` | `src/exercise_detection.rs` | Detects exercise sessions from HR and gravity samples using the same constants as `exercise.py` in the server pipeline (`MIN_EXERCISE_MIN = 10 min`, `MERGE_GAP_S = 60 s`, `MOTION_THRESHOLD = 0.20 g`). |
-| `baselines` | `src/baselines.rs` | EWMA personal baseline engine for HRV RMSSD and resting HR. Alpha = 0.10 (10-night memory). Cold-start gate: z-scores are `None` until 4 nights; baseline marked ready after 7 nights; trusted after 14. Reconstructs state from `daily_recovery_metrics` rows — no new SQLite table. |
+| `baselines` | `src/baselines.rs` | EWMA personal baseline engine for HRV RMSSD and resting HR. Alpha = 0.0483 (14-night half-life; `1 − 0.5^(1/14)`). Cold-start gate: z-scores are `None` until 4 nights; baseline marked ready after 7 nights; trusted after 14. Reconstructs state from `daily_recovery_metrics` rows — no new SQLite table. |
 | `store` | `src/store.rs` | SQLite schema at version 19 (`CURRENT_SCHEMA_VERSION = 19`). New in v5.0: `exercise_sessions` table and the v19 migration. Schema is applied by `GooseStore::open` on every startup. |
 
 The `exercise_detection_tests.rs` integration test file covers `exercise_detection`. The `store_tests.rs` file verifies the v19 schema version assertion.
@@ -237,7 +237,7 @@ The complete method list is in `BRIDGE_METHODS` (a `&[&str]` constant in `bridge
 ```
 
 4. Implement the bridge function returning `GooseResult<serde_json::Value>`.
-5. Run `cargo test --test bridge_tests` — the constant-matches-dispatcher test will catch any drift between `BRIDGE_METHODS` and the match arms.
+5. Run `cargo test -p goose-core bridge_methods_constant_matches_dispatcher` — this unit test in `src/bridge.rs` verifies that `BRIDGE_METHODS` and the match arms stay in sync. (Note: `--test bridge_tests` targets only the integration test file and will not run this unit test.)
 
 ### Build artifacts
 
