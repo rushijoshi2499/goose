@@ -355,7 +355,7 @@ def read_device_frames(conn, device_id: str, from_ts: float, to_ts: float, limit
     # These carry the exact iOS shape already; NULL columns fall back to the same defaults
     # as the archive path above so the iOS importer sees a uniform dict format.
     db_rows = conn.execute(
-        """SELECT extract(epoch FROM ts)::float AS captured_at_unix,
+        """SELECT extract(epoch FROM captured_at)::float AS captured_at_unix,
                   frame_hex,
                   source,
                   device_model,
@@ -363,9 +363,9 @@ def read_device_frames(conn, device_id: str, from_ts: float, to_ts: float, limit
                   sensitivity
            FROM raw_frames
            WHERE device_id = %s
-             AND extract(epoch FROM ts) >= %s
-             AND extract(epoch FROM ts) <= %s
-           ORDER BY ts""",
+             AND extract(epoch FROM captured_at) >= %s
+             AND extract(epoch FROM captured_at) <= %s
+           ORDER BY captured_at""",
         (device_id, from_ts, to_ts),
     ).fetchall()
     for row in db_rows:

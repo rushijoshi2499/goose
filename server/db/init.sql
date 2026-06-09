@@ -105,23 +105,11 @@ CREATE TABLE IF NOT EXISTS gravity_samples (
 SELECT create_hypertable('gravity_samples', 'ts', if_not_exists => TRUE);
 
 -- ── Raw frames uploaded directly from iOS (POST /v1/ingest-frames) ──────────
--- Frames ingested via the live upload path (not the archive batch path) are
--- stored here. TimescaleDB hypertable on ts; PK covers (device_id, ts, frame_hex)
--- so re-uploading the same frame at the same timestamp is a no-op.
-CREATE TABLE IF NOT EXISTS raw_frames (
-    device_id    TEXT NOT NULL REFERENCES devices(device_id),
-    ts           TIMESTAMPTZ NOT NULL,          -- captured_at wall-clock (from iOS)
-    frame_hex    TEXT NOT NULL,
-    source       TEXT,                          -- "ios.corebluetooth.notification"
-    device_type  TEXT,                          -- "GOOSE"
-    device_model TEXT,                          -- device name / "WHOOP Goose"
-    sensitivity  TEXT,                          -- "user-owned-capture"
-    received_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
-    PRIMARY KEY (device_id, ts, frame_hex)
-);
-SELECT create_hypertable('raw_frames', 'ts', if_not_exists => TRUE);
-CREATE INDEX IF NOT EXISTS raw_frames_device_time ON raw_frames (device_id, ts);
-ALTER TABLE raw_frames ADD COLUMN IF NOT EXISTS device_generation TEXT DEFAULT '5.0';
+-- Table created in an earlier deployment with column `captured_at` (not `ts`).
+-- We keep the existing schema intact; only add the dedup unique index needed for
+-- ON CONFLICT idempotent upserts, if it doesn't exist yet.
+CREATE UNIQUE INDEX IF NOT EXISTS raw_frames_dedup
+    ON raw_frames (device_id, captured_at, frame_hex);
 
 -- ── WHOOP 5.0 generation tag (Phase 05, D-09 / SRV-04) ────────────────────────
 -- Idempotent migration: tag every decoded-stream hypertable with the device
