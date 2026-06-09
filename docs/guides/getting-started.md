@@ -36,7 +36,7 @@ rustup target add aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios
 ## Clone the repository
 
 ```bash
-git clone https://github.com/b-nnett/goose.git
+git clone https://github.com/tigercraft4/goose.git
 cd goose
 ```
 

@@ -1,7 +1,7 @@
 <!-- generated-by: gsd-doc-writer -->
 # Testing
 
-Goose has three independent test surfaces: the **Rust core** (44 integration test files, 128 passing tests as of v5.0, runs on Linux and macOS), the **server stack** (pytest suite against FastAPI + TimescaleDB), and the **iOS app** (no automated test target; verified manually with a physical WHOOP device). There is no Swift/XCTest target in the project.
+Goose has three independent test surfaces: the **Rust core** (45 integration test files, 128 passing tests as of v5.0, runs on Linux and macOS), the **server stack** (pytest suite against FastAPI + TimescaleDB), and the **iOS app** (no automated test target; verified manually with a physical WHOOP device). There is no Swift/XCTest target in the project.
 
 ---
 
@@ -9,7 +9,7 @@ Goose has three independent test surfaces: the **Rust core** (44 integration tes
 
 ### Test framework
 
-Cargo's built-in test runner. Integration tests live in `Rust/core/tests/` (44 files). Unit tests are collocated with source modules in `Rust/core/src/`. The crate ships many binaries used by integration tests as CLI fixtures, including `goose-fixture-index`, `goose-parser-fixture-runner`, `goose-capture-import`, `goose-capture-sqlite-import`, `goose-local-health-validation-suite`, `goose-reference-algo-runner`, `goose-property-test-suite`, and others defined in `Rust/core/Cargo.toml`.
+Cargo's built-in test runner. Integration tests live in `Rust/core/tests/` (45 files). Unit tests are collocated with source modules in `Rust/core/src/`. The crate ships many binaries used by integration tests as CLI fixtures, including `goose-fixture-index`, `goose-parser-fixture-runner`, `goose-capture-import`, `goose-capture-sqlite-import`, `goose-local-health-validation-suite`, `goose-reference-algo-runner`, `goose-property-test-suite`, and others defined in `Rust/core/Cargo.toml`.
 
 A `Rust/core/fixtures/` directory provides golden hex frames and synthetic capture data (under `fixtures/owned/` and `fixtures/synthetic/`) consumed by tests such as `fixture_tests.rs`, `capture_import_tests.rs`, and `protocol_tests.rs`.
 
@@ -266,7 +266,7 @@ Prerequisites: the self-hosted server must be running (see `server/README.md`).
 
 ## CI
 
-Two workflows run the automated test gates on every push and pull request that touches `Rust/` or `Rust/core/`.
+Five workflows run the automated test gates on every push and pull request.
 
 ### `rust-core-ci.yml` — Build, test, and lint
 

@@ -30,10 +30,11 @@ The server uses `secrets.compare_digest` for constant-time comparison, preventin
 
 ### Rust Bridge FFI
 
-The bridge does not use network authentication. It is called in-process via a C function pair:
+The bridge does not use network authentication. It is called in-process via three C symbols from `libgoose_core.a`:
 
 - `goose_bridge_handle_json(request: *const c_char) -> *mut c_char`
 - `goose_bridge_free_string(ptr: *mut c_char)`
+- `goose_core_version_json() -> *const c_char`
 
 All security is at the iOS app/OS level; the bridge is not exposed over any network interface.
 
@@ -587,7 +588,7 @@ Every caller creates its own `GooseRustBridge` instance — the bridge is statel
 
 ### Method Catalogue
 
-The bridge supports 140 RPC methods at compile time. The full live list is available at runtime via `core.list_methods`. Methods are grouped by namespace:
+The bridge supports 142 RPC methods at compile time. The full live list is available at runtime via `core.list_methods`. Methods are grouped by namespace:
 
 #### Core / Discovery
 
@@ -675,6 +676,7 @@ The bridge supports 140 RPC methods at compile time. The full live list is avail
 | `metrics.daily_activity_metrics` | `database_path`, `start_time_unix_ms`, `end_time_unix_ms` | List daily activity metric rows |
 | `metrics.hourly_activity_metrics` | `database_path`, `start_time_unix_ms`, `end_time_unix_ms` | List hourly activity metric rows |
 | `metrics.activity_unavailable_daily_status` | `database_path`, `date_key`, `timezone`, `start_time_unix_ms`, `end_time_unix_ms` | Mark activity as unavailable for a day |
+| `metrics.imu_step_count_v1` | `ImuStepCountInput` fields | Estimate step count from IMU data using algorithm v1 |
 
 #### Metrics — Energy
 
@@ -797,7 +799,8 @@ Stream names passed to `sync.mark_synced` and `sync.rows_pending_upload` are val
 |--------|----------|-------------|
 | `overnight.mirror_batch` | `database_path`, `sessions: [...]`, `raw_notifications: [...]`, `historical_range_polls: [...]` | Persist overnight capture data from multiple sources |
 | `overnight.mirror_counts` | `database_path`, `session_id` | Count rows mirrored in an overnight session |
-| `upload.get_recent_decoded_streams` | `database_path` | Retrieve decoded streams for server upload |
+| `upload.get_recent_decoded_streams` | `database_path` | Retrieve decoded streams (all synced=0 rows) for server upload |
+| `upload.get_raw_frames_for_upload` | `database_path` | Retrieve raw BLE frame batches pending upload to the server |
 
 #### Commands
 

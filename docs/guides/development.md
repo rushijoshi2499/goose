@@ -94,16 +94,22 @@ GooseBLEClient+UserActions.swift            User-facing BLE actions
 GooseBLEClient+VitalsAndLogging.swift       Vitals forwarding and BLE logging
 
 HealthDataStore.swift                       Metric query coordinator
-HealthDataStore+Sleep.swift                 Sleep metric queries
-HealthDataStore+Cardio.swift                Cardio load queries
-HealthDataStore+PacketInputs.swift          Packet input readiness
-HealthDataStore+Snapshots.swift             Summary snapshot queries
-HealthDataStore+StaticSnapshots.swift       Static/cached snapshot queries
 HealthDataStore+ActivitySnapshots.swift     Activity snapshot queries
+HealthDataStore+Cardio.swift                Cardio load queries
 HealthDataStore+CoachSummaries.swift        Coach summary queries
+HealthDataStore+Exercise.swift              Exercise session queries
+HealthDataStore+IMUSteps.swift              IMU step count queries
+HealthDataStore+PacketInputs.swift          Packet input readiness
+HealthDataStore+Readiness.swift             Readiness metric queries
+HealthDataStore+Recovery.swift              Recovery score queries
+HealthDataStore+Sleep.swift                 Sleep metric queries
+HealthDataStore+Snapshots.swift             Summary snapshot queries
+HealthDataStore+StagingSleep.swift          Staging sleep queries
+HealthDataStore+StaticSnapshots.swift       Static/cached snapshot queries
 HealthDataStore+StressEnergy.swift          Stress and energy metric queries
 HealthDataStore+Trends.swift                Trend computation queries
 HealthDataStore+Utilities.swift             Shared query helpers
+HealthDataStore+V24Biometrics.swift         v24 biometric metric queries
 HealthDataStore+Vitals.swift                Vitals metric queries
 ```
 

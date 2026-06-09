@@ -14,7 +14,7 @@ See [Getting Started](docs/guides/getting-started.md) for prerequisites and firs
 ### Prerequisites
 
 - macOS with Xcode installed (iOS 26 SDK required)
-- Apple Developer account with signing configured for bundle ID `com.goose.swift`
+- Apple Developer account with signing configured for bundle ID `com.tigercraft4.goose`
 - Rust toolchain via `rustup`
 - iOS Rust targets:
 
@@ -125,7 +125,7 @@ There is no formatter config file. Match the surrounding file's style exactly. R
 
 ### Rust
 
-- Edition 2024, MSRV 1.94.
+- Edition 2024, MSRV 1.96.
 - Run `cargo clippy` and `cargo fmt` before submitting. Clippy is non-blocking in CI but warnings should not be introduced.
 - Follow the existing module structure under `Rust/core/src/`.
 

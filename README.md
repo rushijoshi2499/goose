@@ -91,7 +91,7 @@ The current health metric UI draws heavily from [Bevel](https://www.bevel.health
 
 - macOS with Xcode installed.
 - iOS 26.0 SDK and an iOS 26.0 capable simulator/device.
-- Apple Developer signing configured for the `com.goose.swift` bundle identifier.
+- Apple Developer signing configured for the `com.tigercraft4.goose` bundle identifier.
 - Rust and Cargo for building the Goose Rust core from the committed `Rust/core` source.
 - iOS Rust targets installed with `rustup`; see the Rust Core Bridge section below.
 - Docker (for the self-hosted server — optional).
@@ -147,7 +147,7 @@ After a successful physical-device build, reinstall and launch:
 ```sh
 xcrun devicectl device uninstall app \
   --device <device-id> \
-  com.goose.swift
+  com.tigercraft4.goose
 
 xcrun devicectl device install app \
   --device <device-id> \
@@ -156,7 +156,7 @@ xcrun devicectl device install app \
 xcrun devicectl device process launch \
   --device <device-id> \
   --terminate-existing \
-  com.goose.swift
+  com.tigercraft4.goose
 ```
 
 ## Self-Hosted Server

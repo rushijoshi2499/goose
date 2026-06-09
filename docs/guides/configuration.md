@@ -31,8 +31,11 @@ All iOS configuration is done at runtime through the app UI. There is no build-t
 When upload is enabled and a URL is configured, the **More > Remote Server** screen shows:
 
 - **Server reachable** — result of a `GET /healthz` check. Runs once automatically per app session when upload is enabled; also runs immediately when the user taps **Save**.
-- **Last sync** — timestamp of the most recent successful batch upload, plus the count of records acknowledged by the server.
+- **Test Connection** — manual button that hits `GET /healthz` then `GET /v1/devices` (auth-gated) and reports inline: connected with device count, auth failure (401/403), or server unreachable.
+- **Last sync** — timestamp of the most recent successful batch upload, plus the count of records acknowledged by the server. A **Now** button triggers an immediate manual upload.
 - **Pending batches** — count of batches queued but not yet delivered.
+- **Sync pendente** — count of `hr_samples` rows not yet marked synced. A **Backfill** button replays `sync.backfill_streams` over decoded frames and then uploads.
+- **Import do servidor** — fetches raw BLE frames from `GET /v1/export/frames/{device_id}` and imports them into the local SQLite via `capture.import_frame_batch`, rebuilding the trust chain on a fresh install without a BLE reconnection.
 
 ### Upload retry behaviour
 
