@@ -11,7 +11,7 @@ import psycopg
 from fastapi import Depends, FastAPI, Header, HTTPException, Query
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from . import db, ingest, read, store
 from .analysis import daily
@@ -62,7 +62,14 @@ def require_auth(authorization: str = Header(default="")) -> None:
 
 class Frame(BaseModel):
     seq: int | None = None
-    hex: str
+    hex: str = Field(..., pattern=r"^[0-9a-fA-F]*$")
+
+    @field_validator("hex")
+    @classmethod
+    def hex_even_length(cls, v: str) -> str:
+        if len(v) % 2 != 0:
+            raise ValueError("hex must have even length (complete bytes)")
+        return v
 
 
 class ClockRef(BaseModel):
