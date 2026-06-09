@@ -75,7 +75,7 @@ def cmd_auth() -> None:
     print(f"  access_token  : {data.get('access_token', '(missing)')[:20]}...", file=sys.stderr)
     # Print the refresh token to stderr so it does not appear in shell history,
     # pipe captures, or log files that record stdout.
-    print(f"\n  refresh_token : {data.get('refresh_token', '(missing)')}", file=sys.stderr)
+    print(f"\n  refresh_token : {data.get('refresh_token', '(missing)')[:20]}...", file=sys.stderr)
     print("\n  Copy the refresh_token above and store it as WHOOP_REFRESH_TOKEN"
           " in your .env / secrets store.", file=sys.stderr)
 
