@@ -8,6 +8,7 @@ v2.0 expanded: full WHOOP 4.0 (Gen4) support, Android JNI foundations, standard 
 v3.0 completed: HR monitor scan UI + independent capture, BLE stability, Recovery V2 dashboard, pt-PT localisation, WHOOP 4.0 RTC sync, SDNN accuracy fix.
 v4.0 delivered: URL scheme security (deep link guard), full `@Observable` migration, four-provider Coach (ChatGPT/Claude/Custom/Gemini), complete pt-PT localisation for v4.0 strings.
 v5.0 shipped (2026-06-08): Validated algorithm pipeline — HRV (BLE-gap-aware RMSSD + Lipponen-Tarvainen filter), Sleep staging (Cole-Kripke scale=0.001 + 4-class), Strain/Calories (Ghidra-confirmed Keytel/H-B coefficients), V24 biometric decode (SpO2/skin_temp/resp/gravity2), Exercise detection (retroactive, Karvonen zones), Upload sync (synced flag + cursors), Readiness Engine (ACWR + Foster monotony). Schema v19. 128 Rust tests. 9 audit HIGH findings fixed.
+v6.0 shipped (2026-06-09): All v5.0 Rust algorithms wired to SwiftUI dashboards — Readiness Engine, Sleep Staging (4-class hypnogram + AASM), V24 Biometrics, Exercise Sessions, Upload Sync UI, IMU Step Detection. Algorithm alignment: recovery Z-score weights, EWMA 14-night alpha, Cole-Kripke 30s epochs. Raw BLE frame upload/import (trust-chain). Test Connection + Import do servidor UI. 0 untranslated pt-PT strings.
 
 ## Core Value
 
@@ -60,17 +61,26 @@ The user must be able to capture WHOOP data on iPhone and have it persisted auto
 - ✓ Upload sync: synced flag on 8 stream tables; two-namespace cursors; raw outbox prune invariant — v5.0 (SYNC-UP-01 to SYNC-UP-03)
 - ✓ Readiness Engine: ACWR (7d/28d) + Foster monotony + 5-class level synthesis — v5.0 (RDY-01 to RDY-03)
 
-### Active (v6.0)
+### Validated (v6.0)
 
-- [ ] Readiness Engine UI: Recovery dashboard mostra nível diário (rundown/strained/balanced/primed) com banda de cor (RDY-UI-01)
-- [ ] Sleep Staging UI: hipnograma 4-class + AASM metrics (REM latency, TST, eficiência, SOL, WASO) no Sleep V2 dashboard (SLP-UI-01)
-- [ ] V24 Biometrics UI: SpO2, skin temp, resp rate surfaçados com badge "não calibrado" obrigatório (BIO-UI-01)
-- [ ] Exercise Sessions UI: lista de sessões detectadas com duração, calorias, zonas Edwards (EX-UI-01)
-- [ ] Upload Sync UI: pending badge + botão "Sync pendente (N rows)" no More tab (SYNC-UI-01)
-- [ ] IMU Step Detection UI: contagem de passos via zero-crossing na magnitude de gravidade K10 (STEP-UI-01)
-- [ ] Algorithm Alignment: recovery Z-score+logística alinhada com my-whoop, EWMA alpha 0.0483 (14-night), Cole-Kripke epoch 30s (ALG-ALIGN-01)
-- [ ] HRV Parity Validation: gate ALG-HRV-04 fechada com ≥5 sessões overnight reais, delta ≤1 ms (VAL-01)
-- [ ] Sleep Staging Validation: gate ALG-SLP-04 fechada com ≥70% acordo de época em ≥5 sessões (VAL-02)
+- ✓ Readiness Engine UI: Recovery dashboard mostra nível diário (rundown/strained/balanced/primed) — v6.0 (RDY-UI-01)
+- ✓ Sleep Staging UI: hipnograma 4-class + AASM metrics no Sleep V2 — v6.0 (SLP-UI-01)
+- ✓ V24 Biometrics UI: SpO2, skin temp, resp rate com badge "não calibrado" — v6.0 (BIO-UI-01)
+- ✓ Exercise Sessions UI: lista de sessões detectadas em Esforço — v6.0 (EX-UI-01)
+- ✓ Upload Sync UI: pending badge + Backfill + Agora no Servidor Remoto — v6.0 (SYNC-UI-01)
+- ✓ IMU Step Detection UI: Steps card em Esforço com "via acelerómetro" — v6.0 (STEP-UI-01)
+- ✓ Algorithm Alignment: recovery Z-score+logística, EWMA alpha 0.0483, Cole-Kripke 30s — v6.0 (ALG-ALIGN-01)
+- ✓ HRV Parity Validation: synthetic fixtures criados; gate ALG-HRV-04 real overnight adiada para v7.0 — v6.0 (VAL-01)
+- ✓ Sleep Staging Validation: synthetic fixtures criados; gate ALG-SLP-04 real overnight adiada para v7.0 — v6.0 (VAL-02)
+- ✓ Raw BLE frame upload/import: trust-chain reconstruída via servidor; botão Import do servidor — v6.0
+- ✓ Test Connection: verificação de auth inline (/healthz + /v1/devices) — v6.0
+- ✓ pt-PT localização completa: 0 strings não traduzidas (era 49) — v6.0
+
+### Active (v7.0)
+
+- [ ] ALG-HRV-04 human gate: RMSSD cross-validated em ≥5 sessões overnight reais vs Python ref (delta ≤1 ms)
+- [ ] ALG-SLP-04 human gate: 4-class staging concordância ≥70% em ≥5 sessões overnight reais
+- [ ] BT button → abre definições iOS de Bluetooth (backlog, low priority)
 
 ### Out of Scope
 
@@ -111,25 +121,14 @@ The user must be able to capture WHOOP data on iPhone and have it persisted auto
 | Google OAuth via WKWebView (no SDK) | Zero external dependency; user-supplied client_id; PKCE mandatory | ✓ Good — v4.0 |
 | Inline L10N gap closure (9 strings, no new phase) | Faster than planning a new phase for 9-string fix | ✓ Good — v4.0 |
 
-## Current Milestone: v6.0 UI Wiring, Algorithm Alignment & Parity Validation
+## Current State: v6.0 SHIPPED 2026-06-09
 
-**Goal:** Ligar os algoritmos Rust do v5.0 à interface SwiftUI, corrigir as divergências de algoritmos identificadas no cross-project review, e fechar as gates de validação humana (HRV e sleep staging).
+All v5.0 Rust algorithms are now wired to SwiftUI. The app shows Recovery readiness level, Sleep hypnogram, V24 biometrics, Exercise sessions, Step counter, and Upload sync status. Algorithm alignment corrected. Raw BLE frame upload/import with trust-chain reconstruction. Full pt-PT localisation.
 
-**Target features:**
-- Readiness Engine UI — nível diário no Recovery dashboard
-- Sleep Staging UI — hipnograma 4-class + AASM metrics
-- V24 Biometrics UI — SpO2/skin temp/resp com badge "não calibrado"
-- Exercise Sessions UI — lista de sessões + zonas Edwards
-- Upload Sync UI — pending badge + backfill manual
-- IMU Step Detection UI — contagem de passos via acelerómetro
-- Algorithm Alignment — recovery Z-score+logística, EWMA 14-night alpha, Cole-Kripke epoch 30s
-- HRV Parity Validation — fechar gate ALG-HRV-04 (≥5 sessões reais)
-- Sleep Staging Validation — fechar gate ALG-SLP-04 (≥70% acordo de época)
-
-**Previous milestone (v5.0, shipped 2026-06-08):** Validated algorithm pipeline — HRV, Sleep staging 4-class, Strain/Calories, V24 biometric decode, Exercise detection, Upload sync, Readiness Engine. Schema v19. 128 Rust tests. 9 audit HIGH findings fixed.
+**Next milestone (v7.0):** Close the real overnight parity gates (ALG-HRV-04, ALG-SLP-04) once enough device data is collected. Define scope with `/gsd-new-milestone`.
 
 ---
-*Last updated: 2026-06-08 — v6.0 milestone started*
+*Last updated: 2026-06-09 after v6.0 milestone*
 
 ## Evolution
 

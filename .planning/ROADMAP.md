@@ -7,7 +7,8 @@
 - ✅ **v3.0 Wearable UX, CI Hardening & RTC Sync** — Phases 9-15 (shipped 2026-06-05)
 - ✅ **v4.0 Security, Performance & Coach Expansion** — Phases 16-19 (shipped 2026-06-06)
 - ✅ **v5.0 Metrics Accuracy, IMU & Upstream Fixes** — Phases 20-35 (shipped 2026-06-08)
-- 🚧 **v6.0 UI Wiring, Algorithm Alignment & Parity Validation** — Phases 36-44 (active)
+- ✅ **v6.0 UI Wiring, Algorithm Alignment & Parity Validation** — Phases 36-45 (shipped 2026-06-09)
+- 📋 **v7.0** — (planning)
 
 ## Phases
 
@@ -80,20 +81,29 @@ Known deferred: ALG-HRV-04, ALG-SLP-04, VAL-01 (human gates — require real WHO
 </details>
 
 <details>
-<summary>🚧 v6.0 UI Wiring, Algorithm Alignment & Parity Validation (Phases 36-44) — ACTIVE</summary>
+<summary>✅ v6.0 UI Wiring, Algorithm Alignment & Parity Validation (Phases 36-45) — SHIPPED 2026-06-09</summary>
 
-- [x] **Phase 36: Readiness Engine UI** — RDY-UI-01 — completed 2026-06-08
-- [x] **Phase 37: Sleep Staging UI (4-class hypnogram + AASM)** — SLP-UI-01 — completed 2026-06-08
-- [x] **Phase 38: V24 Biometrics UI (SpO2, skin temp, resp)** — BIO-UI-01 — completed 2026-06-08
-- [x] **Phase 39: Exercise Sessions UI** — EX-UI-01 — completed 2026-06-08
-- [x] **Phase 40: Upload Sync UI (mark synced + pending badge)** — SYNC-UI-01 — completed 2026-06-08
-- [x] **Phase 41: IMU-based Step Detection UI** — STEP-UI-01 — completed 2026-06-08
-- [x] **Phase 42: Algorithm Alignment (recovery formula, EWMA half-life, sleep epoch 30s)** — ALG-ALIGN-01 — completed 2026-06-08
-- [x] **Phase 43: HRV Parity Validation (ALG-HRV-04 / VAL-01 human gate)** — VAL-01 — completed 2026-06-08
-- [x] **Phase 44: Sleep Staging Validation (ALG-SLP-04 human gate)** — VAL-02 — completed 2026-06-08
-- [ ] **Phase 45: Localização pt-PT (tradução completa da UI)** — L10N-01
+- [x] Phase 36: Readiness Engine UI — RDY-UI-01 — completed 2026-06-08
+- [x] Phase 37: Sleep Staging UI (4-class hypnogram + AASM) — SLP-UI-01 — completed 2026-06-08
+- [x] Phase 38: V24 Biometrics UI (SpO2, skin temp, resp) — BIO-UI-01 — completed 2026-06-08
+- [x] Phase 39: Exercise Sessions UI — EX-UI-01 — completed 2026-06-08
+- [x] Phase 40: Upload Sync UI (mark synced + pending badge) — SYNC-UI-01 — completed 2026-06-08
+- [x] Phase 41: IMU-based Step Detection UI — STEP-UI-01 — completed 2026-06-08
+- [x] Phase 42: Algorithm Alignment (recovery formula, EWMA half-life, sleep epoch 30s) — ALG-ALIGN-01 — completed 2026-06-08
+- [x] Phase 43: HRV Parity Validation (synthetic fixtures; real overnight deferred) — VAL-01 — completed 2026-06-08
+- [x] Phase 44: Sleep Staging Validation (synthetic fixtures; real overnight deferred) — VAL-02 — completed 2026-06-08
+- [x] Phase 45: pt-PT localisation + trust-chain import UI + Test Connection — L10N-01 — completed 2026-06-09
+
+Full details: `.planning/milestones/v6.0-ROADMAP.md`
+
+Known deferred: ALG-HRV-04 real overnight cross-validation (v7.0), ALG-SLP-04 real overnight concordance (v7.0)
 
 </details>
+
+### 📋 v7.0 (Planning)
+
+- [ ] ALG-HRV-04 gate: RMSSD cross-validated in ≥5 real overnight sessions
+- [ ] ALG-SLP-04 gate: 4-class staging ≥70% epoch concordance in ≥5 real overnight sessions
 
 ## Phase Details
 
