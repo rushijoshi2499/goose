@@ -1,14 +1,14 @@
 ---
 gsd_state_version: 1.0
-milestone: v6.0
-milestone_name: UI Wiring, Algorithm Alignment & Parity Validation
-status: active
-last_updated: "2026-06-08T19:07:32.335Z"
-last_activity: 2026-06-08
+milestone: v7.0
+milestone_name: Sync Correctness, Async & Sleep Sync
+status: executing
+last_updated: "2026-06-09T23:24:41.010Z"
+last_activity: 2026-06-09 -- Phase 46 execution started
 progress:
-  total_phases: 9
+  total_phases: 12
   completed_phases: 0
-  total_plans: 0
+  total_plans: 2
   completed_plans: 0
   percent: 0
 ---
@@ -17,17 +17,18 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-06-04)
+See: .planning/PROJECT.md (updated 2026-06-09)
 
-**Core value:** The user captures WHOOP data on iPhone and it is automatically persisted on their personal server — without depending on external infrastructure.
-**Current focus:** Phase 36 — Readiness Engine UI
+**Core value:** The user captures WHOOP data on iPhone and it is automatically persisted on their personal server — without depending on external infrastructure. Metrics align with WHOOP from the same raw data.
+**Current focus:** Phase 46 — upload-route-alignment
 
 ## Current Position
 
-Phase: 36 — Readiness Engine UI
-Plan: —
-Status: Roadmap active — ready to plan
-Last activity: 2026-06-08 — Roadmap created; 9 phases defined
+Milestone: v7.0 — Sync Correctness, Async & Sleep Sync
+Phase: 46 (upload-route-alignment) — EXECUTING
+Plan: 1 of 2
+Status: Executing Phase 46
+Last activity: 2026-06-09 -- Phase 46 execution started
 
 ## Performance Metrics
 
@@ -166,6 +167,6 @@ Items acknowledged and deferred at v5.0 milestone close on 2026-06-08:
 
 ## Session Continuity
 
-Last session: 2026-06-08T20:00:00Z
-Status: v5.0 SHIPPED — milestone archived
-Next: /gsd-new-milestone to start v6.0
+Last session: 2026-06-10
+Status: v7.0 STARTED — REQUIREMENTS.md (12 requisitos) + ROADMAP.md (Phases 46-51) criados
+Next: /gsd-discuss-phase 46 ou /gsd-plan-phase 46 — Upload Route Alignment
