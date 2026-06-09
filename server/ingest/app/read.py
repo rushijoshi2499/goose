@@ -293,6 +293,67 @@ def query_workouts(conn, device_id, start_date, end_date):
     return [dict(zip(_WORKOUT_COLS, r)) for r in rows]
 
 
+def read_device_frames(conn, device_id: str, from_ts: float, to_ts: float, limit: int = 5000):
+    """Return raw frames for a device in [from_ts, to_ts] unix seconds, paginatable.
+
+    Timestamps are interpolated linearly within each batch's [start_ts, end_ts] window.
+    Returns list of dicts compatible with the iOS capture.import_frame_batch format:
+      {captured_at_unix, frame_hex, source, device_model, device_type, sensitivity}
+    """
+    name_row = conn.execute(
+        "SELECT name FROM devices WHERE device_id = %s", (device_id,)
+    ).fetchone()
+    device_name = (name_row[0] or "WHOOP Goose") if name_row else "WHOOP Goose"
+
+    batches = conn.execute(
+        """SELECT file_path,
+                  extract(epoch FROM start_ts)::float AS start_unix,
+                  extract(epoch FROM end_ts)::float   AS end_unix,
+                  packet_count
+           FROM raw_batches
+           WHERE device_id = %s
+             AND extract(epoch FROM end_ts) >= %s
+             AND extract(epoch FROM start_ts) <= %s
+           ORDER BY start_ts""",
+        (device_id, from_ts, to_ts),
+    ).fetchall()
+
+    out = []
+    for file_path, start_unix, end_unix, packet_count in batches:
+        if len(out) >= limit:
+            break
+        if not file_path:
+            continue
+        try:
+            with open(file_path, "rb") as fh:
+                raw = zstandard.ZstdDecompressor().decompress(fh.read())
+        except (OSError, Exception):
+            continue
+
+        lines = [ln for ln in raw.decode().splitlines() if ln]
+        n = len(lines)
+        if n == 0:
+            continue
+        duration = max((end_unix or start_unix) - (start_unix or 0), 0.0)
+        for i, hex_line in enumerate(lines):
+            frac = i / n if n > 1 else 0.0
+            ts = (start_unix or 0.0) + frac * duration
+            if ts < from_ts or ts > to_ts:
+                continue
+            out.append({
+                "captured_at_unix": ts,
+                "frame_hex": hex_line,
+                "source": "ios.corebluetooth.notification",
+                "device_model": device_name,
+                "device_type": "GOOSE",
+                "sensitivity": "user-owned-capture",
+            })
+            if len(out) >= limit:
+                break
+
+    return out
+
+
 from whoop_protocol import parse_frame
 
 

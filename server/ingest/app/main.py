@@ -424,6 +424,21 @@ def backfill_workouts(body: BackfillWorkouts):
     return {"recomputed": len(results), "days": results}
 
 
+@app.get("/v1/export/frames/{device_id}", dependencies=[Depends(require_auth)])
+def export_device_frames(
+    device_id: str,
+    from_: float = Query(0.0, alias="from", ge=0.0),
+    to: float = Query(9_999_999_999.0, alias="to"),
+    limit: int = Query(5000, ge=1, le=5000),
+):
+    """Export raw frames for a device in [from, to] unix seconds (paginated).
+    iOS calls this as GET /v1/export/frames/{deviceID}?from=...&to=...&limit=5000
+    to import historical data on a fresh install via capture.import_frame_batch."""
+    with psycopg.connect(cfg.db_dsn) as conn:
+        frames = read.read_device_frames(conn, device_id, from_ts=from_, to_ts=to, limit=limit)
+    return {"device_id": device_id, "frames": frames, "count": len(frames)}
+
+
 @app.get("/v1/batches/{batch_id}/frames", dependencies=[Depends(require_auth)])
 def get_batch_frames(batch_id: str):
     with psycopg.connect(cfg.db_dsn) as conn:
