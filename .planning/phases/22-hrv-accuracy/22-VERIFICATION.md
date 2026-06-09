@@ -1,9 +1,11 @@
 ---
 phase: 22-hrv-accuracy
 verified: 2026-06-07T00:00:00Z
-status: human_needed
+status: deferred
 score: 16/17 must-haves verified
 overrides_applied: 0
+deferred_at: 2026-06-09
+deferred_reason: "ALG-HRV-04 cross-validation requires >= 5 real overnight WHOOP sessions with RR intervals captured by the Goose iOS app and compared against the my-whoop Python reference pipeline. Synthetic fixtures created in Phase 43 confirm algorithmic correctness but do not substitute for real physiological data. Deferred to v7.0 when sufficient overnight data is available."
 human_verification:
   - test: "Run goose_hrv_v0 on >= 5 real overnight WHOOP sessions and compare RMSSD output to the my-whoop Python reference"
     expected: "Delta <= 1 ms on all 5 sessions (ALG-HRV-04 cross-validation gate)"

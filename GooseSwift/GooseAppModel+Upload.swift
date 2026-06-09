@@ -236,6 +236,60 @@ extension GooseAppModel {
     return formatter.string(from: date)
   }
 
+  // Manual connection test — hits /healthz then /v1/devices (auth-gated).
+  // Reports inline result via connectionTestResult.
+  func testServerConnection() {
+    guard !connectionTestRunning else { return }
+    let serverURLString = UserDefaults.standard.string(forKey: RemoteServerStorage.serverURL) ?? ""
+    guard !serverURLString.isEmpty, let baseURL = URL(string: serverURLString) else {
+      connectionTestResult = "No server URL configured."
+      return
+    }
+    guard let token = (try? RemoteServerKeychain.loadToken()) ?? nil, !token.isEmpty else {
+      connectionTestResult = "No API token configured."
+      return
+    }
+    connectionTestRunning = true
+    connectionTestResult = nil
+    Task.detached(priority: .utility) { [weak self] in
+      guard let self else { return }
+      // Step 1: /healthz
+      var healthzReq = URLRequest(url: baseURL.appendingPathComponent("healthz"))
+      healthzReq.timeoutInterval = 5
+      guard let (_, healthzResp) = try? await URLSession.shared.data(for: healthzReq),
+            (healthzResp as? HTTPURLResponse)?.statusCode == 200 else {
+        await MainActor.run { [weak self] in
+          self?.connectionTestRunning = false
+          self?.connectionTestResult = "❌ Server unreachable"
+        }
+        return
+      }
+      // Step 2: /v1/devices (auth check)
+      var devicesReq = URLRequest(url: baseURL.appendingPathComponent("v1/devices"))
+      devicesReq.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+      devicesReq.timeoutInterval = 8
+      let result: String
+      if let (data, devResp) = try? await URLSession.shared.data(for: devicesReq),
+         let http = devResp as? HTTPURLResponse {
+        if http.statusCode == 200,
+           let devs = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
+          result = "✅ Connected · \(devs.count) device\(devs.count == 1 ? "" : "s")"
+        } else if http.statusCode == 401 || http.statusCode == 403 {
+          result = "⚠️ Server reachable · Auth failed (\(http.statusCode))"
+        } else {
+          result = "⚠️ Server reachable · Devices error (\(http.statusCode))"
+        }
+      } else {
+        result = "⚠️ Server reachable · Auth check failed"
+      }
+      await MainActor.run { [weak self] in
+        self?.connectionTestRunning = false
+        self?.connectionTestResult = result
+        self?.serverReachable = result.hasPrefix("✅") || result.hasPrefix("⚠️")
+      }
+    }
+  }
+
   // Explicit health check — always runs regardless of session state.
   // Called after user saves server settings.
   func checkServerHealth() {

@@ -90,6 +90,29 @@ struct MoreRemoteServerView: View {
             }
           }
 
+          // Row 1b: Manual connection test (auth-validated)
+          LabeledContent("Test Connection") {
+            HStack(spacing: 8) {
+              if model.connectionTestRunning {
+                ProgressView().scaleEffect(0.7)
+              } else if let result = model.connectionTestResult {
+                Text(result)
+                  .font(.caption)
+                  .foregroundStyle(result.hasPrefix("✅") ? .green : result.hasPrefix("⚠️") ? .orange : .red)
+                  .lineLimit(1)
+                  .minimumScaleFactor(0.7)
+              } else {
+                Text("Not tested").foregroundStyle(.secondary)
+              }
+              Button("Test") {
+                model.testServerConnection()
+              }
+              .buttonStyle(.bordered)
+              .controlSize(.mini)
+              .disabled(model.connectionTestRunning)
+            }
+          }
+
           // Row 2: Last sync + ACK count + manual trigger
           LabeledContent("Last sync") {
             HStack(spacing: 8) {
