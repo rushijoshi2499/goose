@@ -318,6 +318,7 @@ pub const BRIDGE_METHODS: &[&str] = &[
     "sync.rows_pending_upload",
     "timeline.from_decoded_frames",
     "ui_coverage.audit",
+    "upload.get_raw_frames_for_upload",
     "upload.get_recent_decoded_streams",
 ];
 
@@ -2790,6 +2791,12 @@ fn handle_bridge_request_inner(request: BridgeRequest) -> BridgeResponse {
                 .map(|value| bridge_ok(&request.request_id, value))
                 .unwrap_or_else(|error| bridge_error(&request.request_id, "method_error", error))
         }
+        "upload.get_raw_frames_for_upload" => {
+            request_args::<UploadGetRawFramesArgs>(&request)
+                .and_then(upload_get_raw_frames_for_upload_bridge)
+                .map(|value| bridge_ok(&request.request_id, value))
+                .unwrap_or_else(|error| bridge_error(&request.request_id, "method_error", error))
+        }
         "storage.compact_raw_evidence" => request_args::<StorageCompactRawEvidenceArgs>(&request)
             .and_then(storage_compact_raw_evidence_bridge)
             .map(|value| bridge_ok(&request.request_id, value))
@@ -3217,6 +3224,18 @@ struct UploadGetRecentDecodedStreamsArgs {
     since_ts: f64, // Unix timestamp (seconds); fetch decoded frames captured >= since_ts
 }
 
+#[derive(Debug, Deserialize)]
+struct UploadGetRawFramesArgs {
+    database_path: String,
+    since_ts: f64, // Unix timestamp (seconds); fetch raw_evidence captured >= since_ts
+    #[serde(default = "default_raw_frames_limit")]
+    limit: usize,
+}
+
+fn default_raw_frames_limit() -> usize {
+    2000
+}
+
 // ---------------------------------------------------------------------------
 // V24 physical unit helpers (uncalibrated; quality_flag="uncalibrated" always)
 // ---------------------------------------------------------------------------
@@ -3511,6 +3530,97 @@ fn upload_get_recent_decoded_streams_bridge(
 
     serde_json::to_value(result)
         .map_err(|error| GooseError::message(format!("upload streams serialize failed: {error}")))
+}
+
+// ── Raw frames upload bridge ──────────────────────────────────────────────────
+
+/// Parse an ISO-8601 UTC string produced by `chrono_from_unix` back to Unix
+/// seconds (f64). Format: "YYYY-MM-DDTHH:MM:SS.mmmZ". Returns 0.0 on parse
+/// failure so callers can skip malformed rows without crashing.
+fn iso8601_to_unix(s: &str) -> f64 {
+    // Expected format: "2024-01-15T12:30:45.123Z" (26 chars minimum)
+    let s = s.trim_end_matches('Z');
+    let parts: Vec<&str> = s.splitn(2, 'T').collect();
+    if parts.len() != 2 {
+        return 0.0;
+    }
+    let date_parts: Vec<&str> = parts[0].splitn(3, '-').collect();
+    let time_parts: Vec<&str> = parts[1].splitn(2, '.').collect();
+    let hms: Vec<&str> = time_parts[0].splitn(3, ':').collect();
+    if date_parts.len() != 3 || hms.len() != 3 {
+        return 0.0;
+    }
+    let (Ok(y), Ok(mo), Ok(d)) = (
+        date_parts[0].parse::<u32>(),
+        date_parts[1].parse::<u32>(),
+        date_parts[2].parse::<u32>(),
+    ) else {
+        return 0.0;
+    };
+    let (Ok(h), Ok(min), Ok(sec)) = (
+        hms[0].parse::<u64>(),
+        hms[1].parse::<u64>(),
+        hms[2].parse::<u64>(),
+    ) else {
+        return 0.0;
+    };
+    let ms: u64 = time_parts
+        .get(1)
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(0);
+    // Days since epoch via inverse of days_to_ymd
+    let days = ymd_to_days(y, mo, d) as u64;
+    let unix_secs = days * 86400 + h * 3600 + min * 60 + sec;
+    unix_secs as f64 + ms as f64 / 1000.0
+}
+
+/// Convert (year, month, day) to days since Unix epoch (1970-01-01).
+/// Mirrors days_to_ymd but in the opposite direction.
+fn ymd_to_days(year: u32, month: u32, day: u32) -> u32 {
+    // Julian Day Number approach matching days_to_ymd
+    let jd = {
+        let a = (14u32.wrapping_sub(month)) / 12;
+        let y = year as i64 + 4800 - a as i64;
+        let m = month as i64 + 12 * a as i64 - 3;
+        day as i64 + (153 * m + 2) / 5 + 365 * y + y / 4 - y / 100 + y / 400 - 32045
+    };
+    (jd - 2440588) as u32 // 2440588 = Julian Day of 1970-01-01
+}
+
+/// Return raw_evidence rows captured since `since_ts` in the format expected by
+/// the server's `POST /v1/ingest-frames` endpoint. Each row maps directly onto
+/// the `RawFrame` Pydantic model on the server side.
+///
+/// `since_ts` is a Unix timestamp (seconds, float). Returns up to `limit` rows
+/// ordered by `captured_at` ascending (oldest first) so the caller can paginate
+/// by advancing `since_ts` to the last row's `captured_at_unix`.
+fn upload_get_raw_frames_for_upload_bridge(
+    args: UploadGetRawFramesArgs,
+) -> GooseResult<serde_json::Value> {
+    let store = open_bridge_store(&args.database_path)?;
+    let since_dt = chrono_from_unix(args.since_ts);
+    let now_dt = chrono_now();
+    let all_rows = store.raw_evidence_between(&since_dt, &now_dt)?;
+    let rows: Vec<&crate::store::RawEvidenceRow> = all_rows.iter().take(args.limit).collect();
+    let frames: Vec<serde_json::Value> = rows
+        .iter()
+        .map(|r| {
+            let captured_at_unix: f64 = iso8601_to_unix(&r.captured_at);
+            json!({
+                "captured_at_unix": captured_at_unix,
+                "frame_hex": r.payload_hex,
+                "source": r.source,
+                "device_type": "GOOSE",
+                "device_model": r.device_model,
+                "sensitivity": r.sensitivity,
+            })
+        })
+        .collect();
+    let count = frames.len();
+    Ok(json!({
+        "frames": frames,
+        "count": count,
+    }))
 }
 
 // ── Store gravity bridge ──────────────────────────────────────────────────────
