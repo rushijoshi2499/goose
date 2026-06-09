@@ -350,6 +350,12 @@ def backfill_workouts(body: BackfillWorkouts):
     end = _parse_date(to_str)
     if end < start:
         raise HTTPException(status_code=422, detail="'to' must be >= 'from'")
+    _MAX_BACKFILL_DAYS = 366
+    if (end - start).days + 1 > _MAX_BACKFILL_DAYS:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Range exceeds maximum of {_MAX_BACKFILL_DAYS} days",
+        )
     results = []
     with psycopg.connect(cfg.db_dsn) as conn:
         day = start
