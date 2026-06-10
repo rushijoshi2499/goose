@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v7.0
 milestone_name: Sync Correctness, Async & Sleep Sync
 status: executing
-last_updated: "2026-06-10T15:08:08.359Z"
-last_activity: 2026-06-10 -- Phase 49 execution started
+last_updated: "2026-06-10T16:00:00.000Z"
+last_activity: 2026-06-10 -- Phase 49 Plan 02 complete
 progress:
   total_phases: 12
   completed_phases: 3
   total_plans: 15
-  completed_plans: 9
-  percent: 25
+  completed_plans: 10
+  percent: 27
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-06-09)
 
 Milestone: v7.0 — Sync Correctness, Async & Sleep Sync
 Phase: 49 (HealthDataStore Async Migration) — EXECUTING
-Plan: 2 of 7
+Plan: 3 of 7
 Status: Ready to execute
-Last activity: 2026-06-10 -- Phase 49 execution started
+Last activity: 2026-06-10 -- Phase 49 Plan 02 complete
 
 ## Performance Metrics
 
@@ -82,6 +82,7 @@ Last activity: 2026-06-10 -- Phase 49 execution started
 | Phase 47 P01 | 55 | 2 tasks (TDD) | 19 files |
 | Phase 47 P03 | 3 | 2 tasks | 6 files |
 | Phase 49 P01 | 2 | 2 tasks | 1 files |
+| Phase 49 P02 | 8 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -122,6 +123,7 @@ Recent decisions affecting current work:
 - Phase 29 Plan 02: GooseError has no From<serde_json::Error>; use json!{} macro for infallible struct serialisation in bridge handlers
 - Phase 47 Plan 01: device_uuid uses Option<&'a str> on RawEvidenceInput (not Option<String>); index references captured_at (not ts — raw_evidence has no ts column); PRAGMA user_version not bumped; existing callsites use device_uuid: None (backward compatible)
 - [Phase ?]: Phase 49 Plan 01: requestAsync/requestValueAsync added as additive wrappers (Task.detached) so sync FFI never runs on @MainActor; nonisolated(unsafe) on lastTiming not needed (build clean)
+- [Phase ?]: Phase 49 Plan 02: packetInputBridgeReports now nonisolated static async (21 awaited calls); runPacketInputs now async func; in-file callers use Task { await } shims; external callers (AppShellView, HealthDashboardViews) deferred to 49-07
 
 ### Pending Todos
 
