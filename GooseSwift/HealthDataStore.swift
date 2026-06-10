@@ -45,13 +45,11 @@ final class HealthDataStore {
   var packetInputReports: [String: [String: Any]] = [:]
   var packetScoreReports: [String: [String: Any]] = [:]
   var referenceComparisonReports: [String: [String: Any]] = [:]
-  var packetInputRefreshWorkItem: DispatchWorkItem?
+  var packetInputRefreshTask: Task<Void, Error>?
   var packetInputRunID: UUID?
   var packetInputIsRunning = false
   var heartRateTimelineRefreshID: UUID?
   @ObservationIgnored nonisolated(unsafe) var heartRateSeriesUpdateObserver: NSObjectProtocol?
-  let packetInputQueue = DispatchQueue(label: "com.goose.swift.health.packet-inputs", qos: .utility)
-  let heartRateTimelineQueue = DispatchQueue(label: "com.goose.swift.health.heart-rate-timeline", qos: .utility)
   var databasePath: String
 
   // Cache for the 7-day rolling average strain computation (moved from extension — stored
@@ -98,14 +96,14 @@ final class HealthDataStore {
     selectedAlgorithmByFamily = [:]
     primarySleepDetail = nil
     databasePath = HealthDataStore.defaultDatabasePath()
-    refreshHeartRateTimeline()
+    Task { await self.refreshHeartRateTimeline() }
     heartRateSeriesUpdateObserver = NotificationCenter.default.addObserver(
       forName: HeartRateSeriesStore.didUpdateNotification,
       object: nil,
       queue: .main
     ) { [weak self] _ in
-      Task { @MainActor in
-        self?.refreshHeartRateTimeline()
+      Task { @MainActor [weak self] in
+        await self?.refreshHeartRateTimeline()
       }
     }
   }
@@ -152,12 +150,12 @@ final class HealthDataStore {
     ].joined(separator: "\n")
   }
 
-  func loadBridgeCatalogsIfNeeded() {
+  func loadBridgeCatalogsIfNeeded() async {
     guard !attemptedCatalogLoad else {
       return
     }
     attemptedCatalogLoad = true
-    refreshBridgeCatalogs()
+    await refreshBridgeCatalogs()
   }
 
   func refreshPacketInputsIfNeeded() {
@@ -167,21 +165,16 @@ final class HealthDataStore {
     Task { await self.runPacketInputs() }
   }
 
-  func refreshHeartRateTimeline(for date: Date = Date()) {
+  func refreshHeartRateTimeline(for date: Date = Date()) async {
     let refreshID = UUID()
     heartRateTimelineRefreshID = refreshID
     let store = heartRateSeriesStore
-    heartRateTimelineQueue.async { [weak self] in
-      let snapshot = store.timelineSnapshot(forDayContaining: date)
-      Task { @MainActor in
-        guard let self,
-              self.heartRateTimelineRefreshID == refreshID else {
-          return
-        }
-        self.heartRateHourlyRanges = snapshot.ranges
-        self.heartRateTimelineStatus = snapshot.status
-      }
+    let snapshot = store.timelineSnapshot(forDayContaining: date)
+    guard heartRateTimelineRefreshID == refreshID else {
+      return
     }
+    heartRateHourlyRanges = snapshot.ranges
+    heartRateTimelineStatus = snapshot.status
   }
 
   func heartRateHourlyTimelineRows(maxRows: Int = 8) -> [HealthSummaryRow] {
@@ -202,59 +195,49 @@ final class HealthDataStore {
   }
 
   func refreshPacketInputsAfterCapture() {
-    packetInputRefreshWorkItem?.cancel()
-    let workItem = DispatchWorkItem { [weak self] in
-      guard let self else { return }
-      Task { await self.runPacketInputs() }
+    packetInputRefreshTask?.cancel()
+    packetInputRefreshTask = Task { [weak self] in
+      try await Task.sleep(for: .seconds(0.8))
+      guard let self, !Task.isCancelled else { return }
+      await self.runPacketInputs()
     }
-    packetInputRefreshWorkItem = workItem
-    DispatchQueue.main.asyncAfter(deadline: .now() + 0.8, execute: workItem)
   }
 
-  func refreshBridgeCatalogs() {
+  func refreshBridgeCatalogs() async {
     catalogStatus = "Loading bridge catalog..."
-    let bridge = self.bridge
-    packetInputQueue.async { [weak self] in
-      do {
-        let algorithmsValue = try bridge.requestValue(method: "metrics.built_in_definitions")
-        let referencesValue = try bridge.requestValue(method: "metrics.reference_definitions")
-        let preferencesValue = try bridge.requestValue(method: "metrics.default_preferences")
+    do {
+      let algorithmsValue = try await bridge.requestValueAsync(method: "metrics.built_in_definitions")
+      let referencesValue = try await bridge.requestValueAsync(method: "metrics.reference_definitions")
+      let preferencesValue = try await bridge.requestValueAsync(method: "metrics.default_preferences")
 
-        let parsedAlgorithms = Self.algorithmRows(from: algorithmsValue)
-          .map { HealthAlgorithmDefinition(row: $0, source: .bridge("metrics.built_in_definitions")) }
-        let parsedReferences = Self.algorithmRows(from: referencesValue)
-          .map { HealthAlgorithmDefinition(row: $0, source: .bridge("metrics.reference_definitions")) }
-        let parsedPreferences = Self.preferenceRows(from: preferencesValue)
+      let parsedAlgorithms = Self.algorithmRows(from: algorithmsValue)
+        .map { HealthAlgorithmDefinition(row: $0, source: .bridge("metrics.built_in_definitions")) }
+      let parsedReferences = Self.algorithmRows(from: referencesValue)
+        .map { HealthAlgorithmDefinition(row: $0, source: .bridge("metrics.reference_definitions")) }
+      let parsedPreferences = Self.preferenceRows(from: preferencesValue)
 
-        DispatchQueue.main.async { [weak self] in
-          guard let self else { return }
-          if !parsedAlgorithms.isEmpty {
-            self.algorithmDefinitions = parsedAlgorithms
-          }
-          if !parsedReferences.isEmpty {
-            self.referenceDefinitions = parsedReferences
-          }
-          if !parsedPreferences.isEmpty {
-            self.selectedAlgorithmByFamily = parsedPreferences
-          } else {
-            self.selectedAlgorithmByFamily = Dictionary(
-              uniqueKeysWithValues: self.algorithmDefinitions.map { ($0.family, $0.id) }
-            )
-          }
-          self.catalogSource = .bridge("Rust metric registry")
-          self.catalogStatus = "Bridge catalog loaded"
-        }
-      } catch {
-        let shortErr = Self.shortError(error)
-        DispatchQueue.main.async { [weak self] in
-          guard let self else { return }
-          self.algorithmDefinitions = []
-          self.referenceDefinitions = []
-          self.selectedAlgorithmByFamily = [:]
-          self.catalogSource = .unavailable("Rust catalog unavailable")
-          self.catalogStatus = "Metric catalog unavailable: \(shortErr)"
-        }
+      if !parsedAlgorithms.isEmpty {
+        algorithmDefinitions = parsedAlgorithms
       }
+      if !parsedReferences.isEmpty {
+        referenceDefinitions = parsedReferences
+      }
+      if !parsedPreferences.isEmpty {
+        selectedAlgorithmByFamily = parsedPreferences
+      } else {
+        selectedAlgorithmByFamily = Dictionary(
+          uniqueKeysWithValues: algorithmDefinitions.map { ($0.family, $0.id) }
+        )
+      }
+      catalogSource = .bridge("Rust metric registry")
+      catalogStatus = "Bridge catalog loaded"
+    } catch {
+      let shortErr = Self.shortError(error)
+      algorithmDefinitions = []
+      referenceDefinitions = []
+      selectedAlgorithmByFamily = [:]
+      catalogSource = .unavailable("Rust catalog unavailable")
+      catalogStatus = "Metric catalog unavailable: \(shortErr)"
     }
   }
 
@@ -267,7 +250,7 @@ final class HealthDataStore {
       packetInputStatus = "Packet-derived input extraction already running..."
       return
     }
-    packetInputRefreshWorkItem?.cancel()
+    packetInputRefreshTask?.cancel()
     let runID = UUID()
     packetInputRunID = runID
     packetInputIsRunning = true
@@ -300,14 +283,11 @@ final class HealthDataStore {
     bandSleepImportStatus = "Band sync failed: \(detail)"
   }
 
-  func refreshSleepAfterBandSync(packetCount: Int) {
+  func refreshSleepAfterBandSync(packetCount: Int) async {
     bandSleepImportStatus = "Band sync captured \(packetCount) packets | extracting sleep inputs..."
-    Task { [weak self] in
-      guard let self else { return }
-      await self.runPacketInputs()
-      await self.runSleepScore()
-      await self.runSleepStaging()
-      self.bandSleepImportStatus = "Band sync captured \(packetCount) packets | \(self.packetScoreStatus)"
-    }
+    await runPacketInputs()
+    await runSleepScore()
+    await runSleepStaging()
+    bandSleepImportStatus = "Band sync captured \(packetCount) packets | \(packetScoreStatus)"
   }
 }
