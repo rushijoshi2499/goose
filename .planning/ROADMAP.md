@@ -70,7 +70,7 @@ Known deferred: ALG-HRV-04 real overnight cross-validation (v7.0), ALG-SLP-04 re
 - [x] Phase 47: Device ID Namespace Resolution (completed 2026-06-10)
 - [x] Phase 48: Upload Sync Race Fix (completed 2026-06-10)
 - [x] Phase 49: HealthDataStore Async Migration (completed 2026-06-10)
-- [ ] Phase 50: Morning Band Sleep Sync
+- [x] Phase 50: Morning Band Sleep Sync (completed 2026-06-10)
 - [ ] Phase 51: Validation Gates (human — ALG-HRV-04 + ALG-SLP-04)
 
 ## Phase Details
@@ -199,7 +199,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 50-03-PLAN.md — Phase gate: cargo test + xcodebuild + visual checkpoint
+- [x] 50-03-PLAN.md — Phase gate: cargo test + xcodebuild + visual checkpoint (human approved 2026-06-10)
 
 **Cross-cutting constraints:**
 
@@ -234,7 +234,7 @@ Plans:
 | 47. Device ID Namespace | v7.0 | 3/3 | Complete   | 2026-06-10 |
 | 48. Upload Sync Race Fix | v7.0 | 3/3 | Complete   | 2026-06-10 |
 | 49. HealthDataStore Async | v7.0 | 7/7 | Complete   | 2026-06-10 |
-| 50. Morning Band Sleep Sync | v7.0 | 2/3 | In Progress|  |
+| 50. Morning Band Sleep Sync | v7.0 | 3/3 | Complete   | 2026-06-10 |
 | 51. Validation Gates (human) | v7.0 | 0/TBD | Blocked (human gate) | — |
 
 ## Backlog
