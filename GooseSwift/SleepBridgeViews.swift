@@ -33,7 +33,7 @@ struct SleepDataBridgeSection: View {
         .disabled(!ble.canSyncHistorical)
 
         Button {
-          store.refreshSleepAfterBandSync(packetCount: ble.historicalPacketCount)
+          Task { await store.refreshSleepAfterBandSync(packetCount: ble.historicalPacketCount) }
         } label: {
           Label("Refresh Score", systemImage: "chart.xyaxis.line")
             .frame(maxWidth: .infinity)

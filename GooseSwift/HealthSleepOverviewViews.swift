@@ -142,7 +142,7 @@ struct SleepV2OverviewPage: View {
       }
     }
     .onAppear {
-      store.loadBridgeCatalogsIfNeeded()
+      Task { await store.loadBridgeCatalogsIfNeeded() }
       startBandSleepSyncIfReady()
       Task { await store.runSleepStaging() }
     }
@@ -151,7 +151,7 @@ struct SleepV2OverviewPage: View {
     }
     .onChange(of: ble.historicalSyncStatus) { _, newValue in
       if newValue == "synced" {
-        store.refreshSleepAfterBandSync(packetCount: ble.historicalPacketCount)
+        Task { await store.refreshSleepAfterBandSync(packetCount: ble.historicalPacketCount) }
       } else if newValue == "failed" {
         store.markBandSleepSyncFailed(ble.historicalSyncStatus)
       }

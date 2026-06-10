@@ -88,7 +88,7 @@ struct CoachView: View {
     }
     .onAppear {
       model.recordUIAction("page.opened", detail: "Coach")
-      healthStore.loadBridgeCatalogsIfNeeded()
+      Task { await healthStore.loadBridgeCatalogsIfNeeded() }
       healthStore.refreshPacketInputsIfNeeded()
       chat.refreshAuth()
       applyRequestedCoachPromptIfNeeded()

@@ -196,7 +196,7 @@ struct MoreAlgorithmsView: View {
     .gooseListBackground()
     .navigationTitle("Algorithms")
     .onAppear {
-      healthStore.loadBridgeCatalogsIfNeeded()
+      Task { await healthStore.loadBridgeCatalogsIfNeeded() }
     }
   }
 }

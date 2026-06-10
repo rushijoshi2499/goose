@@ -97,7 +97,7 @@ struct HomeDashboardView: View {
       refreshSnapshots()
     }
     .task {
-      healthStore.loadBridgeCatalogsIfNeeded()
+      await healthStore.loadBridgeCatalogsIfNeeded()
       model.refreshActivityTimeline(for: selectedDate)
       refreshSnapshots()
     }

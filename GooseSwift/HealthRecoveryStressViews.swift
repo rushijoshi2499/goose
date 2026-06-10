@@ -199,8 +199,8 @@ struct RecoveryV2OverviewPage: View {
       SleepV2BevelTrendSheet(snapshot: snapshot)
     }
     .onAppear {
-      store.loadBridgeCatalogsIfNeeded()
       Task {
+        await store.loadBridgeCatalogsIfNeeded()
         await store.runPacketScores()
         await store.runRecoveryV1()
         await store.runReadinessV1()

@@ -63,8 +63,10 @@ struct HealthView: View {
     }
     .onAppear {
       model.recordUIAction("page.opened", detail: "Health")
-      store.loadBridgeCatalogsIfNeeded()
-      store.refreshHeartRateTimeline()
+      Task {
+        await store.loadBridgeCatalogsIfNeeded()
+        await store.refreshHeartRateTimeline()
+      }
       refreshSnapshots()
     }
     .onChange(of: model.ble.liveHeartRateBPM) { _, _ in
@@ -112,8 +114,10 @@ struct HealthView: View {
 
   @MainActor
   private func refreshDashboard() {
-    store.refreshBridgeCatalogs()
-    store.refreshHeartRateTimeline()
-    store.refreshPacketInputsIfNeeded()
+    Task {
+      await store.refreshBridgeCatalogs()
+      await store.refreshHeartRateTimeline()
+      store.refreshPacketInputsIfNeeded()
+    }
   }
 }

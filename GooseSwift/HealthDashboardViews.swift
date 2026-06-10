@@ -351,7 +351,7 @@ struct HealthRouteDestinationView: View {
   var body: some View {
     HealthRouteContentView(route: route, store: store, selectedDate: selectedDate)
       .task {
-        store.loadBridgeCatalogsIfNeeded()
+        await store.loadBridgeCatalogsIfNeeded()
       }
   }
 }
@@ -542,7 +542,7 @@ struct HealthMonitorView: View {
     .navigationTitle("Health Monitor")
     .task {
       cachedMonitorSnapshots = store.healthMonitorSnapshots()
-      store.refreshHeartRateTimeline()
+      await store.refreshHeartRateTimeline()
       store.refreshPacketInputsIfNeeded()
     }
     .onChange(of: store.packetScoreStatus) { cachedMonitorSnapshots = store.healthMonitorSnapshots() }

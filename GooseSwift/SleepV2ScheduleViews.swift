@@ -141,7 +141,7 @@ struct SleepV2BandSyncCard: View {
         .disabled(!ble.canSyncHistorical)
 
         Button {
-          store.refreshSleepAfterBandSync(packetCount: ble.historicalPacketCount)
+          Task { await store.refreshSleepAfterBandSync(packetCount: ble.historicalPacketCount) }
         } label: {
           Label("Refresh score", systemImage: "chart.xyaxis.line")
             .frame(maxWidth: .infinity)
