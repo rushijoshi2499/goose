@@ -149,7 +149,7 @@ These rules apply whenever touching `GooseRustBridge` or adding bridge call site
 - Check both empty and populated states for any metric UI you change. Metric pages must remain polished when data is missing.
 - Keep user-facing health copy plain. Avoid medical claims.
 - Put debug tooling, packet details, and raw export behaviour under More or Debug surfaces — not in everyday health views.
-- Update the relevant MVP doc in `docs/goose-swift-mvp/` when a change completes or changes an open task.
+- Update the relevant feature spec in `docs/features/` when a change completes or changes an open task.
 - Mention any build warnings, skipped checks, or device-only assumptions in the PR description.
 - For any change that touches the Rust core, confirm the Rust test suite still passes locally before opening the PR.
 

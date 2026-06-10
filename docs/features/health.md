@@ -4,7 +4,7 @@ Source map: Flutter `MetricsView`, Flutter V2 metric pages, Flutter `health_moni
 
 MVP rule: Health owns metric detail, trend, algorithm, and provenance surfaces. Home can preview metrics, but Health is where users inspect why a number exists.
 
-Swift evidence 2026-06-01: `HealthView.swift`, `AppRouter.swift`, `xcodebuildmcp build_sim` and `build_run_sim` passed with no warnings/errors. Simulator screenshots cover Health landing and every child route in `docs/goose-swift-mvp/evidence/health-2026-06-01/`.
+Swift evidence 2026-06-01: `HealthView.swift`, `AppRouter.swift`, `xcodebuildmcp build_sim` and `build_run_sim` passed with no warnings/errors. Simulator screenshots cover Health landing and every child route in `docs/assets/evidence/health-2026-06-01/`.
 
 ## Parent View Contract
 

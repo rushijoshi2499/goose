@@ -1,4 +1,10 @@
 <!-- generated-by: gsd-doc-writer -->
+> **Disclaimer — Unofficial Project / Personal Data Research**
+>
+> Goose is an independent, unofficial project not affiliated with, endorsed by, or supported by WHOOP, Inc. This project accesses biometric data exclusively over Bluetooth Low Energy from the user's own hardware — it does not touch WHOOP's servers or APIs. It was built for personal research and data portability purposes only, grounded in GDPR Art. 20 (right to data portability) and EU Directive 2009/24/EC Art. 6 (interoperability exception).
+>
+> See [DISCLAIMER.md](DISCLAIMER.md) for the full legal statement.
+
 # Goose - Local Companion for WHOOP Devices
 
 **Alpha proof of concept. This build is for developers to evaluate whether a project of this scope is viable. It is not ready to use as an app for tracking personal health data yet.**
@@ -47,7 +53,7 @@ GooseWorkoutLiveActivityExtension/  Live Activity widget extension
 Rust/                               iOS static library, headers, per-platform outputs
 Scripts/build_ios_rust.sh           Xcode build phase for the Goose Rust core
 server/                             Self-hosted FastAPI+TimescaleDB server (Docker)
-docs/goose-swift-mvp/               MVP plans, contracts, and data-readiness docs
+docs/features/                      Feature specs per app tab (Home, Health, Coach, More)
 GooseSwift.xcodeproj                Xcode project
 ```
 
@@ -239,12 +245,12 @@ Guides and reference docs:
 - `docs/architecture/overview.md`: system overview, component diagram, and data flow.
 - `docs/api/reference.md`: server API endpoints, request/response formats, and authentication.
 
-MVP implementation plans in `docs/goose-swift-mvp/`:
+Feature specs in `docs/features/`:
 
-- `Home.md`: Home tab contract and remaining work.
-- `Health.md`: Health surfaces, metric pages, packet inputs, trends, and acceptance checks.
-- `Coach.md`: Coach tab plan and chat architecture notes.
-- `More.md`: operational settings/debug/capture/privacy surfaces.
+- `home.md`: Home tab contract and remaining work.
+- `health.md`: Health surfaces, metric pages, packet inputs, trends, and acceptance checks.
+- `coach.md`: Coach tab plan and chat architecture notes.
+- `more.md`: operational settings/debug/capture/privacy surfaces.
 - `CodexCoachServer.md`: viability notes for a future Codex-powered coach.
 - `RemainingDataTodo.md`: unresolved data-source and persistence work.
 

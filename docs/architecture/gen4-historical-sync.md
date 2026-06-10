@@ -132,4 +132,4 @@ The Gen4 protocol was reverse-engineered from:
 3. **Command sequence tracing** — the cmd 34 → 22 → 23 sequence was confirmed by matching command numbers in request frames against response frames.
 4. **Page sequence extraction** — bytes 10–13 of the cmd 34 response were identified as the last-synced page counter by observing that subsequent cmd 23 requests with `seq = last_synced + 1` elicited historical data from the strap.
 
-See `docs/protocol-reverse-engineering.md` for the full BLE protocol reference.
+See `docs/architecture/protocol-reverse-engineering.md` for the full BLE protocol reference.
