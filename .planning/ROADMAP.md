@@ -109,7 +109,12 @@ Known deferred: ALG-HRV-04 real overnight cross-validation (v7.0), ALG-SLP-04 re
   4. `GET /v1/export/frames/{device_id}` aceita tanto UUID como device_model como parâmetro (lookup bidireccional)
   5. `cargo test -p goose-core` verde; testes cobrem: migration roundtrip, insert com uuid, query por uuid, query por device_model
 
-**Plans**: TBD
+**Plans**: 3 plans (1 wave — parallel, zero file overlap)
+Plans:
+
+- [ ] 47-01-PLAN.md — Rust storage layer: device_uuid migration, structs, insert/read, capture-import, upload bridge response (+ 5 tests)
+- [ ] 47-02-PLAN.md — iOS wiring: BLE connectedPeripheralUUID, UserDefaults UUID↔model map, CaptureFrameWriteQueue, upload payload (checkpoint)
+- [ ] 47-03-PLAN.md — Server: raw_frames device_uuid migration, IngestFrame model, bidirectional export lookup (+ tests)
 
 ---
 
