@@ -170,7 +170,7 @@ Backs onto:
 - packet-derived feature/score gap summaries
 - unavailable health-sync metrics
 
-This tool should drive the Coach empty state and the deterministic "next concrete action" required by `Coach.md`.
+This tool should drive the Coach empty state and the deterministic "next concrete action" described in the Coach tab section of `docs/features/overview.md`.
 
 ## Runtime Boundary
 
@@ -229,7 +229,7 @@ Exit criteria:
 
 ## Recommendation
 
-Proceed with a Mac/local app-server spike to validate the coach tools and prompts, but treat production iOS as requiring either a supported embedded Codex runtime or a remote backend architecture. Build the Coach data boundary now: read-only tools, provenance, redaction, consent, and audit logging. That work is required in all viable architectures and lines up with the existing `Coach.md` acceptance checks.
+Proceed with a Mac/local app-server spike to validate the coach tools and prompts, but treat production iOS as requiring either a supported embedded Codex runtime or a remote backend architecture. Build the Coach data boundary now: read-only tools, provenance, redaction, consent, and audit logging. That work is required in all viable architectures and lines up with the Coach acceptance criteria in `docs/features/overview.md`.
 
 ## References
 

@@ -161,6 +161,7 @@ pytest tests/ # integration tests self-manage the TimescaleDB container
 |------|---------------|
 | `test_ingest_decoded_api.py` | `/v1/ingest-decoded` endpoint contract |
 | `test_ingest_api.py` | General ingest endpoint contract including auth and archive-only mode |
+| `test_ingest_frames_api.py` | `POST /v1/ingest-frames` round-trip, auth, and idempotency (requires Docker) |
 | `test_read_api.py` | Read endpoints, pagination, filtering |
 | `test_read.py` | Lower-level read helpers: device listing, stream queries, downsampling |
 | `test_ingest_pipeline.py` | Full ingest pipeline including stream routing |
