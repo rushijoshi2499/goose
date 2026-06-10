@@ -131,7 +131,16 @@ Plans:
   4. Teste de unidade: mock do servidor retorna 503 → rows permanecem `synced = 0`; mock retorna 200 → rows ficam `synced = 1`
   5. `cargo test -p goose-core` verde (nenhuma regressão nos testes Rust do sync infrastructure)
 
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+**Wave 1**
+
+- [ ] 48-01-PLAN.md — Rust TDD: test_pre_capture_does_not_mark_rows_inserted_during_race_window in sync_methods_tests
+- [ ] 48-02-PLAN.md — Swift fix: captureAllPendingRowIDs + markStreamsSynced refactor + URLSession-injectable init
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 48-03-PLAN.md — Swift unit tests: MockURLProtocol + test_upload503_leavesSynced0 + test_upload200_marksSynced1
 
 ---
 
