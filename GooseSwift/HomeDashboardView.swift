@@ -54,6 +54,29 @@ struct HomeDashboardView: View {
           openRecovery: { openHealth(.recovery) }
         )
 
+        HomeDeviceStatusCard(
+          ble: model.ble,
+          onReconnect: { model.ble.reconnectRemembered() }
+        )
+
+        HomeToolsGrid(
+          catalogReady: healthStore.catalogStatus.contains("loaded"),
+          openSleepCoach: {
+            router.openCoach(prompt: "Sleep coach: review my sleep quality and give me advice")
+          },
+          openActivity: { openHealth(.strain) },
+          openCoach: { router.openCoach() },
+          openCalibration: { router.openMore(.algorithms) }
+        )
+
+        HomeEvidenceFooter(
+          rustStatus: model.rustStatus,
+          databasePath: healthStore.databasePath,
+          catalogSource: healthStore.catalogSource,
+          algorithmsByFamily: healthStore.selectedAlgorithmByFamily,
+          onTap: { router.openMore(.debug) }
+        )
+
       }
       .padding(.horizontal, 16)
       .padding(.vertical, 18)
@@ -232,6 +255,236 @@ struct HomeDashboardView: View {
   private func openCoach(_ prompt: String) {
     router.openCoach(prompt: prompt)
     model.recordUIAction("coach.opened", detail: "Home daily score card")
+  }
+}
+
+// MARK: - HOME-01: Device Status Card
+
+private struct HomeDeviceStatusCard: View {
+  let ble: GooseBLEClient
+  let onReconnect: () -> Void
+
+  private var isConnected: Bool {
+    let s = ble.connectionState.lowercased()
+    return s == "ready" || s == "connected" || s == "discovering"
+  }
+
+  private var stateColor: Color { isConnected ? .green : .red }
+
+  private var lastSyncText: String {
+    guard let date = ble.lastSyncAt else { return "Never" }
+    let rel = RelativeDateTimeFormatter()
+    rel.unitsStyle = .short
+    return rel.localizedString(for: date, relativeTo: Date()).capitalized
+  }
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 10) {
+      HStack {
+        Circle()
+          .fill(stateColor)
+          .frame(width: 8, height: 8)
+        Text(ble.activeDeviceName)
+          .font(.subheadline.weight(.semibold))
+          .foregroundStyle(.primary)
+        Spacer()
+        Text(ble.connectionState.localizedConnectionState)
+          .font(.caption.weight(.medium))
+          .foregroundStyle(stateColor)
+      }
+
+      HStack(spacing: 20) {
+        HomeDeviceStat(
+          label: "Battery",
+          value: ble.batteryLevelPercent.map { "\($0)%" } ?? "--"
+        )
+        HomeDeviceStat(
+          label: "HR",
+          value: ble.liveHeartRateBPM.map { "\($0) bpm" } ?? "--"
+        )
+        HomeDeviceStat(label: "Last Sync", value: lastSyncText)
+        Spacer()
+        if !isConnected && ble.hasRememberedDevice {
+          Button(action: onReconnect) {
+            Text("Reconnect")
+              .font(.caption.weight(.semibold))
+              .padding(.horizontal, 10)
+              .padding(.vertical, 5)
+              .background(.blue.opacity(0.15), in: Capsule())
+              .foregroundStyle(.blue)
+          }
+          .buttonStyle(.plain)
+        }
+      }
+    }
+    .padding(14)
+    .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+  }
+}
+
+private struct HomeDeviceStat: View {
+  let label: String
+  let value: String
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 2) {
+      Text(label)
+        .font(.system(size: 10, weight: .semibold))
+        .foregroundStyle(.secondary)
+        .textCase(.uppercase)
+      Text(value)
+        .font(.system(size: 13, weight: .bold))
+        .foregroundStyle(.primary)
+    }
+  }
+}
+
+// MARK: - HOME-02: Tools Grid
+
+private struct HomeToolsGrid: View {
+  let catalogReady: Bool
+  let openSleepCoach: () -> Void
+  let openActivity: () -> Void
+  let openCoach: () -> Void
+  let openCalibration: () -> Void
+
+  private let columns = [GridItem(.flexible()), GridItem(.flexible())]
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 10) {
+      Text("TOOLS")
+        .font(.system(size: 11, weight: .black))
+        .foregroundStyle(.secondary)
+
+      LazyVGrid(columns: columns, spacing: 10) {
+        HomeToolButton(
+          title: "Sleep Coach",
+          systemImage: "moon.zzz",
+          ready: catalogReady,
+          action: openSleepCoach
+        )
+        HomeToolButton(
+          title: "Activity",
+          systemImage: "figure.run",
+          ready: catalogReady,
+          action: openActivity
+        )
+        HomeToolButton(
+          title: "Journal",
+          systemImage: "book.pages",
+          ready: true,
+          action: openCoach
+        )
+        HomeToolButton(
+          title: "Calibration",
+          systemImage: "slider.horizontal.3",
+          ready: catalogReady,
+          action: openCalibration
+        )
+      }
+    }
+  }
+}
+
+private struct HomeToolButton: View {
+  let title: String
+  let systemImage: String
+  let ready: Bool
+  let action: () -> Void
+
+  var body: some View {
+    Button(action: action) {
+      HStack(spacing: 8) {
+        Image(systemName: systemImage)
+          .font(.system(size: 16, weight: .semibold))
+          .foregroundStyle(ready ? .primary : .tertiary)
+        VStack(alignment: .leading, spacing: 1) {
+          Text(title)
+            .font(.system(size: 13, weight: .semibold))
+            .foregroundStyle(.primary)
+          Text(ready ? "Ready" : "Loading")
+            .font(.system(size: 10, weight: .medium))
+            .foregroundStyle(ready ? .green : .secondary)
+        }
+        Spacer()
+      }
+      .padding(10)
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+    .buttonStyle(.plain)
+  }
+}
+
+// MARK: - HOME-03: Evidence Footer
+
+private struct HomeEvidenceFooter: View {
+  let rustStatus: String
+  let databasePath: String
+  let catalogSource: HealthDataSource
+  let algorithmsByFamily: [String: String]
+  let onTap: () -> Void
+
+  private var coreVersion: String {
+    if let range = rustStatus.range(of: "v\\d+\\.\\d+\\.\\d+", options: .regularExpression) {
+      return String(rustStatus[range])
+    }
+    return rustStatus.isEmpty ? "—" : "core"
+  }
+
+  private var storeFilename: String {
+    URL(fileURLWithPath: databasePath).lastPathComponent
+  }
+
+  private var dataMode: String { catalogSource.kind.rawValue }
+
+  var body: some View {
+    Button(action: onTap) {
+      VStack(alignment: .leading, spacing: 6) {
+        HStack {
+          Text("DATA PROVENANCE")
+            .font(.system(size: 10, weight: .black))
+            .foregroundStyle(.secondary)
+          Spacer()
+          Image(systemName: "chevron.right")
+            .font(.system(size: 10, weight: .semibold))
+            .foregroundStyle(.tertiary)
+        }
+
+        HomeEvidenceRow(label: "Core", value: coreVersion)
+        HomeEvidenceRow(label: "Store", value: storeFilename)
+        HomeEvidenceRow(label: "Mode", value: dataMode)
+
+        if !algorithmsByFamily.isEmpty {
+          Divider().opacity(0.5)
+          ForEach(algorithmsByFamily.keys.sorted(), id: \.self) { family in
+            HomeEvidenceRow(label: family.capitalized, value: algorithmsByFamily[family] ?? "—")
+          }
+        }
+      }
+      .padding(12)
+      .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+    .buttonStyle(.plain)
+  }
+}
+
+private struct HomeEvidenceRow: View {
+  let label: String
+  let value: String
+
+  var body: some View {
+    HStack {
+      Text(label)
+        .font(.system(size: 11, weight: .medium))
+        .foregroundStyle(.secondary)
+      Spacer()
+      Text(value)
+        .font(.system(size: 11, weight: .semibold, design: .monospaced))
+        .foregroundStyle(.primary)
+        .lineLimit(1)
+        .minimumScaleFactor(0.7)
+    }
   }
 }
 
