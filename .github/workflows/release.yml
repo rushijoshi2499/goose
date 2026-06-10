@@ -38,7 +38,7 @@ jobs:
           ref: ${{ steps.resolve-tag.outputs.tag }}
           fetch-depth: 0
 
-      - name: Build (no code signing)
+      - name: Build (no code signing, use pre-built Rust libs)
         run: |
           xcodebuild \
             -project GooseSwift.xcodeproj \
@@ -50,6 +50,7 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
             DEVELOPMENT_TEAM="" \
+            GOOSE_SKIP_RUST_CORE_BUILD=1 \
             -derivedDataPath build/DerivedData \
             build
 
