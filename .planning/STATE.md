@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v7.0
 milestone_name: Sync Correctness, Async & Sleep Sync
 status: executing
-last_updated: "2026-06-10T18:38:24.944Z"
-last_activity: 2026-06-10 -- Phase 49 Plan 06 complete
+last_updated: "2026-06-10T19:55:00.000Z"
+last_activity: 2026-06-10 -- Phase 50 Plan 02 complete — GooseAppModel+SleepSync.swift morning auto-sync trigger
 progress:
   total_phases: 12
   completed_phases: 4
-  total_plans: 15
-  completed_plans: 15
-  percent: 33
+  total_plans: 18
+  completed_plans: 16
+  percent: 39
 ---
 
 # Project State
@@ -20,15 +20,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-09)
 
 **Core value:** The user captures WHOOP data on iPhone and it is automatically persisted on their personal server — without depending on external infrastructure. Metrics align with WHOOP from the same raw data.
-**Current focus:** Phase 49 — HealthDataStore Async Migration
+**Current focus:** Phase 50 — Morning Band Sleep Sync
 
 ## Current Position
 
 Milestone: v7.0 — Sync Correctness, Async & Sleep Sync
-Phase: 49 (HealthDataStore Async Migration) — EXECUTING
-Plan: 7 of 7
-Status: Ready to execute
-Last activity: 2026-06-10 -- Phase 49 Plan 06 complete
+Phase: 50 (Morning Band Sleep Sync) — EXECUTING
+Plan: 2 of 3 complete
+Status: Executing Phase 50
+Last activity: 2026-06-10 -- Phase 50 Plan 02 complete — GooseAppModel+SleepSync.swift morning auto-sync trigger
 
 ## Performance Metrics
 
@@ -88,6 +88,8 @@ Last activity: 2026-06-10 -- Phase 49 Plan 06 complete
 | Phase 49-healthdatastore-async-migration P05 | 2min | 3 tasks | 5 files |
 | Phase 49-healthdatastore-async-migration P06 | 3min | 2 tasks | 2 files |
 | Phase 49-healthdatastore-async-migration P07 | 45 | 4 tasks | 11 files |
+| Phase 50-morning-band-sleep-sync P01 | 40min | 2 tasks | 3 files |
+| Phase 50-morning-band-sleep-sync P02 | 30min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -134,6 +136,8 @@ Recent decisions affecting current work:
 - Phase 49 Plan 04: liveStrainReport captured before first await in runReadinessV1 to preserve @MainActor state snapshot; runReadinessV1 merged into existing Task{} in HealthRecoveryStressViews alongside runPacketScores+runRecoveryV1
 - Phase 49 Plan 05: runV24Biometrics merged into existing Task{} in HealthRecoveryStressViews alongside runPacketScores+runRecoveryV1+runReadinessV1; HealthMetricFamilyStrainViews bare calls wrapped in Task{} as minimal shims (full refactor deferred to 49-07)
 - Phase 49 Plan 06: cardioLoadActivitySessions + cardioLoadActivityMetricsByName + sleepScoreReport converted to async; databasePath captured before await; dead-code finding (zero callers) confirmed — no cascade updates required
+- Phase 50 Plan 02: historicalSyncStatus polling (1s intervals, max 120 attempts) chosen over onHistoricalSyncCompleted to avoid AppShellView single-slot conflict (Pitfall #3); weak var healthStore added to GooseAppModel — set by AppShellView in onAppear
+- Phase 50 Plan 02: sleep_id format band_ble.{deviceId}.{yyyy-MM-dd} deterministic; UserDefaults written before first await to prevent retry loops on drop+reconnect
 
 ### Pending Todos
 
@@ -184,6 +188,6 @@ Items acknowledged and deferred at v5.0 milestone close on 2026-06-08:
 
 ## Session Continuity
 
-Last session: 2026-06-10T15:55:02.680Z
-Status: Phase 49 Plan 06 complete — cardioLoadActivitySessions + cardioLoadActivityMetricsByName + sleepScoreReport async
-Next: Phase 49 Plan 07 — final cleanup, remove sync bridge API, wrap external callers
+Last session: 2026-06-10T19:55:00.000Z
+Status: Phase 50 Plan 02 complete — GooseAppModel+SleepSync.swift morning auto-sync trigger (SLP-SYNC-02 + SLP-SYNC-03)
+Next: Phase 50 Plan 03 — smoke test and final verification
