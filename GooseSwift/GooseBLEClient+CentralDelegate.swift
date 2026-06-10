@@ -214,6 +214,7 @@ extension GooseBLEClient: CBCentralManagerDelegate {
     lastSyncAt = now
     updateConnectionState("discovering")
     updateReconnectState("connected")
+    connectedPeripheralUUID = peripheral.identifier.uuidString
     record(source: "ble", title: "connect.succeeded", body: "\(peripheral.name ?? fallbackName ?? "WHOOP") \(peripheral.identifier.uuidString) evidence=\(evidence)")
     peripheral.discoverServices(serviceDiscoveryIDs)
     processCachedServicesIfAvailable(peripheral, reason: "connect.\(reason)")

@@ -117,11 +117,22 @@ extension GooseAppModel {
       connectedDeviceGeneration = ble.discoveredDevices
         .first(where: { $0.id == ble.activeDeviceIdentifier })?.generation
       captureFrameWriteQueue.activeDeviceID = ble.activeDeviceIdentifier?.uuidString
+      if let uuid = ble.connectedPeripheralUUID {
+        captureFrameWriteQueue.currentDeviceUUID = uuid
+        let deviceModel = ble.activeDeviceName
+        var map = UserDefaults.standard.data(forKey: GooseBLEClient.DefaultsKey.deviceUUIDMap)
+          .flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: String] } ?? [:]
+        map[uuid] = deviceModel
+        if let data = try? JSONSerialization.data(withJSONObject: map) {
+          UserDefaults.standard.set(data, forKey: GooseBLEClient.DefaultsKey.deviceUUIDMap)
+        }
+      }
     } else {
       // Clear on all non-ready states (connecting, discovering, connect timeout, disconnected, etc.)
       // to prevent a stale generation label from the previous connection showing during reconnection.
       connectedDeviceGeneration = nil
       captureFrameWriteQueue.activeDeviceID = nil
+      captureFrameWriteQueue.currentDeviceUUID = nil
     }
 
     if overnightGuardActive {

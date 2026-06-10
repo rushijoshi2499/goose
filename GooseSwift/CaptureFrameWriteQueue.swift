@@ -58,6 +58,7 @@ struct CapturedFrameWriteRow {
   let sensitivity: String
   let captureSessionID: String?
   let deviceType: String
+  let deviceUUID: String?
 
   var bridgeObject: [String: Any] {
     [
@@ -70,6 +71,7 @@ struct CapturedFrameWriteRow {
       "sensitivity": sensitivity,
       "capture_session_id": captureSessionID ?? NSNull(),
       "device_type": deviceType,
+      "device_uuid": deviceUUID ?? NSNull(),
     ]
   }
 }
@@ -197,6 +199,12 @@ final class CaptureFrameWriteQueue: @unchecked Sendable {
   var activeDeviceID: String? {
     get { stateLock.withLock { _activeDeviceID } }
     set { stateLock.withLock { _activeDeviceID = newValue } }
+  }
+
+  private var _currentDeviceUUID: String?
+  var currentDeviceUUID: String? {
+    get { stateLock.withLock { _currentDeviceUUID } }
+    set { stateLock.withLock { _currentDeviceUUID = newValue } }
   }
 
   init(databasePath: String, maxQueuedRows: Int, maxBatchRows: Int, coalesceDelay: TimeInterval) {

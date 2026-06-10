@@ -183,7 +183,8 @@ extension GooseAppModel {
       event: event,
       capturedAt: capturedAt,
       captureSessionID: captureSessionID,
-      deviceModel: ble.activeDeviceName
+      deviceModel: ble.activeDeviceName,
+      deviceUUID: captureFrameWriteQueue.currentDeviceUUID
     )
     let rowBuildQueue = incrementCaptureFrameRowBuildQueueDepth()
     publishPipelinePerformanceStatus(
@@ -673,6 +674,7 @@ extension GooseAppModel {
     let capturedAt: String
     let captureSessionID: String?
     let deviceModel: String
+    let deviceUUID: String?
   }
 
   nonisolated static func captureFrameRows(for request: CaptureFrameRowBuildRequest) -> [CapturedFrameWriteRow] {
@@ -687,7 +689,8 @@ extension GooseAppModel {
         frameHex: frame.hex,
         sensitivity: "user-owned-capture",
         captureSessionID: request.captureSessionID,
-        deviceType: request.event.rustDeviceType
+        deviceType: request.event.rustDeviceType,
+        deviceUUID: request.deviceUUID
       )
     }
   }

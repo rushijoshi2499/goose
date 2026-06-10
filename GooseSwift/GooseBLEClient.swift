@@ -30,6 +30,7 @@ import OSLog
   var activeDeviceName = "WHOOP"
   var activeDeviceIdentifier: UUID?
   var selectedDeviceID: UUID?
+  var connectedPeripheralUUID: String?
   var connectedAt: Date?
   var lastSyncAt: Date?
   var batteryLevelPercent: Int?
@@ -334,6 +335,7 @@ import OSLog
   enum DefaultsKey {
     static let rememberedDeviceID = "goose.swift.rememberedDeviceID"
     static let rememberedDeviceName = "goose.swift.rememberedDeviceName"
+    static let deviceUUIDMap = "goose.swift.device_uuid_map"
     static let rememberedDeviceValidated = "goose.swift.rememberedDeviceValidatedWhoop"
     static let lastBatteryPercent = "goose.swift.lastBatteryPercent"
     static let lastBatteryCapturedAt = "goose.swift.lastBatteryCapturedAt"
