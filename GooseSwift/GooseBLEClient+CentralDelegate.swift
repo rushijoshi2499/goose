@@ -92,6 +92,7 @@ extension GooseBLEClient: CBCentralManagerDelegate {
       commandCharacteristic = nil
       debugMenuCharacteristic = nil
       clientHelloSentForCurrentConnection = false
+      connectedPeripheralUUID = nil
       updateConnectionState("disconnected")
       updateReconnectState("waiting for bluetooth")
       connectedAt = nil
@@ -233,6 +234,7 @@ extension GooseBLEClient: CBCentralManagerDelegate {
 
     autoConnectForPhysiologyCapture = false
     pendingConnectionReason = nil
+    connectedPeripheralUUID = nil
     updateConnectionState("connect failed")
     record(level: .error, source: "ble", title: "connect.failed", body: error?.localizedDescription ?? "unknown")
     // If we were in a backoff cycle, schedule the next attempt.
@@ -285,6 +287,7 @@ extension GooseBLEClient: CBCentralManagerDelegate {
     batteryLevelStatusCharacteristic = nil
     batteryCharacteristicDiscoveryPending = false
     clientHelloSentForCurrentConnection = false
+    connectedPeripheralUUID = nil
     connectedAt = nil
     if shouldReconnect {
       let reconnectReason = prioritizeLiveCaptureOnReady ? "auto_live_capture_disconnect" : "auto.disconnect"
