@@ -21,8 +21,8 @@
 
 ### HealthDataStore Async Migration
 
-- [ ] **ASYNC-01**: Todos os 60+ call sites de bridge em `HealthDataStore` (9 ficheiros Swift) são convertidos para `async`/`await` num background actor — zero chamadas síncronas Rust na `@MainActor` (issue #79)
-- [ ] **ASYNC-02**: A UI continua a actualizar correctamente após a migração — nenhum freeze de main thread, dashboards respondem normalmente
+- [x] **ASYNC-01**: Todos os 60+ call sites de bridge em `HealthDataStore` (9 ficheiros Swift) são convertidos para `async`/`await` num background actor — zero chamadas síncronas Rust na `@MainActor` (issue #79)
+- [x] **ASYNC-02**: A UI continua a actualizar correctamente após a migração — nenhum freeze de main thread, dashboards respondem normalmente
 
 ### Morning Band Sleep Sync
 
@@ -65,8 +65,8 @@
 | DEVID-01 | Phase 47 | Pending |
 | DEVID-02 | Phase 47 | Complete |
 | SYNCR-01 | Phase 48 | Pending |
-| ASYNC-01 | Phase 49 | Pending |
-| ASYNC-02 | Phase 49 | Pending |
+| ASYNC-01 | Phase 49 | Complete |
+| ASYNC-02 | Phase 49 | Complete |
 | SLP-SYNC-01 | Phase 50 | Pending |
 | SLP-SYNC-02 | Phase 50 | Pending |
 | SLP-SYNC-03 | Phase 50 | Pending |
