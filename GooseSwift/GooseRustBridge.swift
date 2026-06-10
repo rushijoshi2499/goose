@@ -80,6 +80,14 @@ final class GooseRustBridge: @unchecked Sendable {
     return response["result"] ?? [:]
   }
 
+  func requestValueAsync(method: String, args: [String: Any] = [:]) async throws -> Any {
+    try await Task.detached(priority: .userInitiated) { try self.requestValue(method: method, args: args) }.value
+  }
+
+  func requestAsync(method: String, args: [String: Any] = [:]) async throws -> [String: Any] {
+    try await requestValueAsync(method: method, args: args) as? [String: Any] ?? [:]
+  }
+
   private static func timing(
     from response: [String: Any],
     requestEncodeMicroseconds: Int,
