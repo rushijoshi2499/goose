@@ -589,9 +589,7 @@ fn compare_expected_json_subset(
         // expectations that were written before the field existed.
         serde_json::Value::Array(expected_arr) => {
             let Some(actual_arr) = actual.as_array() else {
-                issues.push(format!(
-                    "{id} expected {path} to be an array, got {actual}"
-                ));
+                issues.push(format!("{id} expected {path} to be an array, got {actual}"));
                 return;
             };
             if actual_arr.len() != expected_arr.len() {

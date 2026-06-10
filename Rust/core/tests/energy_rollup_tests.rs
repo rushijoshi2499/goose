@@ -1,9 +1,9 @@
 use goose_core::{
     energy_rollup::{
         EnergyDailyRollupOptions, GOOSE_ENERGY_UNAVAILABLE_STATUS_V0_ID,
-        GOOSE_ENERGY_UNAVAILABLE_STATUS_V0_VERSION,
-        harris_benedict_rmr_kcal_day, keytel_active_kcal_per_min, rmr_mifflin_st_jeor,
-        rollup_energy_day_for_store, rollup_energy_unavailable_daily_status_for_store,
+        GOOSE_ENERGY_UNAVAILABLE_STATUS_V0_VERSION, harris_benedict_rmr_kcal_day,
+        keytel_active_kcal_per_min, rmr_mifflin_st_jeor, rollup_energy_day_for_store,
+        rollup_energy_unavailable_daily_status_for_store,
     },
     store::{DailyActivityMetricInput, GooseStore},
 };
@@ -15,7 +15,10 @@ fn rmr_mifflin_st_jeor_male_exact_coefficients() {
     // Male: 10*w + 6.25*h - 5*a + 5
     // weight=80, height=175, age=30 → 10*80 + 6.25*175 - 5*30 + 5 = 800 + 1093.75 - 150 + 5 = 1748.75
     let result = rmr_mifflin_st_jeor(80.0, 175.0, 30.0, Some("male"));
-    assert_eq!(result, 1748.75, "male Mifflin-St Jeor: 10*80 + 6.25*175 - 5*30 + 5");
+    assert_eq!(
+        result, 1748.75,
+        "male Mifflin-St Jeor: 10*80 + 6.25*175 - 5*30 + 5"
+    );
 }
 
 #[test]
@@ -23,7 +26,10 @@ fn rmr_mifflin_st_jeor_female_exact_coefficients() {
     // Female: 10*w + 6.25*h - 5*a - 161
     // weight=60, height=165, age=25 → 10*60 + 6.25*165 - 5*25 - 161 = 600 + 1031.25 - 125 - 161 = 1345.25
     let result = rmr_mifflin_st_jeor(60.0, 165.0, 25.0, Some("female"));
-    assert_eq!(result, 1345.25, "female Mifflin-St Jeor: 10*60 + 6.25*165 - 5*25 - 161");
+    assert_eq!(
+        result, 1345.25,
+        "female Mifflin-St Jeor: 10*60 + 6.25*165 - 5*25 - 161"
+    );
 }
 
 #[test]
@@ -32,8 +38,14 @@ fn rmr_mifflin_st_jeor_unknown_sex_uses_mean_intercept() {
     // weight=70, height=170, age=35 → 10*70 + 6.25*170 - 5*35 - 78 = 700 + 1062.5 - 175 - 78 = 1509.5
     let result_none = rmr_mifflin_st_jeor(70.0, 170.0, 35.0, None);
     let result_other = rmr_mifflin_st_jeor(70.0, 170.0, 35.0, Some("other"));
-    assert_eq!(result_none, 1509.5, "unknown-sex Mifflin: 10*70 + 6.25*170 - 5*35 - 78");
-    assert_eq!(result_other, 1509.5, "other-sex Mifflin: same intercept -78");
+    assert_eq!(
+        result_none, 1509.5,
+        "unknown-sex Mifflin: 10*70 + 6.25*170 - 5*35 - 78"
+    );
+    assert_eq!(
+        result_other, 1509.5,
+        "other-sex Mifflin: same intercept -78"
+    );
 }
 
 #[test]
@@ -77,7 +89,10 @@ fn keytel_active_kcal_per_min_hr_capped_at_hrmax() {
     // HR > hrmax → use hrmax instead
     let with_hrmax = keytel_active_kcal_per_min(190.0, 80.0, 30.0, Some("male"), 190.0);
     let with_above_hrmax = keytel_active_kcal_per_min(250.0, 80.0, 30.0, Some("male"), 190.0);
-    assert_eq!(with_hrmax, with_above_hrmax, "HR above hrmax should be capped at hrmax");
+    assert_eq!(
+        with_hrmax, with_above_hrmax,
+        "HR above hrmax should be capped at hrmax"
+    );
 }
 
 #[test]
@@ -279,7 +294,9 @@ fn rollup_with_height_absent_emits_mifflin_height_absent_flag() {
     )
     .unwrap();
     assert!(
-        report.quality_flags.contains(&"resting_kcal_mifflin_height_absent".to_string()),
+        report
+            .quality_flags
+            .contains(&"resting_kcal_mifflin_height_absent".to_string()),
         "quality_flags must include resting_kcal_mifflin_height_absent when height absent; got: {:?}",
         report.quality_flags
     );
@@ -312,7 +329,9 @@ fn rollup_with_height_present_does_not_emit_mifflin_height_absent_flag() {
     )
     .unwrap();
     assert!(
-        !report.quality_flags.contains(&"resting_kcal_mifflin_height_absent".to_string()),
+        !report
+            .quality_flags
+            .contains(&"resting_kcal_mifflin_height_absent".to_string()),
         "quality_flags must NOT include resting_kcal_mifflin_height_absent when height present; got: {:?}",
         report.quality_flags
     );

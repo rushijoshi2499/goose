@@ -537,7 +537,11 @@ pub fn built_in_default_algorithm_preferences() -> Vec<AlgorithmPreferenceRecord
         default_algorithm_preference("strain", GOOSE_STRAIN_V1_ID, GOOSE_STRAIN_V1_VERSION),
         default_algorithm_preference("recovery", GOOSE_RECOVERY_V1_ID, GOOSE_RECOVERY_V1_VERSION),
         default_algorithm_preference("stress", GOOSE_STRESS_V0_ID, GOOSE_STRESS_V0_VERSION),
-        default_algorithm_preference("readiness", GOOSE_READINESS_V1_ID, GOOSE_READINESS_V1_VERSION),
+        default_algorithm_preference(
+            "readiness",
+            GOOSE_READINESS_V1_ID,
+            GOOSE_READINESS_V1_VERSION,
+        ),
     ]
 }
 
@@ -821,9 +825,7 @@ const SWS_MIN_DURATION_MINUTES: f64 = 5.0;
 //
 // Recency weighting (Tier 2): the caller assigns weight = index+1 in chronological
 // order over the returned deep segments, so later segments receive higher weight.
-fn select_sws_window(
-    stage_segments: Option<&[SleepStageSegment]>,
-) -> (u8, Vec<usize>) {
+fn select_sws_window(stage_segments: Option<&[SleepStageSegment]>) -> (u8, Vec<usize>) {
     let Some(segs) = stage_segments else {
         return (3, Vec::new());
     };
@@ -1089,10 +1091,12 @@ pub fn goose_hrv_v0(input: &HrvInput) -> AlgorithmRunResult<HrvOutput> {
             // ALG-HRV-04 cross-validation reviewer can reproduce which RR window was used.
             let sws_selected_segment = if window_tier_used == 1 {
                 let segs = input.stage_segments.as_deref().unwrap_or(&[]);
-                sws_indices.first().map(|&i| json!({
-                    "index": i,
-                    "duration_minutes": segs.get(i).map(|s| s.duration_minutes)
-                }))
+                sws_indices.first().map(|&i| {
+                    json!({
+                        "index": i,
+                        "duration_minutes": segs.get(i).map(|s| s.duration_minutes)
+                    })
+                })
             } else {
                 None
             };
@@ -1915,14 +1919,20 @@ pub fn tanaka_hrmax(age: f64) -> f64 {
 /// Non-finite values (NaN, ±infinity) are filtered out before counting. Index
 /// is clamped to `len - 1` to guard against boundary overflow (T-23-02).
 pub fn estimate_hrmax_from_history(hr_history: &[f64]) -> Option<f64> {
-    let mut finite: Vec<f64> = hr_history.iter().copied().filter(|v| v.is_finite()).collect();
+    let mut finite: Vec<f64> = hr_history
+        .iter()
+        .copied()
+        .filter(|v| v.is_finite())
+        .collect();
     if finite.len() < 600 {
         return None;
     }
     finite.sort_by(|a, b| a.partial_cmp(b).unwrap());
     let len = finite.len();
     // CR-01 fix: nearest-rank P99.5 is ceil(0.995*n) - 1 (0-indexed).
-    let index = ((0.995 * len as f64).ceil() as usize).saturating_sub(1).min(len - 1);
+    let index = ((0.995 * len as f64).ceil() as usize)
+        .saturating_sub(1)
+        .min(len - 1);
     Some(finite[index])
 }
 
@@ -2094,7 +2104,12 @@ pub fn goose_strain_v1(input: &StrainInput) -> AlgorithmRunResult<StrainScoreOut
         resolve_effective_hrmax(input.max_hr_bpm, input.profile_age, &[]);
 
     // Banister b constant for provenance recording (selected by sex, case-insensitive).
-    let b_constant: f64 = match input.profile_sex.as_deref().map(str::to_ascii_lowercase).as_deref() {
+    let b_constant: f64 = match input
+        .profile_sex
+        .as_deref()
+        .map(str::to_ascii_lowercase)
+        .as_deref()
+    {
         Some("male") => 1.92,
         Some("female") => 1.67,
         _ => 1.795,
@@ -2577,9 +2592,7 @@ fn lipponen_tarvainen_filter(segment: &[f64]) -> Vec<f64> {
 
 // Apply the ectopic filter to every segment and return the filtered segments together
 // with total beat counts before and after. The caller computes the removal fraction.
-fn apply_ectopic_filter(
-    segments: &[Vec<f64>],
-) -> (Vec<Vec<f64>>, usize, usize) {
+fn apply_ectopic_filter(segments: &[Vec<f64>]) -> (Vec<Vec<f64>>, usize, usize) {
     let mut filtered = Vec::with_capacity(segments.len());
     let mut total_before = 0usize;
     let mut total_after = 0usize;
@@ -4115,7 +4128,7 @@ pub fn waso_from_hr(hr_series: &[(f64, f64)], resting_hr: f64, onset_ts: f64) ->
 
 /// Return the time from window start to the first sustained low-HR period of
 /// >= `sustained_minutes` consecutive minutes where all HR samples are <=
-/// `resting_hr * 1.05`.
+/// > `resting_hr * 1.05`.
 ///
 /// "Consecutive" means no sample above the threshold interrupts the run.
 /// Returns `None` when no such sustained period exists.
@@ -4272,7 +4285,9 @@ pub fn goose_recovery_v1(input: &RecoveryV1Input, baseline: &EwmaBaseline) -> Re
 
     // Cold-start gate: HRV baseline not seeded yet.
     if z_hrv.is_none() {
-        let band = ColourBand::from_score(RECOVERY_POPULATION_MEAN).as_str().to_string();
+        let band = ColourBand::from_score(RECOVERY_POPULATION_MEAN)
+            .as_str()
+            .to_string();
         return RecoveryV1Output {
             algorithm_id: GOOSE_RECOVERY_V1_ID.to_string(),
             algorithm_version: GOOSE_RECOVERY_V1_VERSION.to_string(),
@@ -4332,7 +4347,11 @@ mod recovery_v1_tests {
 
     /// Build a minimal EwmaState with exact mean/variance/night_count for test control.
     fn make_state(mean: f64, variance: f64, night_count: usize) -> EwmaState {
-        EwmaState { mean, variance, night_count }
+        EwmaState {
+            mean,
+            variance,
+            night_count,
+        }
     }
 
     fn make_baseline(hrv: EwmaState, resting_hr: EwmaState) -> EwmaBaseline {
@@ -4365,14 +4384,16 @@ mod recovery_v1_tests {
         let input = RecoveryV1Input {
             device_id: "dev".to_string(),
             date_key: "2024-01-01".to_string(),
-            hrv_rmssd_ms: 60.0,  // == hrv.mean → z_hrv = 0
+            hrv_rmssd_ms: 60.0,   // == hrv.mean → z_hrv = 0
             resting_hr_bpm: 55.0, // == rhr.mean → z_rhr = 0
             resp_rate_rpm: None,
             sleep_performance_fraction: None,
         };
 
         let output = goose_recovery_v1(&input, &baseline);
-        let score = output.score_0_to_100.expect("score must be Some when trusted");
+        let score = output
+            .score_0_to_100
+            .expect("score must be Some when trusted");
 
         // Expected: 100 / (1 + exp(-1.6 * 0.20)) = 100 / (1 + exp(-0.32)) ≈ 57.9%
         let expected = 100.0 / (1.0 + (-1.6_f64 * 0.20_f64).exp());
@@ -4451,10 +4472,7 @@ mod recovery_v1_tests {
             output.trust_level, "calibrating",
             "cold-start: trust_level must be 'calibrating'"
         );
-        assert!(
-            output.z_hrv.is_none(),
-            "cold-start: z_hrv must be None"
-        );
+        assert!(output.z_hrv.is_none(), "cold-start: z_hrv must be None");
     }
 
     // ---- Cold-start: colour band falls back to population mean band ----------
@@ -4520,7 +4538,10 @@ mod recovery_v1_tests {
         let baseline = make_baseline(hrv, rhr);
         let output = goose_recovery_v1(&make_input(), &baseline);
         assert_eq!(output.trust_level, "provisional");
-        assert!(output.score_0_to_100.is_some(), "provisional must have a score");
+        assert!(
+            output.score_0_to_100.is_some(),
+            "provisional must have a score"
+        );
     }
 
     #[test]
@@ -4564,7 +4585,10 @@ mod recovery_v1_tests {
             score,
             expected
         );
-        assert!(output.z_rhr.is_none(), "z_rhr must be None when rhr baseline cold");
+        assert!(
+            output.z_rhr.is_none(),
+            "z_rhr must be None when rhr baseline cold"
+        );
     }
 }
 
@@ -4663,7 +4687,10 @@ pub fn goose_readiness_v1(input: &ReadinessInput) -> ReadinessOutput {
     }
 
     // ACWR: acute = mean of last 7; chronic = mean of last 28.
-    let window28: Vec<f64> = input.daily_strain[n - 28..].iter().map(|(_, s)| *s).collect();
+    let window28: Vec<f64> = input.daily_strain[n - 28..]
+        .iter()
+        .map(|(_, s)| *s)
+        .collect();
     let window7 = &window28[21..]; // last 7 of the 28
 
     let acute_load = window7.iter().sum::<f64>() / 7.0;
@@ -4682,7 +4709,7 @@ pub fn goose_readiness_v1(input: &ReadinessInput) -> ReadinessOutput {
 
     // Foster monotony from last 7 strains.
     let monotony = foster_monotony(window7);
-    let monotony_high = monotony.map_or(false, |m| m >= 2.0);
+    let monotony_high = monotony.is_some_and(|m| m >= 2.0);
 
     // Level synthesis (evaluated in priority order).
     let level = match acwr {
@@ -4690,7 +4717,7 @@ pub fn goose_readiness_v1(input: &ReadinessInput) -> ReadinessOutput {
         Some(v) if v >= 1.5 => ReadinessLevel::Rundown,
         _ if monotony_high => ReadinessLevel::Strained,
         Some(v) if v < 0.8 => ReadinessLevel::Strained,
-        Some(v) if v >= 0.8 && v <= 1.3 && !monotony_high => ReadinessLevel::Primed,
+        Some(v) if (0.8..=1.3).contains(&v) && !monotony_high => ReadinessLevel::Primed,
         _ => ReadinessLevel::Balanced,
     };
 
@@ -4713,7 +4740,9 @@ mod readiness_tests {
     // Helper: build ReadinessInput with n entries all at strain `s`.
     fn uniform_input(n: usize, s: f64) -> ReadinessInput {
         let pairs = (0..n).map(|i| (i as f64 * 86400.0, s)).collect();
-        ReadinessInput { daily_strain: pairs }
+        ReadinessInput {
+            daily_strain: pairs,
+        }
     }
 
     // Helper: build 28-entry input with custom last-7 strain.
@@ -4724,14 +4753,19 @@ mod readiness_tests {
         for j in 0..7 {
             pairs.push(((21 + j) as f64 * 86400.0, last7_strain));
         }
-        ReadinessInput { daily_strain: pairs }
+        ReadinessInput {
+            daily_strain: pairs,
+        }
     }
 
     #[test]
     fn test_readiness_insufficient_data_27_entries() {
         let input = uniform_input(27, 10.0);
         let out = goose_readiness_v1(&input);
-        assert!(out.insufficient_data, "27 entries: insufficient_data must be true");
+        assert!(
+            out.insufficient_data,
+            "27 entries: insufficient_data must be true"
+        );
         assert_eq!(out.level, ReadinessLevel::Unknown);
         assert!(out.acwr.is_none());
         assert_eq!(out.acwr_zone, "unknown");
@@ -4747,7 +4781,9 @@ mod readiness_tests {
 
     #[test]
     fn test_readiness_insufficient_data_empty() {
-        let input = ReadinessInput { daily_strain: vec![] };
+        let input = ReadinessInput {
+            daily_strain: vec![],
+        };
         let out = goose_readiness_v1(&input);
         assert!(out.insufficient_data);
         assert_eq!(out.level, ReadinessLevel::Unknown);
@@ -4762,7 +4798,10 @@ mod readiness_tests {
         let acwr = out.acwr.expect("acwr must be Some");
         assert!((acwr - 1.0).abs() < 1e-9, "acwr must be 1.0, got {acwr}");
         assert_eq!(out.acwr_zone, "optimal");
-        assert!(out.monotony.is_none(), "uniform strain → monotony must be None (std=0)");
+        assert!(
+            out.monotony.is_none(),
+            "uniform strain → monotony must be None (std=0)"
+        );
         assert!(!out.monotony_high);
         assert_eq!(out.level, ReadinessLevel::Primed);
     }
@@ -4775,13 +4814,12 @@ mod readiness_tests {
         for j in 0..7 {
             pairs.push((21.0 + j as f64, 7.5));
         }
-        let input = ReadinessInput { daily_strain: pairs };
+        let input = ReadinessInput {
+            daily_strain: pairs,
+        };
         let out = goose_readiness_v1(&input);
         let acwr = out.acwr.unwrap();
-        assert!(
-            (acwr - 0.8).abs() < 1e-9,
-            "acwr must be 0.8, got {acwr}"
-        );
+        assert!((acwr - 0.8).abs() < 1e-9, "acwr must be 0.8, got {acwr}");
         assert_eq!(out.acwr_zone, "optimal", "acwr=0.8 must map to 'optimal'");
     }
 
@@ -4794,13 +4832,12 @@ mod readiness_tests {
         for j in 0..7 {
             pairs.push((21.0 + j as f64, x));
         }
-        let input = ReadinessInput { daily_strain: pairs };
+        let input = ReadinessInput {
+            daily_strain: pairs,
+        };
         let out = goose_readiness_v1(&input);
         let acwr = out.acwr.unwrap();
-        assert!(
-            (acwr - 1.3).abs() < 1e-9,
-            "acwr must be 1.3, got {acwr}"
-        );
+        assert!((acwr - 1.3).abs() < 1e-9, "acwr must be 1.3, got {acwr}");
         assert_eq!(out.acwr_zone, "optimal", "acwr=1.3 must map to 'optimal'");
     }
 
@@ -4813,15 +4850,18 @@ mod readiness_tests {
         for j in 0..7 {
             pairs.push((21.0 + j as f64, 18.0));
         }
-        let input = ReadinessInput { daily_strain: pairs };
+        let input = ReadinessInput {
+            daily_strain: pairs,
+        };
         let out = goose_readiness_v1(&input);
         let acwr = out.acwr.unwrap();
-        assert!(
-            (acwr - 1.5).abs() < 1e-6,
-            "acwr must be 1.5, got {acwr}"
-        );
+        assert!((acwr - 1.5).abs() < 1e-6, "acwr must be 1.5, got {acwr}");
         assert_eq!(out.acwr_zone, "danger", "acwr=1.5 must map to 'danger'");
-        assert_eq!(out.level, ReadinessLevel::Rundown, "acwr=1.5 must yield Rundown");
+        assert_eq!(
+            out.level,
+            ReadinessLevel::Rundown,
+            "acwr=1.5 must yield Rundown"
+        );
     }
 
     #[test]
@@ -4846,7 +4886,11 @@ mod readiness_tests {
         let out = goose_readiness_v1(&input);
         let acwr = out.acwr.unwrap();
         assert!(acwr < 0.8, "acwr must be <0.8, got {acwr}");
-        assert_eq!(out.level, ReadinessLevel::Strained, "under-training acwr must yield Strained");
+        assert_eq!(
+            out.level,
+            ReadinessLevel::Strained,
+            "under-training acwr must yield Strained"
+        );
     }
 
     #[test]
@@ -4874,15 +4918,24 @@ mod readiness_tests {
         for (j, &s) in last7.iter().enumerate() {
             pairs.push((21.0 + j as f64, s));
         }
-        let input = ReadinessInput { daily_strain: pairs };
+        let input = ReadinessInput {
+            daily_strain: pairs,
+        };
         let out = goose_readiness_v1(&input);
         let mono = out.monotony.expect("monotony must be Some");
         assert!(
             mono >= 2.0,
             "monotony must be >=2.0 (got {mono}) for values with mean/std >> 2"
         );
-        assert!(out.monotony_high, "monotony>=2.0 must set monotony_high=true");
-        assert_eq!(out.level, ReadinessLevel::Strained, "high monotony must yield Strained");
+        assert!(
+            out.monotony_high,
+            "monotony>=2.0 must set monotony_high=true"
+        );
+        assert_eq!(
+            out.level,
+            ReadinessLevel::Strained,
+            "high monotony must yield Strained"
+        );
     }
 
     #[test]
@@ -4899,14 +4952,21 @@ mod readiness_tests {
         for (j, &s) in last7.iter().enumerate() {
             pairs.push((21.0 + j as f64, s));
         }
-        let input = ReadinessInput { daily_strain: pairs };
+        let input = ReadinessInput {
+            daily_strain: pairs,
+        };
         let out = goose_readiness_v1(&input);
-        let mono = out.monotony.expect("monotony must be Some for high-variance input");
+        let mono = out
+            .monotony
+            .expect("monotony must be Some for high-variance input");
         assert!(
             mono < 2.0,
             "monotony must be <2.0 for high-variance input, got {mono}"
         );
-        assert!(!out.monotony_high, "monotony<2.0 must NOT set monotony_high");
+        assert!(
+            !out.monotony_high,
+            "monotony<2.0 must NOT set monotony_high"
+        );
     }
 
     #[test]
@@ -4918,7 +4978,9 @@ mod readiness_tests {
         for j in 0..7 {
             pairs.push((21.0 + j as f64, 16.0));
         }
-        let input = ReadinessInput { daily_strain: pairs };
+        let input = ReadinessInput {
+            daily_strain: pairs,
+        };
         let out = goose_readiness_v1(&input);
         let acwr = out.acwr.unwrap();
         assert!(
@@ -4930,7 +4992,11 @@ mod readiness_tests {
             "uniform last7 → monotony must be None (std=0)"
         );
         assert!(!out.monotony_high, "uniform last7 → no high monotony");
-        assert_eq!(out.level, ReadinessLevel::Balanced, "caution zone without monotony → Balanced");
+        assert_eq!(
+            out.level,
+            ReadinessLevel::Balanced,
+            "caution zone without monotony → Balanced"
+        );
     }
 }
 
@@ -5050,7 +5116,9 @@ mod imu_step_count_tests {
 
     #[test]
     fn test_imu_step_count_insufficient_data() {
-        let input = ImuStepCountInput { gravity_samples: vec![[1.0, 0.0, 0.0]; 10] };
+        let input = ImuStepCountInput {
+            gravity_samples: vec![[1.0, 0.0, 0.0]; 10],
+        };
         let out = imu_step_count_v1(&input);
         assert!(out.insufficient_data);
         assert_eq!(out.step_count, 0);
@@ -5059,7 +5127,9 @@ mod imu_step_count_tests {
     #[test]
     fn test_imu_step_count_zero_motion_no_crossings() {
         // Constant signal → no zero-crossings after DC removal.
-        let input = ImuStepCountInput { gravity_samples: vec![[0.0, 0.0, 1.0]; 100] };
+        let input = ImuStepCountInput {
+            gravity_samples: vec![[0.0, 0.0, 1.0]; 100],
+        };
         let out = imu_step_count_v1(&input);
         assert!(!out.insufficient_data, "100 samples must be sufficient");
         assert_eq!(out.step_count, 0, "constant signal → no crossings");
@@ -5075,11 +5145,17 @@ mod imu_step_count_tests {
                 [t.sin(), 0.0, 1.0]
             })
             .collect();
-        let input = ImuStepCountInput { gravity_samples: samples };
+        let input = ImuStepCountInput {
+            gravity_samples: samples,
+        };
         let out = imu_step_count_v1(&input);
         assert!(!out.insufficient_data);
         // 200 samples, period=100 samples → 2 full cycles → 2 positive zero-crossings minimum.
-        assert!(out.step_count >= 2, "2 full cycles must yield >=2 steps, got {}", out.step_count);
+        assert!(
+            out.step_count >= 2,
+            "2 full cycles must yield >=2 steps, got {}",
+            out.step_count
+        );
     }
 }
 
@@ -5142,7 +5218,11 @@ mod hrv_parity_tests {
 
         let input = make_hrv_input(intervals_ms);
         let result = goose_hrv_v0(&input);
-        let rmssd = result.output.as_ref().map(|o| o.rmssd_ms).unwrap_or(f64::NAN);
+        let rmssd = result
+            .output
+            .as_ref()
+            .map(|o| o.rmssd_ms)
+            .unwrap_or(f64::NAN);
         assert!(
             rmssd.abs() < 1.0,
             "uniform: RMSSD must be < 1 ms, got {:.3}",
@@ -5154,14 +5234,24 @@ mod hrv_parity_tests {
     #[test]
     fn test_hrv_parity_alternating_delta_200ms() {
         let n = 60;
-        let intervals_ms: Vec<f64> = (0..n).map(|i| if i % 2 == 0 { 800.0 } else { 1000.0 }).collect();
+        let intervals_ms: Vec<f64> = (0..n)
+            .map(|i| if i % 2 == 0 { 800.0 } else { 1000.0 })
+            .collect();
         let expected = reference_rmssd_ms(&intervals_ms);
         // All successive differences are 200, so RMSSD = sqrt(200^2) = 200.0
-        assert!((expected - 200.0).abs() < 0.1, "reference must be ≈200 ms, got {:.4}", expected);
+        assert!(
+            (expected - 200.0).abs() < 0.1,
+            "reference must be ≈200 ms, got {:.4}",
+            expected
+        );
 
         let input = make_hrv_input(intervals_ms);
         let result = goose_hrv_v0(&input);
-        let rmssd = result.output.as_ref().map(|o| o.rmssd_ms).unwrap_or(f64::NAN);
+        let rmssd = result
+            .output
+            .as_ref()
+            .map(|o| o.rmssd_ms)
+            .unwrap_or(f64::NAN);
         // After gap/ectopic filter the value will differ slightly; the delta vs reference
         // must be <= 1 ms for normal physiological sequences.
         assert!(
@@ -5180,7 +5270,9 @@ mod hrv_parity_tests {
         let n = 50;
         let intervals_ms: Vec<f64> = (0..n)
             .map(|_| {
-                x = x.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+                x = x
+                    .wrapping_mul(6364136223846793005)
+                    .wrapping_add(1442695040888963407);
                 let noise = ((x >> 33) as f64 / u32::MAX as f64) * 100.0 - 50.0;
                 (950.0 + noise).max(300.0).min(2000.0)
             })
@@ -5189,7 +5281,11 @@ mod hrv_parity_tests {
         let expected = reference_rmssd_ms(&intervals_ms);
         let input = make_hrv_input(intervals_ms);
         let result = goose_hrv_v0(&input);
-        let rmssd = result.output.as_ref().map(|o| o.rmssd_ms).unwrap_or(f64::NAN);
+        let rmssd = result
+            .output
+            .as_ref()
+            .map(|o| o.rmssd_ms)
+            .unwrap_or(f64::NAN);
 
         // Delta must be <= 1 ms vs reference on this clean synthetic fixture.
         // Note: the SWS window filter and gap-rejection may shrink the working window,

@@ -12,11 +12,7 @@ fn request(value: serde_json::Value) -> BridgeResponse {
 }
 
 fn db_path(tempdir: &tempfile::TempDir) -> String {
-    tempdir
-        .path()
-        .join("goose.sqlite")
-        .display()
-        .to_string()
+    tempdir.path().join("goose.sqlite").display().to_string()
 }
 
 // ---------------------------------------------------------------------------
@@ -126,9 +122,11 @@ fn test_v24_plausibility_spo2_reject() {
         !warnings.is_empty(),
         "expected at least one plausibility warning"
     );
-    let any_spo2_warn = warnings
-        .iter()
-        .any(|w| w.as_str().unwrap_or("").contains("spo2_plausibility_reject"));
+    let any_spo2_warn = warnings.iter().any(|w| {
+        w.as_str()
+            .unwrap_or("")
+            .contains("spo2_plausibility_reject")
+    });
     assert!(
         any_spo2_warn,
         "expected spo2_plausibility_reject in warnings, got: {:?}",
@@ -150,7 +148,12 @@ fn test_v24_plausibility_spo2_reject() {
     assert!(query_resp.ok, "query failed: {:?}", query_resp.error);
     let qresult = query_resp.result.unwrap();
     let spo2 = qresult["spo2"].as_array().unwrap();
-    assert_eq!(spo2.len(), 0, "rejected row should not be stored, got: {:?}", spo2);
+    assert_eq!(
+        spo2.len(),
+        0,
+        "rejected row should not be stored, got: {:?}",
+        spo2
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -173,8 +176,7 @@ fn test_v24_uncalibrated_flag() {
     assert!(resp.ok, "bridge error: {:?}", resp.error);
     let result = resp.result.unwrap();
     assert_eq!(
-        result["quality_flag"],
-        "uncalibrated",
+        result["quality_flag"], "uncalibrated",
         "quality_flag must always be 'uncalibrated'"
     );
     let spo2_pct = result["spo2_pct"].as_f64().unwrap();
@@ -197,11 +199,13 @@ fn test_v24_uncalibrated_flag() {
     assert!(resp2.ok, "bridge error: {:?}", resp2.error);
     let result2 = resp2.result.unwrap();
     assert_eq!(
-        result2["quality_flag"],
-        "uncalibrated",
+        result2["quality_flag"], "uncalibrated",
         "quality_flag must always be 'uncalibrated' even when rejected"
     );
-    assert_eq!(result2["rejected"], true, "rejected flag should be true for out-of-range");
+    assert_eq!(
+        result2["rejected"], true,
+        "rejected flag should be true for out-of-range"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -262,17 +266,31 @@ fn test_v24_skin_contact_gate() {
     let qresult = query_resp.result.unwrap();
 
     let spo2 = qresult["spo2"].as_array().unwrap();
-    assert_eq!(spo2.len(), 2, "both contact=0 and contact=1 rows should be stored");
+    assert_eq!(
+        spo2.len(),
+        2,
+        "both contact=0 and contact=1 rows should be stored"
+    );
 
     // contact=0 row is stored
     let contact0 = spo2.iter().find(|r| r["contact"] == 0);
-    assert!(contact0.is_some(), "contact=0 row should be present in storage");
+    assert!(
+        contact0.is_some(),
+        "contact=0 row should be present in storage"
+    );
 
     // contact=1 row is stored
     let contact1 = spo2.iter().find(|r| r["contact"] == 1);
-    assert!(contact1.is_some(), "contact=1 row should be present in storage");
+    assert!(
+        contact1.is_some(),
+        "contact=1 row should be present in storage"
+    );
 
     // sig_quality rows — both stored
     let sig_quality = qresult["sig_quality"].as_array().unwrap();
-    assert_eq!(sig_quality.len(), 2, "both sig_quality rows should be stored");
+    assert_eq!(
+        sig_quality.len(),
+        2,
+        "both sig_quality rows should be stored"
+    );
 }

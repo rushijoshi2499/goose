@@ -12,11 +12,7 @@ fn request(value: serde_json::Value) -> BridgeResponse {
 }
 
 fn db_path(tempdir: &tempfile::TempDir) -> String {
-    tempdir
-        .path()
-        .join("goose.sqlite")
-        .display()
-        .to_string()
+    tempdir.path().join("goose.sqlite").display().to_string()
 }
 
 // ---------------------------------------------------------------------------
@@ -124,7 +120,11 @@ fn test_detect_sessions_roundtrip() {
         }
     }));
 
-    assert!(query_resp.ok, "sessions_between failed: {:?}", query_resp.error);
+    assert!(
+        query_resp.ok,
+        "sessions_between failed: {:?}",
+        query_resp.error
+    );
     let qresult = query_resp.result.unwrap();
     let sessions = qresult["sessions"].as_array().unwrap();
     assert!(
@@ -138,18 +138,12 @@ fn test_detect_sessions_roundtrip() {
         sess["start_ts"].as_f64().is_some(),
         "start_ts field missing"
     );
-    assert!(
-        sess["end_ts"].as_f64().is_some(),
-        "end_ts field missing"
-    );
+    assert!(sess["end_ts"].as_f64().is_some(), "end_ts field missing");
     assert!(
         sess["duration_s"].as_f64().is_some(),
         "duration_s field missing"
     );
-    assert!(
-        sess["avg_hr"].as_f64().is_some(),
-        "avg_hr field missing"
-    );
+    assert!(sess["avg_hr"].as_f64().is_some(), "avg_hr field missing");
 }
 
 // ---------------------------------------------------------------------------
@@ -319,7 +313,11 @@ fn test_sessions_between_empty_range() {
         }
     }));
 
-    assert!(query_resp.ok, "sessions_between failed: {:?}", query_resp.error);
+    assert!(
+        query_resp.ok,
+        "sessions_between failed: {:?}",
+        query_resp.error
+    );
     let sessions = query_resp.result.unwrap()["sessions"]
         .as_array()
         .unwrap()

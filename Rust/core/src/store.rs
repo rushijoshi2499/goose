@@ -111,8 +111,13 @@ const ALLOWED_ACTIVITY_METRIC_UNITS: [&str; 25] = [
     "percent", "ratio", "load", "joule", "w", "kg", "m/s2", "c", "f", "degrees", "n/a",
 ];
 
-const ALLOWED_EXTERNAL_SLEEP_PLATFORMS: [&str; 5] =
-    ["healthkit", "health_connect", "manual", "import", "goose_ble"];
+const ALLOWED_EXTERNAL_SLEEP_PLATFORMS: [&str; 5] = [
+    "healthkit",
+    "health_connect",
+    "manual",
+    "import",
+    "goose_ble",
+];
 
 const ALLOWED_EXTERNAL_SLEEP_STAGE_KINDS: [&str; 8] = [
     "in_bed",
@@ -737,10 +742,10 @@ pub struct ExerciseSessionRow {
 
 #[derive(Debug, Clone)]
 pub struct V24BiometricBatch {
-    pub spo2: Vec<(f64, i64, i64, i64)>,       // (ts, red, ir, contact)
-    pub skin_temp: Vec<(f64, i64, i64)>,        // (ts, raw, contact)
-    pub resp: Vec<(f64, i64, i64)>,             // (ts, raw, contact)
-    pub sig_quality: Vec<(f64, i64, i64)>,      // (ts, quality, contact)
+    pub spo2: Vec<(f64, i64, i64, i64)>,   // (ts, red, ir, contact)
+    pub skin_temp: Vec<(f64, i64, i64)>,   // (ts, raw, contact)
+    pub resp: Vec<(f64, i64, i64)>,        // (ts, raw, contact)
+    pub sig_quality: Vec<(f64, i64, i64)>, // (ts, quality, contact)
 }
 
 #[derive(Debug, Clone)]
@@ -3974,8 +3979,8 @@ impl GooseStore {
             let both_non_null = existing_hrv.is_some() && existing_rhr.is_some();
             if both_non_null {
                 // Row exists with real values — idempotency check.
-                let hrv_matches = existing_hrv.map_or(false, |v| (v - hrv_rmssd).abs() < 1e-9);
-                let rhr_matches = existing_rhr.map_or(false, |v| (v - rhr_bpm).abs() < 1e-9);
+                let hrv_matches = existing_hrv.is_some_and(|v| (v - hrv_rmssd).abs() < 1e-9);
+                let rhr_matches = existing_rhr.is_some_and(|v| (v - rhr_bpm).abs() < 1e-9);
                 if hrv_matches && rhr_matches {
                     return Ok(false); // identical values — idempotent no-op
                 }
@@ -6764,7 +6769,8 @@ impl GooseStore {
                 avg_hrr_pct: row.get(11)?,
             })
         })?;
-        rows.collect::<Result<Vec<_>, _>>().map_err(GooseError::from)
+        rows.collect::<Result<Vec<_>, _>>()
+            .map_err(GooseError::from)
     }
 
     pub fn insert_v24_biometric_batch(
@@ -6869,7 +6875,12 @@ impl GooseStore {
             })?
             .collect::<Result<Vec<_>, _>>()?
         };
-        Ok(V24BiometricWindow { spo2, skin_temp, resp, sig_quality })
+        Ok(V24BiometricWindow {
+            spo2,
+            skin_temp,
+            resp,
+            sig_quality,
+        })
     }
 }
 
@@ -7164,13 +7175,18 @@ impl GooseStore {
 
     fn ensure_synced_columns(&self) -> GooseResult<()> {
         let synced_ddl = "synced INTEGER NOT NULL DEFAULT 0";
-        for table in &["spo2_samples", "skin_temp_samples", "resp_samples", "gravity", "gravity2_samples", "exercise_sessions"] {
+        for table in &[
+            "spo2_samples",
+            "skin_temp_samples",
+            "resp_samples",
+            "gravity",
+            "gravity2_samples",
+            "exercise_sessions",
+        ] {
             let columns = self.table_columns_unchecked(table)?;
             if !columns.contains("synced") {
-                self.conn.execute(
-                    &format!("ALTER TABLE {table} ADD COLUMN {synced_ddl}"),
-                    [],
-                )?;
+                self.conn
+                    .execute(&format!("ALTER TABLE {table} ADD COLUMN {synced_ddl}"), [])?;
             }
         }
         Ok(())
@@ -7189,11 +7205,7 @@ impl GooseStore {
         Ok(())
     }
 
-    pub fn get_upload_cursor(
-        &self,
-        namespace: &str,
-        stream: &str,
-    ) -> GooseResult<Option<String>> {
+    pub fn get_upload_cursor(&self, namespace: &str, stream: &str) -> GooseResult<Option<String>> {
         self.conn
             .query_row(
                 "SELECT value FROM upload_cursors WHERE namespace=?1 AND stream=?2",
@@ -7219,9 +7231,7 @@ impl GooseStore {
             .collect::<Vec<_>>()
             .join(",");
         let sql = format!("UPDATE {stream} SET synced=1 WHERE rowid IN ({placeholders})");
-        let count = self
-            .conn
-            .execute(&sql, params_from_iter(row_ids.iter()))?;
+        let count = self.conn.execute(&sql, params_from_iter(row_ids.iter()))?;
         Ok(count)
     }
 
@@ -7240,8 +7250,7 @@ impl GooseStore {
         if limit <= 0 {
             return Err(GooseError::message("limit must be a positive integer"));
         }
-        let sql =
-            format!("SELECT rowid, * FROM {stream} WHERE synced=0 ORDER BY ts LIMIT ?1");
+        let sql = format!("SELECT rowid, * FROM {stream} WHERE synced=0 ORDER BY ts LIMIT ?1");
         let mut statement = self.conn.prepare(&sql)?;
         let col_names: Vec<String> = statement
             .column_names()
@@ -7253,19 +7262,13 @@ impl GooseStore {
             for (i, name) in col_names.iter().enumerate() {
                 let val = match row.get_ref(i)? {
                     rusqlite::types::ValueRef::Null => serde_json::Value::Null,
-                    rusqlite::types::ValueRef::Integer(v) => {
-                        serde_json::Value::Number(v.into())
-                    }
+                    rusqlite::types::ValueRef::Integer(v) => serde_json::Value::Number(v.into()),
                     rusqlite::types::ValueRef::Real(v) => serde_json::Value::Number(
                         serde_json::Number::from_f64(v)
                             .unwrap_or_else(|| serde_json::Number::from(0)),
                     ),
                     rusqlite::types::ValueRef::Text(v) => {
-                        serde_json::Value::String(
-                            std::str::from_utf8(v)
-                                .unwrap_or("")
-                                .to_string(),
-                        )
+                        serde_json::Value::String(std::str::from_utf8(v).unwrap_or("").to_string())
                     }
                     rusqlite::types::ValueRef::Blob(_) => serde_json::Value::Null,
                 };
@@ -7320,11 +7323,10 @@ impl GooseStore {
                     marker_value,
                     ..
                 } => {
-                    if hr_present.unwrap_or(false) {
-                        if let (Some(ts), Some(bpm)) = (ts_unix, marker_value) {
+                    if hr_present.unwrap_or(false)
+                        && let (Some(ts), Some(bpm)) = (ts_unix, marker_value) {
                             hr_rows.push((ts, *bpm as i64));
                         }
-                    }
                 }
                 DataPacketBodySummary::RawMotionK10 { heart_rate, .. } => {
                     if let (Some(ts), Some(bpm)) = (ts_unix, heart_rate) {
@@ -7338,11 +7340,10 @@ impl GooseStore {
                     ..
                 } => {
                     let contact = skin_contact.unwrap_or(0) == 1;
-                    if contact {
-                        if let (Some(ts), Some(bpm)) = (ts_unix, *v24_hr) {
+                    if contact
+                        && let (Some(ts), Some(bpm)) = (ts_unix, *v24_hr) {
                             hr_rows.push((ts, bpm as i64));
                         }
-                    }
                     if let Some(ts_base) = ts_unix {
                         let mut t = ts_base;
                         for &ms in rr_intervals_ms.iter() {
@@ -7384,7 +7385,11 @@ impl GooseStore {
     }
 
     /// Return all rr_intervals rows with ts in [start_ts, end_ts).
-    pub fn rr_intervals_between(&self, start_ts: f64, end_ts: f64) -> GooseResult<Vec<RrIntervalRow>> {
+    pub fn rr_intervals_between(
+        &self,
+        start_ts: f64,
+        end_ts: f64,
+    ) -> GooseResult<Vec<RrIntervalRow>> {
         let mut stmt = self.conn.prepare(
             "SELECT device_id, ts, interval_ms, synced FROM rr_intervals \
              WHERE ts >= ?1 AND ts < ?2 ORDER BY ts",
@@ -7410,11 +7415,7 @@ impl GooseStore {
     /// NOT performed in compact_raw_evidence_payloads_to_limit — the invariant is enforced
     /// at the call site by the upload pipeline which checks synced=1 before any stream
     /// table DELETE.
-    pub fn prune_synced_stream_rows(
-        &self,
-        stream: &str,
-        older_than_ts: f64,
-    ) -> GooseResult<usize> {
+    pub fn prune_synced_stream_rows(&self, stream: &str, older_than_ts: f64) -> GooseResult<usize> {
         if !STREAM_ALLOWLIST.contains(&stream) {
             return Err(GooseError::message(format!("unknown stream: {stream}")));
         }
@@ -8799,9 +8800,13 @@ mod v24_biometric_tests {
         let store = make_store();
         let batch = make_batch();
 
-        store.insert_v24_biometric_batch("device-A", &batch).unwrap();
+        store
+            .insert_v24_biometric_batch("device-A", &batch)
+            .unwrap();
 
-        let window = store.v24_biometric_samples_between("device-A", 0.0, 2000.0).unwrap();
+        let window = store
+            .v24_biometric_samples_between("device-A", 0.0, 2000.0)
+            .unwrap();
 
         assert_eq!(window.spo2.len(), 1);
         assert_eq!(window.spo2[0].ts, 1000.0);
@@ -8832,16 +8837,34 @@ mod v24_biometric_tests {
         let batch = make_batch();
 
         // Insert twice — second INSERT OR IGNORE should be a no-op.
-        store.insert_v24_biometric_batch("device-A", &batch).unwrap();
-        store.insert_v24_biometric_batch("device-A", &batch).unwrap();
+        store
+            .insert_v24_biometric_batch("device-A", &batch)
+            .unwrap();
+        store
+            .insert_v24_biometric_batch("device-A", &batch)
+            .unwrap();
 
-        let window = store.v24_biometric_samples_between("device-A", 0.0, 2000.0).unwrap();
+        let window = store
+            .v24_biometric_samples_between("device-A", 0.0, 2000.0)
+            .unwrap();
 
         // Each table should have exactly 1 row.
-        assert_eq!(window.spo2.len(), 1, "spo2 should have exactly 1 row after idempotent insert");
-        assert_eq!(window.skin_temp.len(), 1, "skin_temp should have exactly 1 row");
+        assert_eq!(
+            window.spo2.len(),
+            1,
+            "spo2 should have exactly 1 row after idempotent insert"
+        );
+        assert_eq!(
+            window.skin_temp.len(),
+            1,
+            "skin_temp should have exactly 1 row"
+        );
         assert_eq!(window.resp.len(), 1, "resp should have exactly 1 row");
-        assert_eq!(window.sig_quality.len(), 1, "sig_quality should have exactly 1 row");
+        assert_eq!(
+            window.sig_quality.len(),
+            1,
+            "sig_quality should have exactly 1 row"
+        );
     }
 
     #[test]
@@ -8854,9 +8877,13 @@ mod v24_biometric_tests {
             sig_quality: vec![(2000.0_f64, 0_i64, 0_i64)],
         };
 
-        store.insert_v24_biometric_batch("device-A", &batch).unwrap();
+        store
+            .insert_v24_biometric_batch("device-A", &batch)
+            .unwrap();
 
-        let window = store.v24_biometric_samples_between("device-A", 0.0, 3000.0).unwrap();
+        let window = store
+            .v24_biometric_samples_between("device-A", 0.0, 3000.0)
+            .unwrap();
 
         // Rows with contact=0 are stored; downstream gating is consumer responsibility.
         assert_eq!(window.spo2.len(), 1);
@@ -8909,7 +8936,10 @@ mod exercise_session_tests {
                 |row| row.get(0),
             )
             .expect("failed to query sqlite_master");
-        assert_eq!(count, 1, "exercise_sessions table should exist after migration");
+        assert_eq!(
+            count, 1,
+            "exercise_sessions table should exist after migration"
+        );
     }
 
     #[test]
@@ -8919,7 +8949,10 @@ mod exercise_session_tests {
             .conn
             .query_row("PRAGMA user_version", [], |row| row.get(0))
             .expect("failed to read user_version");
-        assert_eq!(version, 19, "PRAGMA user_version should be 19 after v19 migration");
+        assert_eq!(
+            version, 19,
+            "PRAGMA user_version should be 19 after v19 migration"
+        );
     }
 
     #[test]
@@ -8963,16 +8996,26 @@ mod exercise_session_tests {
         let results = store
             .exercise_sessions_between("device-X", 1_900_000.0, 3_000_000.0)
             .unwrap();
-        assert_eq!(results.len(), 1, "only one row should exist after idempotent insert");
+        assert_eq!(
+            results.len(),
+            1,
+            "only one row should exist after idempotent insert"
+        );
     }
 
     #[test]
     fn test_exercise_sessions_between_ordering() {
         let store = make_store();
         // Insert 3 rows out of chronological order.
-        store.insert_exercise_session(&make_row(3_000.0, 3_600.0)).unwrap();
-        store.insert_exercise_session(&make_row(1_000.0, 1_600.0)).unwrap();
-        store.insert_exercise_session(&make_row(2_000.0, 2_600.0)).unwrap();
+        store
+            .insert_exercise_session(&make_row(3_000.0, 3_600.0))
+            .unwrap();
+        store
+            .insert_exercise_session(&make_row(1_000.0, 1_600.0))
+            .unwrap();
+        store
+            .insert_exercise_session(&make_row(2_000.0, 2_600.0))
+            .unwrap();
 
         let results = store
             .exercise_sessions_between("device-X", 0.0, 10_000.0)
@@ -9076,13 +9119,21 @@ mod sync_schema_tests {
     fn test_synced_column_on_new_tables() {
         let store = make_store();
         let cols = store.table_columns_unchecked("hr_samples").unwrap();
-        assert!(cols.contains("synced"), "hr_samples should have synced column");
+        assert!(
+            cols.contains("synced"),
+            "hr_samples should have synced column"
+        );
     }
 
     #[test]
     fn test_synced_column_added_to_existing() {
         let store = make_store();
-        for table in &["spo2_samples", "skin_temp_samples", "resp_samples", "gravity"] {
+        for table in &[
+            "spo2_samples",
+            "skin_temp_samples",
+            "resp_samples",
+            "gravity",
+        ] {
             let cols = store.table_columns_unchecked(table).unwrap();
             assert!(
                 cols.contains("synced"),
@@ -9122,9 +9173,7 @@ mod sync_schema_tests {
             .upsert_upload_cursor("read", "hr_samples", "500.0")
             .unwrap();
 
-        let hw = store
-            .get_upload_cursor("highwater", "hr_samples")
-            .unwrap();
+        let hw = store.get_upload_cursor("highwater", "hr_samples").unwrap();
         let rd = store.get_upload_cursor("read", "hr_samples").unwrap();
 
         assert_eq!(hw.as_deref(), Some("1000.0"));
@@ -9146,12 +9195,15 @@ mod sync_methods_tests {
         // Insert a synthetic raw_evidence row — all NOT NULL columns must be provided
         let evidence_id = format!("evidence-{ts_unix}");
         let captured_at = format!("1970-01-01T00:{:02}:{:02}.000Z", ts_unix / 60, ts_unix % 60);
-        store.conn.execute(
-            "INSERT OR IGNORE INTO raw_evidence \
+        store
+            .conn
+            .execute(
+                "INSERT OR IGNORE INTO raw_evidence \
              (evidence_id, source, captured_at, device_model, payload_hex, sha256, sensitivity) \
              VALUES (?1, 'test', ?2, 'test-device', '', '', 'standard')",
-            params![evidence_id, captured_at],
-        ).unwrap();
+                params![evidence_id, captured_at],
+            )
+            .unwrap();
         // Build the ParsedPayload JSON for a NormalHistory DataPacket.
         // ParsedPayload uses #[serde(tag = "kind", rename_all = "snake_case")], so
         // DataPacket serialises as {"kind":"data_packet", <fields flat>} (internally tagged).
@@ -9173,22 +9225,31 @@ mod sync_methods_tests {
     #[test]
     fn test_mark_synced_sets_flag() {
         let store = make_store();
-        store.conn.execute(
-            "INSERT INTO hr_samples (device_id, ts, bpm) VALUES ('dev-1', 1000.0, 75)",
-            [],
-        ).unwrap();
-        let rowid: i64 = store.conn.query_row(
-            "SELECT rowid FROM hr_samples WHERE device_id='dev-1' AND ts=1000.0",
-            [],
-            |r| r.get(0),
-        ).unwrap();
+        store
+            .conn
+            .execute(
+                "INSERT INTO hr_samples (device_id, ts, bpm) VALUES ('dev-1', 1000.0, 75)",
+                [],
+            )
+            .unwrap();
+        let rowid: i64 = store
+            .conn
+            .query_row(
+                "SELECT rowid FROM hr_samples WHERE device_id='dev-1' AND ts=1000.0",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
         let affected = store.mark_synced_rows("hr_samples", &[rowid]).unwrap();
         assert_eq!(affected, 1);
-        let synced: i64 = store.conn.query_row(
-            "SELECT synced FROM hr_samples WHERE rowid=?1",
-            params![rowid],
-            |r| r.get(0),
-        ).unwrap();
+        let synced: i64 = store
+            .conn
+            .query_row(
+                "SELECT synced FROM hr_samples WHERE rowid=?1",
+                params![rowid],
+                |r| r.get(0),
+            )
+            .unwrap();
         assert_eq!(synced, 1, "synced should be 1 after mark_synced_rows");
     }
 
@@ -9198,15 +9259,36 @@ mod sync_methods_tests {
         let result = store.mark_synced_rows("nonexistent_table", &[1]);
         assert!(result.is_err(), "unknown stream should return Err");
         let msg = format!("{:?}", result.unwrap_err());
-        assert!(msg.contains("unknown stream"), "error should mention unknown stream");
+        assert!(
+            msg.contains("unknown stream"),
+            "error should mention unknown stream"
+        );
     }
 
     #[test]
     fn test_rows_pending_upload_returns_unsynced() {
         let store = make_store();
-        store.conn.execute("INSERT INTO hr_samples (device_id, ts, bpm, synced) VALUES ('d', 1.0, 60, 0)", []).unwrap();
-        store.conn.execute("INSERT INTO hr_samples (device_id, ts, bpm, synced) VALUES ('d', 2.0, 61, 0)", []).unwrap();
-        store.conn.execute("INSERT INTO hr_samples (device_id, ts, bpm, synced) VALUES ('d', 3.0, 62, 1)", []).unwrap();
+        store
+            .conn
+            .execute(
+                "INSERT INTO hr_samples (device_id, ts, bpm, synced) VALUES ('d', 1.0, 60, 0)",
+                [],
+            )
+            .unwrap();
+        store
+            .conn
+            .execute(
+                "INSERT INTO hr_samples (device_id, ts, bpm, synced) VALUES ('d', 2.0, 61, 0)",
+                [],
+            )
+            .unwrap();
+        store
+            .conn
+            .execute(
+                "INSERT INTO hr_samples (device_id, ts, bpm, synced) VALUES ('d', 3.0, 62, 1)",
+                [],
+            )
+            .unwrap();
         let rows = store.rows_pending_upload("hr_samples", 10).unwrap();
         assert_eq!(rows.len(), 2, "only synced=0 rows should be returned");
     }
@@ -9215,10 +9297,13 @@ mod sync_methods_tests {
     fn test_rows_pending_upload_respects_limit() {
         let store = make_store();
         for i in 0..5i64 {
-            store.conn.execute(
-                "INSERT INTO hr_samples (device_id, ts, bpm, synced) VALUES ('d', ?1, 70, 0)",
-                params![i as f64],
-            ).unwrap();
+            store
+                .conn
+                .execute(
+                    "INSERT INTO hr_samples (device_id, ts, bpm, synced) VALUES ('d', ?1, 70, 0)",
+                    params![i as f64],
+                )
+                .unwrap();
         }
         let rows = store.rows_pending_upload("hr_samples", 3).unwrap();
         assert_eq!(rows.len(), 3, "limit=3 should return exactly 3 rows");
@@ -9232,11 +9317,12 @@ mod sync_methods_tests {
             .backfill_streams_from_decoded_frames("dev-1", 900.0, 1100.0)
             .unwrap();
         assert_eq!(report.hr_inserted, 1, "one HR row should be inserted");
-        let count: i64 = store.conn.query_row(
-            "SELECT COUNT(*) FROM hr_samples WHERE synced=0",
-            [],
-            |r| r.get(0),
-        ).unwrap();
+        let count: i64 = store
+            .conn
+            .query_row("SELECT COUNT(*) FROM hr_samples WHERE synced=0", [], |r| {
+                r.get(0)
+            })
+            .unwrap();
         assert_eq!(count, 1, "backfilled row must have synced=0 (not stranded)");
     }
 
@@ -9244,11 +9330,21 @@ mod sync_methods_tests {
     fn test_sync_backfill_is_idempotent() {
         let store = make_store();
         insert_test_hr_frame(&store, "dev-1", 2000, 80);
-        let r1 = store.backfill_streams_from_decoded_frames("dev-1", 1900.0, 2100.0).unwrap();
-        let r2 = store.backfill_streams_from_decoded_frames("dev-1", 1900.0, 2100.0).unwrap();
+        let r1 = store
+            .backfill_streams_from_decoded_frames("dev-1", 1900.0, 2100.0)
+            .unwrap();
+        let r2 = store
+            .backfill_streams_from_decoded_frames("dev-1", 1900.0, 2100.0)
+            .unwrap();
         assert_eq!(r1.hr_inserted, 1);
-        assert_eq!(r2.hr_inserted, 0, "second backfill should insert 0 rows (idempotent via INSERT OR IGNORE)");
-        let count: i64 = store.conn.query_row("SELECT COUNT(*) FROM hr_samples", [], |r| r.get(0)).unwrap();
+        assert_eq!(
+            r2.hr_inserted, 0,
+            "second backfill should insert 0 rows (idempotent via INSERT OR IGNORE)"
+        );
+        let count: i64 = store
+            .conn
+            .query_row("SELECT COUNT(*) FROM hr_samples", [], |r| r.get(0))
+            .unwrap();
         assert_eq!(count, 1, "exactly one row after two backfill calls");
     }
 
@@ -9267,17 +9363,17 @@ mod sync_methods_tests {
         // Prune all synced=1 rows older than ts=10000
         let pruned = store.prune_synced_stream_rows("gravity", 10000.0).unwrap();
         assert_eq!(pruned, 1, "should prune exactly 1 synced=1 row");
-        let remaining: i64 = store.conn.query_row(
-            "SELECT COUNT(*) FROM gravity",
-            [],
-            |r| r.get(0),
-        ).unwrap();
+        let remaining: i64 = store
+            .conn
+            .query_row("SELECT COUNT(*) FROM gravity", [], |r| r.get(0))
+            .unwrap();
         assert_eq!(remaining, 1, "synced=0 row must survive prune");
-        let synced: i64 = store.conn.query_row(
-            "SELECT synced FROM gravity WHERE ts=500.0",
-            [],
-            |r| r.get(0),
-        ).unwrap();
+        let synced: i64 = store
+            .conn
+            .query_row("SELECT synced FROM gravity WHERE ts=500.0", [], |r| {
+                r.get(0)
+            })
+            .unwrap();
         assert_eq!(synced, 0, "surviving row should still be synced=0");
     }
 
@@ -9285,7 +9381,11 @@ mod sync_methods_tests {
     fn test_sync_invalid_stream_rejected() {
         let store = make_store();
         // All three stream methods must reject unknown table names
-        assert!(store.mark_synced_rows("'; DROP TABLE hr_samples; --", &[1]).is_err());
+        assert!(
+            store
+                .mark_synced_rows("'; DROP TABLE hr_samples; --", &[1])
+                .is_err()
+        );
         assert!(store.rows_pending_upload("malicious_table", 10).is_err());
         assert!(store.prune_synced_stream_rows("notastream", 0.0).is_err());
     }
@@ -9293,12 +9393,24 @@ mod sync_methods_tests {
     #[test]
     fn test_sync_cursor_namespace_isolation() {
         let store = make_store();
-        store.upsert_upload_cursor("highwater", "hr_samples", "1000").unwrap();
-        store.upsert_upload_cursor("read", "hr_samples", "2000").unwrap();
+        store
+            .upsert_upload_cursor("highwater", "hr_samples", "1000")
+            .unwrap();
+        store
+            .upsert_upload_cursor("read", "hr_samples", "2000")
+            .unwrap();
         let hw = store.get_upload_cursor("highwater", "hr_samples").unwrap();
         let rd = store.get_upload_cursor("read", "hr_samples").unwrap();
-        assert_eq!(hw.as_deref(), Some("1000"), "highwater cursor should return 1000");
-        assert_eq!(rd.as_deref(), Some("2000"), "read cursor should return 2000");
+        assert_eq!(
+            hw.as_deref(),
+            Some("1000"),
+            "highwater cursor should return 1000"
+        );
+        assert_eq!(
+            rd.as_deref(),
+            Some("2000"),
+            "read cursor should return 2000"
+        );
     }
 
     /// D-06 contract test: rows inserted AFTER rows_pending_upload captures IDs must remain
@@ -9313,10 +9425,13 @@ mod sync_methods_tests {
         let store = make_store();
 
         // Step 1: insert the "pre-upload" row — exists before the HTTP request begins.
-        store.conn.execute(
-            "INSERT INTO hr_samples (device_id, ts, bpm) VALUES ('dev-race', 1.0, 70)",
-            [],
-        ).unwrap();
+        store
+            .conn
+            .execute(
+                "INSERT INTO hr_samples (device_id, ts, bpm) VALUES ('dev-race', 1.0, 70)",
+                [],
+            )
+            .unwrap();
 
         // Step 2: pre-capture — simulates what GooseUploadService does before building the
         // HTTP payload. rows_pending_upload returns all synced=0 rows at this moment.
@@ -9326,32 +9441,54 @@ mod sync_methods_tests {
             .iter()
             .filter_map(|r| r["rowid"].as_i64())
             .collect();
-        assert_eq!(captured_ids.len(), 1, "exactly one row should be pending before upload");
+        assert_eq!(
+            captured_ids.len(),
+            1,
+            "exactly one row should be pending before upload"
+        );
 
         // Step 3: race-window row — arrives while the HTTP request is in-flight, after
         // pre-capture but before mark_synced_rows is called.
-        store.conn.execute(
-            "INSERT INTO hr_samples (device_id, ts, bpm) VALUES ('dev-race', 2.0, 72)",
-            [],
-        ).unwrap();
+        store
+            .conn
+            .execute(
+                "INSERT INTO hr_samples (device_id, ts, bpm) VALUES ('dev-race', 2.0, 72)",
+                [],
+            )
+            .unwrap();
 
         // Step 4: mark only the pre-captured IDs (simulates post-2xx mark).
         let affected = store.mark_synced_rows("hr_samples", &captured_ids).unwrap();
-        assert_eq!(affected, 1, "exactly the pre-captured row should be marked synced");
+        assert_eq!(
+            affected, 1,
+            "exactly the pre-captured row should be marked synced"
+        );
 
         // Assertion A: exactly one row remains pending — the race-window row (ts=2.0).
         let pending_after: Vec<serde_json::Value> =
             store.rows_pending_upload("hr_samples", 10).unwrap();
-        assert_eq!(pending_after.len(), 1, "race-window row must remain pending (synced=0)");
+        assert_eq!(
+            pending_after.len(),
+            1,
+            "race-window row must remain pending (synced=0)"
+        );
         let ts = pending_after[0]["ts"].as_f64();
-        assert_eq!(ts, Some(2.0), "pending row must be the race-window row (ts=2.0)");
+        assert_eq!(
+            ts,
+            Some(2.0),
+            "pending row must be the race-window row (ts=2.0)"
+        );
 
         // Assertion B: the pre-captured row is now synced=1.
-        let synced_flag: i64 = store.conn.query_row(
-            "SELECT synced FROM hr_samples WHERE ts=1.0",
-            [],
-            |r| r.get(0),
-        ).unwrap();
-        assert_eq!(synced_flag, 1i64, "pre-captured row must be synced=1 after mark_synced_rows");
+        let synced_flag: i64 = store
+            .conn
+            .query_row("SELECT synced FROM hr_samples WHERE ts=1.0", [], |r| {
+                r.get(0)
+            })
+            .unwrap();
+        assert_eq!(
+            synced_flag, 1i64,
+            "pre-captured row must be synced=1 after mark_synced_rows"
+        );
     }
 }

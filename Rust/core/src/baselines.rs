@@ -10,7 +10,6 @@
 /// Recurrence:
 ///   mean_new     = (1 - α) × mean_old + α × x
 ///   variance_new = (1 - α) × variance_old + α × (x - mean_old)²
-
 use crate::{GooseResult, store::GooseStore};
 
 /// EWMA alpha (14-night half-life constant: 1 - 0.5^(1/14) ≈ 0.0483).
@@ -137,19 +136,12 @@ impl EwmaState {
 /// Per-device EWMA baseline, holding independent state for HRV RMSSD and
 /// resting heart rate.
 #[derive(Debug, Clone)]
+#[derive(Default)]
 pub struct EwmaBaseline {
     pub hrv: EwmaState,
     pub resting_hr: EwmaState,
 }
 
-impl Default for EwmaBaseline {
-    fn default() -> Self {
-        Self {
-            hrv: EwmaState::default(),
-            resting_hr: EwmaState::default(),
-        }
-    }
-}
 
 impl EwmaBaseline {
     /// Reconstruct EWMA state by replaying all `daily_recovery_metrics` rows
@@ -162,16 +154,14 @@ impl EwmaBaseline {
         let rows = store.daily_recovery_metrics_all_ordered()?;
         let mut baseline = Self::default();
         for row in &rows {
-            if let Some(hrv) = row.hrv_rmssd_ms {
-                if hrv.is_finite() {
+            if let Some(hrv) = row.hrv_rmssd_ms
+                && hrv.is_finite() {
                     baseline.hrv.fold(hrv);
                 }
-            }
-            if let Some(rhr) = row.resting_hr_bpm {
-                if rhr.is_finite() {
+            if let Some(rhr) = row.resting_hr_bpm
+                && rhr.is_finite() {
                     baseline.resting_hr.fold(rhr);
                 }
-            }
         }
         Ok(baseline)
     }
@@ -344,7 +334,9 @@ mod tests {
             variance: sigma * sigma,
             night_count: MIN_NIGHTS_SEED, // exactly at cold-start boundary
         };
-        let z = state.z_score(60.0 + sigma).expect("must be Some at seed boundary");
+        let z = state
+            .z_score(60.0 + sigma)
+            .expect("must be Some at seed boundary");
         assert!(
             (z - 1.0).abs() < 1e-6,
             "one std above mean yields z ≈ 1.0, got {}",
@@ -377,10 +369,7 @@ mod tests {
             variance: 4.0,
             night_count: 6,
         };
-        assert!(
-            !state.is_ready(),
-            "baseline must not be ready at 6 nights"
-        );
+        assert!(!state.is_ready(), "baseline must not be ready at 6 nights");
     }
 
     #[test]
@@ -563,7 +552,9 @@ mod tests {
     fn test_ewma_baseline_update_rejects_non_finite_hrv() {
         let store = GooseStore::open_in_memory().expect("open_in_memory");
         assert!(
-            store.ewma_baseline_update("2024-01-01", f64::NAN, 55.0).is_err(),
+            store
+                .ewma_baseline_update("2024-01-01", f64::NAN, 55.0)
+                .is_err(),
             "NaN hrv must be rejected"
         );
         assert!(
@@ -592,7 +583,10 @@ mod tests {
             .ewma_baseline_update("2024-01-01", 60.0, 55.0)
             .expect("update");
         let baseline = EwmaBaseline::fold_history(&store).expect("fold_history");
-        assert_eq!(baseline.hrv.night_count, 1, "fold_history must pick up ewma update rows");
+        assert_eq!(
+            baseline.hrv.night_count, 1,
+            "fold_history must pick up ewma update rows"
+        );
         assert!(
             (baseline.hrv.mean - 60.0).abs() < 1e-9,
             "mean should be 60.0 after one night"

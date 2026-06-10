@@ -925,7 +925,14 @@ fn required_columns() -> BTreeMap<&'static str, Vec<&'static str>> {
     );
     columns.insert(
         "events",
-        vec!["device_id", "ts", "event_id", "event_name", "synced", "created_at"],
+        vec![
+            "device_id",
+            "ts",
+            "event_id",
+            "event_name",
+            "synced",
+            "created_at",
+        ],
     );
     columns.insert(
         "gravity",
@@ -957,7 +964,15 @@ fn required_columns() -> BTreeMap<&'static str, Vec<&'static str>> {
     );
     columns.insert(
         "spo2_samples",
-        vec!["device_id", "ts", "red", "ir", "contact", "synced", "created_at"],
+        vec![
+            "device_id",
+            "ts",
+            "red",
+            "ir",
+            "contact",
+            "synced",
+            "created_at",
+        ],
     );
     columns.insert(
         "upload_cursors",

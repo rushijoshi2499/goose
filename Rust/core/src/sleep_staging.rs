@@ -152,15 +152,25 @@ pub fn stage_sleep(input: &SleepStagingInput, rows: &[(f64, f64, f64, f64)]) -> 
     let mut epochs: Vec<SleepEpoch> = Vec::with_capacity(n);
 
     // Build lookup once for all epochs (PERF-02: avoid O(N²) HashMap rebuild per call).
-    let ck_lookup: std::collections::HashMap<i64, f64> =
-        activity_counts.iter().map(|&(idx, cnt)| (idx, cnt)).collect();
+    let ck_lookup: std::collections::HashMap<i64, f64> = activity_counts
+        .iter()
+        .map(|&(idx, cnt)| (idx, cnt))
+        .collect();
 
     for i in 0..n {
         let d = cole_kripke_d_score(i, &activity_counts, &ck_lookup);
-        let stage = if d >= COLE_KRIPKE_WAKE_THRESHOLD { "wake" } else { "sleep" };
+        let stage = if d >= COLE_KRIPKE_WAKE_THRESHOLD {
+            "wake"
+        } else {
+            "sleep"
+        };
         let (epoch_idx, count) = activity_counts[i];
         let ts = input.sleep_start_ts + epoch_idx as f64 * (COLE_KRIPKE_EPOCH_MINUTES * 60.0);
-        epochs.push(SleepEpoch { ts, activity_count: count, stage: stage.to_string() });
+        epochs.push(SleepEpoch {
+            ts,
+            activity_count: count,
+            stage: stage.to_string(),
+        });
     }
 
     let total = epochs.len() as f64;
@@ -198,12 +208,12 @@ pub fn stage_sleep(input: &SleepStagingInput, rows: &[(f64, f64, f64, f64)]) -> 
 ///
 /// Builds on the Cole-Kripke binary spine from [`stage_sleep`] and refines
 /// each "sleep" epoch using HR and motion features:
-///   - "deep":  HR <= session p25 AND activity_count <= DEEP_STILLNESS_ACTIVITY_MAX
-///   - "rem":   clock proxy (fractional position in night) >= REM_CLOCK_PROXY_MIN
-///              AND hr_bpm > session median (proxy for higher cardiorespiratory activity)
-///              AND `resp_available` is true (graceful degradation when resp absent)
-///   - "light": remaining sleep epochs
-///   - "wake":  unchanged from the binary spine
+/// - "deep":  HR <= session p25 AND activity_count <= DEEP_STILLNESS_ACTIVITY_MAX
+/// - "rem":   clock proxy (fractional position in night) >= REM_CLOCK_PROXY_MIN
+///   AND hr_bpm > session median (proxy for higher cardiorespiratory activity)
+///   AND `resp_available` is true (graceful degradation when resp absent)
+/// - "light": remaining sleep epochs
+/// - "wake":  unchanged from the binary spine
 ///
 /// Physiological reimposition (applied in order after per-epoch classification):
 ///   (a) No REM in first 15 minutes of sleep: REM epochs < NO_REM_ONSET_MINUTES
@@ -244,8 +254,10 @@ pub fn stage_sleep_four_class(
     let (hr_p25, hr_median) = hr_percentiles(hr_features);
 
     // Build lookup once for all epochs (PERF-02: avoid O(N²) HashMap rebuild per call).
-    let ck_lookup: std::collections::HashMap<i64, f64> =
-        activity_counts.iter().map(|&(idx, cnt)| (idx, cnt)).collect();
+    let ck_lookup: std::collections::HashMap<i64, f64> = activity_counts
+        .iter()
+        .map(|&(idx, cnt)| (idx, cnt))
+        .collect();
 
     // Step 3: per-epoch 4-class assignment.
     let mut epochs: Vec<SleepEpoch> = Vec::with_capacity(n);
@@ -259,16 +271,36 @@ pub fn stage_sleep_four_class(
         } else {
             // Refine sleep epoch using HR + motion features.
             let epoch_hr = nearest_hr(ts, hr_features);
-            classify_sleep_epoch(i, n, count, epoch_hr, hr_p25, hr_median, total_sleep_secs, ts, input.sleep_start_ts, resp_available)
+            classify_sleep_epoch(
+                i,
+                n,
+                count,
+                epoch_hr,
+                hr_p25,
+                hr_median,
+                total_sleep_secs,
+                ts,
+                input.sleep_start_ts,
+                resp_available,
+            )
         };
-        epochs.push(SleepEpoch { ts, activity_count: count, stage });
+        epochs.push(SleepEpoch {
+            ts,
+            activity_count: count,
+            stage,
+        });
     }
 
     // Step 4: physiological reimposition.
     apply_reimposition(&mut epochs, input.sleep_start_ts);
 
     // Step 5: AASM metrics.
-    let aasm = aasm_metrics(&epochs, COLE_KRIPKE_EPOCH_MINUTES, input.sleep_start_ts, input.sleep_end_ts);
+    let aasm = aasm_metrics(
+        &epochs,
+        COLE_KRIPKE_EPOCH_MINUTES,
+        input.sleep_start_ts,
+        input.sleep_end_ts,
+    );
     let total = epochs.len() as f64;
     let wake_count = epochs.iter().filter(|e| e.stage == "wake").count() as f64;
     let non_wake_count = total - wake_count;
@@ -384,7 +416,7 @@ fn hr_percentiles(hr_features: &[EpochHrFeature]) -> (Option<f64>, Option<f64>) 
 /// Apply physiological reimposition rules in order:
 ///   (a) No REM within NO_REM_ONSET_MINUTES of sleep onset.
 ///   (b) Merge contiguous runs shorter than ceil(MIN_SEGMENT_MINUTES / EPOCH_MINUTES).
-fn apply_reimposition(epochs: &mut Vec<SleepEpoch>, sleep_start_ts: f64) {
+fn apply_reimposition(epochs: &mut [SleepEpoch], sleep_start_ts: f64) {
     if epochs.is_empty() {
         return;
     }
@@ -410,7 +442,7 @@ fn apply_reimposition(epochs: &mut Vec<SleepEpoch>, sleep_start_ts: f64) {
 /// Algorithm: identify runs, find short ones, absorb them into the longer
 /// of their left/right neighbours. Repeats until stable (short runs can
 /// cascade after a merge).
-fn merge_short_segments(epochs: &mut Vec<SleepEpoch>, min_len: usize) {
+fn merge_short_segments(epochs: &mut [SleepEpoch], min_len: usize) {
     let n = epochs.len();
     if n == 0 || min_len <= 1 {
         return;
@@ -425,12 +457,14 @@ fn merge_short_segments(epochs: &mut Vec<SleepEpoch>, min_len: usize) {
         for run in &runs {
             if run.len < min_len {
                 // Find longer of left/right neighbour.
-                let left_len = runs.iter()
+                let left_len = runs
+                    .iter()
                     .filter(|r| r.end == run.start)
                     .map(|r| r.len)
                     .next()
                     .unwrap_or(0);
-                let right_len = runs.iter()
+                let right_len = runs
+                    .iter()
                     .filter(|r| r.start == run.end)
                     .map(|r| r.len)
                     .next()
@@ -439,9 +473,13 @@ fn merge_short_segments(epochs: &mut Vec<SleepEpoch>, min_len: usize) {
                 let donor_class = if left_len == 0 && right_len == 0 {
                     continue; // isolated single-run sequence; leave as-is
                 } else if left_len >= right_len {
-                    runs.iter().find(|r| r.end == run.start).map(|r| r.class.clone())
+                    runs.iter()
+                        .find(|r| r.end == run.start)
+                        .map(|r| r.class.clone())
                 } else {
-                    runs.iter().find(|r| r.start == run.end).map(|r| r.class.clone())
+                    runs.iter()
+                        .find(|r| r.start == run.end)
+                        .map(|r| r.class.clone())
                 };
 
                 if let Some(cls) = donor_class {
@@ -476,7 +514,12 @@ fn collect_runs(epochs: &[SleepEpoch]) -> Vec<Run> {
     let mut start = 0;
     for i in 1..epochs.len() {
         if epochs[i].stage != epochs[start].stage {
-            runs.push(Run { start, end: i, len: i - start, class: epochs[start].stage.clone() });
+            runs.push(Run {
+                start,
+                end: i,
+                len: i - start,
+                class: epochs[start].stage.clone(),
+            });
             start = i;
         }
     }
@@ -529,7 +572,9 @@ fn aasm_metrics(
     // WASO: wake epochs that occur after sleep onset.
     let waso = match first_sleep_idx {
         None => 0.0,
-        Some(onset) => epochs[onset..].iter().filter(|e| e.stage == "wake").count() as f64 * epoch_minutes,
+        Some(onset) => {
+            epochs[onset..].iter().filter(|e| e.stage == "wake").count() as f64 * epoch_minutes
+        }
     };
 
     // Stage minutes.
@@ -677,9 +722,8 @@ mod tests {
     #[test]
     fn still_epoch_activity_count_is_zero() {
         let start = 1_000_000.0_f64;
-        let rows: Vec<(f64, f64, f64, f64)> = (0..10)
-            .map(|i| (start + i as f64, 0.0, 0.0, 1.0))
-            .collect();
+        let rows: Vec<(f64, f64, f64, f64)> =
+            (0..10).map(|i| (start + i as f64, 0.0, 0.0, 1.0)).collect();
         let input = make_input(start, start + 600.0);
         let output = stage_sleep(&input, &rows);
 
@@ -722,7 +766,10 @@ mod tests {
             vec![(start, 0.0, 0.0, 1.0), (start + 1.0, 0.0, 0.0, 1.0)];
         let input_still = make_input(start, start + epoch_secs);
         let output_still = stage_sleep(&input_still, &rows_still);
-        assert_eq!(output_still.epochs[0].stage, "sleep", "still epoch must be sleep");
+        assert_eq!(
+            output_still.epochs[0].stage, "sleep",
+            "still epoch must be sleep"
+        );
     }
 
     // T4: edge handling — epochs near start/end do not panic
@@ -745,7 +792,8 @@ mod tests {
     #[test]
     fn non_empty_rows_always_actigraphy_uncalibrated() {
         let start = 0.0_f64;
-        let rows: Vec<(f64, f64, f64, f64)> = vec![(start, 0.0, 0.0, 1.0), (start + 1.0, 0.0, 0.0, 1.0)];
+        let rows: Vec<(f64, f64, f64, f64)> =
+            vec![(start, 0.0, 0.0, 1.0), (start + 1.0, 0.0, 0.0, 1.0)];
         let input = make_input(start, start + 3600.0);
         let output = stage_sleep(&input, &rows);
         assert_eq!(output.staging_method, STAGING_METHOD_ACTIGRAPHY);
@@ -771,7 +819,10 @@ mod tests {
         let wake_count = output.epochs.iter().filter(|e| e.stage == "wake").count();
         let sleep_count = output.epochs.iter().filter(|e| e.stage == "sleep").count();
         assert_eq!(output.wake_fraction, wake_count as f64 / 2.0);
-        assert_eq!(output.sleep_minutes, sleep_count as f64 * COLE_KRIPKE_EPOCH_MINUTES);
+        assert_eq!(
+            output.sleep_minutes,
+            sleep_count as f64 * COLE_KRIPKE_EPOCH_MINUTES
+        );
     }
 
     // ---------------------------------------------------------------------------
@@ -803,10 +854,15 @@ mod tests {
 
         assert_eq!(output.staging_method, STAGING_METHOD_ACTIGRAPHY);
         // All non-wake epochs should be deep (still + HR <= p25).
-        let non_wake: Vec<&SleepEpoch> = output.epochs.iter().filter(|e| e.stage != "wake").collect();
+        let non_wake: Vec<&SleepEpoch> =
+            output.epochs.iter().filter(|e| e.stage != "wake").collect();
         assert!(!non_wake.is_empty(), "should have non-wake epochs");
         for e in &non_wake {
-            assert_eq!(e.stage, "deep", "still + low-HR epoch must be deep, got {}", e.stage);
+            assert_eq!(
+                e.stage, "deep",
+                "still + low-HR epoch must be deep, got {}",
+                e.stage
+            );
         }
     }
 
@@ -836,7 +892,10 @@ mod tests {
 
         // Epochs in the second half (index >= 16, i.e. clock_proxy >= 0.4) with HR > median
         // should become REM. Reimposition rule (a) already handled by clock proxy + onset guard.
-        let late_epochs: Vec<&SleepEpoch> = output.epochs.iter().enumerate()
+        let late_epochs: Vec<&SleepEpoch> = output
+            .epochs
+            .iter()
+            .enumerate()
             .filter(|(i, _)| *i >= 20 && output.epochs[*i].stage != "wake")
             .map(|(_, e)| e)
             .collect();
@@ -872,7 +931,11 @@ mod tests {
             .map(|i| SleepEpoch {
                 ts: start + i as f64 * epoch_secs,
                 activity_count: 0.0,
-                stage: if i == 5 { "rem".to_string() } else { "light".to_string() },
+                stage: if i == 5 {
+                    "rem".to_string()
+                } else {
+                    "light".to_string()
+                },
             })
             .collect();
 
@@ -896,7 +959,11 @@ mod tests {
             .map(|i| SleepEpoch {
                 ts: start + i as f64 * epoch_secs,
                 activity_count: 0.0,
-                stage: if i >= 10 && i < 12 { "rem".to_string() } else { "light".to_string() },
+                stage: if i >= 10 && i < 12 {
+                    "rem".to_string()
+                } else {
+                    "light".to_string()
+                },
             })
             .collect();
 
@@ -1000,14 +1067,14 @@ mod tests {
         let start = 0.0_f64;
         let epoch_secs = COLE_KRIPKE_EPOCH_MINUTES * 60.0;
         // Still rows (no wake from Cole-Kripke).
-        let rows = vec![
-            (start, 0.0, 0.0, 1.0),
-            (start + 1.0, 0.0, 0.0, 1.0),
-        ];
+        let rows = vec![(start, 0.0, 0.0, 1.0), (start + 1.0, 0.0, 0.0, 1.0)];
         let input = make_input(start, start + epoch_secs);
         let output = stage_sleep_four_class(&input, &rows, &[], false);
         for e in &output.epochs {
-            assert_ne!(e.stage, "sleep", "binary 'sleep' must not appear in 4-class output");
+            assert_ne!(
+                e.stage, "sleep",
+                "binary 'sleep' must not appear in 4-class output"
+            );
             assert_ne!(e.stage, "deep", "deep requires HR data");
             assert_ne!(e.stage, "rem", "rem requires HR data");
         }

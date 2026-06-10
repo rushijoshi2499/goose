@@ -17,8 +17,8 @@ use goose_core::{
         CaptureSessionInput, CommandValidationRecord, DailyActivityMetricInput,
         DailyRecoveryMetricInput, DebugCommandRow, DebugEventRow, DebugSessionRow,
         DecodedFrameInput, ExternalSleepSessionInput, ExternalSleepStageInput, GooseStore,
-        HourlyActivityMetricInput, MetricDebugFeatureInput, MetricProvenanceInput,
-        GravityRow, RawEvidenceInput, StepCounterSampleInput,
+        GravityRow, HourlyActivityMetricInput, MetricDebugFeatureInput, MetricProvenanceInput,
+        RawEvidenceInput, StepCounterSampleInput,
     },
 };
 use serde_json::json;
@@ -3219,15 +3219,33 @@ fn gravity_insert_and_query_returns_rows_in_ts_order() {
     assert_eq!(result.len(), 3);
     assert_eq!(
         result[0],
-        GravityRow { device_id: "device-A".to_string(), ts: 1.0, x: 0.0, y: 0.1, z: 9.7 }
+        GravityRow {
+            device_id: "device-A".to_string(),
+            ts: 1.0,
+            x: 0.0,
+            y: 0.1,
+            z: 9.7
+        }
     );
     assert_eq!(
         result[1],
-        GravityRow { device_id: "device-A".to_string(), ts: 2.0, x: 0.1, y: 0.2, z: 9.8 }
+        GravityRow {
+            device_id: "device-A".to_string(),
+            ts: 2.0,
+            x: 0.1,
+            y: 0.2,
+            z: 9.8
+        }
     );
     assert_eq!(
         result[2],
-        GravityRow { device_id: "device-A".to_string(), ts: 3.0, x: 0.2, y: 0.3, z: 9.9 }
+        GravityRow {
+            device_id: "device-A".to_string(),
+            ts: 3.0,
+            x: 0.2,
+            y: 0.3,
+            z: 9.9
+        }
     );
 }
 

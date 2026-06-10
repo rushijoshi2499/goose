@@ -2806,14 +2806,24 @@ fn strain_input_deserializes_without_profile_fields() {
         "hr_zone_minutes": [10.0, 20.0, 20.0, 5.0, 5.0]
     }"#;
     let input: StrainInput = serde_json::from_str(json).expect("deserialization must succeed");
-    assert!(input.profile_sex.is_none(), "profile_sex must default to None");
-    assert!(input.profile_age.is_none(), "profile_age must default to None");
+    assert!(
+        input.profile_sex.is_none(),
+        "profile_sex must default to None"
+    );
+    assert!(
+        input.profile_age.is_none(),
+        "profile_age must default to None"
+    );
 }
 
 #[test]
 fn tanaka_hrmax_returns_exact_value_for_age_50() {
     let hrmax = tanaka_hrmax(50.0);
-    assert_eq!(hrmax, 208.0 - 0.7 * 50.0, "tanaka_hrmax(50) must equal 173.0 exactly");
+    assert_eq!(
+        hrmax,
+        208.0 - 0.7 * 50.0,
+        "tanaka_hrmax(50) must equal 173.0 exactly"
+    );
     assert_eq!(hrmax, 173.0);
 }
 
@@ -2853,7 +2863,9 @@ fn estimate_hrmax_from_history_returns_p99_5_percentile() {
     samples.sort_by(|a, b| a.partial_cmp(b).unwrap());
     let len = samples.len() as f64;
     // CR-01 fix: nearest-rank P99.5 is ceil(0.995*n) - 1 (0-indexed).
-    let expected_index = ((0.995 * len).ceil() as usize).saturating_sub(1).min(samples.len() - 1);
+    let expected_index = ((0.995 * len).ceil() as usize)
+        .saturating_sub(1)
+        .min(samples.len() - 1);
     let expected_value = samples[expected_index];
 
     let result = estimate_hrmax_from_history(&samples);
@@ -2867,7 +2879,10 @@ fn estimate_hrmax_from_history_ignores_non_finite_samples() {
     samples.push(f64::NAN);
     samples.push(f64::INFINITY);
     let result = estimate_hrmax_from_history(&samples);
-    assert!(result.is_none(), "must return None when fewer than 600 finite samples");
+    assert!(
+        result.is_none(),
+        "must return None when fewer than 600 finite samples"
+    );
 }
 
 // ── ALG-STR-01: Task 2 tests ────────────────────────────────────────────────
@@ -3039,7 +3054,9 @@ fn goose_strain_v1_contains_banister_approximation_quality_flag() {
     };
     let result = goose_strain_v1(&input);
     assert!(
-        result.quality_flags.contains(&"banister_trimp_zone_midpoint_approximation".to_string()),
+        result
+            .quality_flags
+            .contains(&"banister_trimp_zone_midpoint_approximation".to_string()),
         "quality_flags must always contain banister_trimp_zone_midpoint_approximation, got: {:?}",
         result.quality_flags
     );
@@ -3060,7 +3077,9 @@ fn goose_strain_v1_output_contains_both_edwards_and_banister_scores() {
         profile_age: None,
     };
     let result = goose_strain_v1(&input);
-    let output = result.output.expect("should produce output for valid input");
+    let output = result
+        .output
+        .expect("should produce output for valid input");
     let component_names: Vec<&str> = output.components.iter().map(|c| c.name.as_str()).collect();
     assert!(
         component_names.contains(&"edwards_zone_load"),
@@ -3093,10 +3112,7 @@ fn goose_strain_v1_uses_resolve_effective_hrmax_and_records_hrmax_source() {
         "provenance must contain hrmax_source, got: {provenance:?}"
     );
     // With age=40 and no history, source should be "tanaka"
-    assert_eq!(
-        provenance["hrmax_source"].as_str().unwrap_or(""),
-        "tanaka"
-    );
+    assert_eq!(provenance["hrmax_source"].as_str().unwrap_or(""), "tanaka");
 }
 
 // ALG-SLP-01: HR-threshold sleep metric helper tests
@@ -3120,21 +3136,13 @@ fn heart_rate_dip_pct_returns_hand_computed_dip() {
     let result = heart_rate_dip_pct(&series, 70.0);
     let dip = result.expect("should return a dip value for this series");
     // nadir is 56.0 → dip = (70 - 56) / 70 * 100 = 20.0%
-    assert!(
-        (dip - 20.0).abs() < 0.01,
-        "expected ~20.0%, got {dip}"
-    );
+    assert!((dip - 20.0).abs() < 0.01, "expected ~20.0%, got {dip}");
 }
 
 #[test]
 fn heart_rate_dip_pct_flat_series_at_baseline_returns_zero() {
     // All HR equal to baseline → no dip, clamped to 0.0
-    let series: Vec<(f64, f64)> = vec![
-        (0.0, 65.0),
-        (5.0, 65.0),
-        (10.0, 65.0),
-        (15.0, 65.0),
-    ];
+    let series: Vec<(f64, f64)> = vec![(0.0, 65.0), (5.0, 65.0), (10.0, 65.0), (15.0, 65.0)];
     let result = heart_rate_dip_pct(&series, 65.0);
     let dip = result.expect("should return a value for flat series");
     assert_eq!(dip, 0.0, "flat series at baseline should return 0.0");
@@ -3163,7 +3171,10 @@ fn waso_from_hr_returns_zero_when_no_post_onset_wake() {
         (2.0, 60.0),
     ];
     let waso = waso_from_hr(&series, resting_hr, 0.0);
-    assert_eq!(waso, 0.0, "WASO should be 0 when all post-onset HR below threshold");
+    assert_eq!(
+        waso, 0.0,
+        "WASO should be 0 when all post-onset HR below threshold"
+    );
 }
 
 #[test]
@@ -3191,8 +3202,8 @@ fn waso_from_hr_excludes_pre_onset_wake_samples() {
     // All samples before onset_ts=10; post-onset HR is below threshold
     let resting_hr = 60.0;
     let series: Vec<(f64, f64)> = vec![
-        (2.0, 80.0), // pre-onset, above threshold — must be excluded
-        (5.0, 75.0), // pre-onset, above threshold — must be excluded
+        (2.0, 80.0),  // pre-onset, above threshold — must be excluded
+        (5.0, 75.0),  // pre-onset, above threshold — must be excluded
         (10.0, 58.0), // onset boundary, below threshold
         (11.0, 57.0), // post-onset, below threshold
     ];
@@ -3234,7 +3245,10 @@ fn sol_from_hr_returns_none_when_no_sustained_period() {
         (4.0, 70.0), // back up — break again (never 3 in a row)
     ];
     let sol = sol_from_hr(&series, resting_hr, 3.0);
-    assert!(sol.is_none(), "should return None when no sustained low-HR period exists");
+    assert!(
+        sol.is_none(),
+        "should return None when no sustained low-HR period exists"
+    );
 }
 
 #[test]
@@ -3248,7 +3262,10 @@ fn hr_disturbance_count_counts_contiguous_wake_runs_once() {
         (3.0, 55.0), // back to sleep
     ];
     let count = hr_disturbance_count(&series, resting_hr, 0.0);
-    assert_eq!(count, 1, "one contiguous wake run should count as 1 disturbance");
+    assert_eq!(
+        count, 1,
+        "one contiguous wake run should count as 1 disturbance"
+    );
 }
 
 #[test]
@@ -3256,14 +3273,17 @@ fn hr_disturbance_count_counts_two_separated_runs_as_two() {
     // Two separated wake runs → count = 2
     let resting_hr = 60.0;
     let series: Vec<(f64, f64)> = vec![
-        (0.0, 55.0),  // sleep
-        (1.0, 70.0),  // wake run 1 start
-        (2.0, 55.0),  // sleep
-        (3.0, 68.0),  // wake run 2 start
-        (4.0, 55.0),  // sleep
+        (0.0, 55.0), // sleep
+        (1.0, 70.0), // wake run 1 start
+        (2.0, 55.0), // sleep
+        (3.0, 68.0), // wake run 2 start
+        (4.0, 55.0), // sleep
     ];
     let count = hr_disturbance_count(&series, resting_hr, 0.0);
-    assert_eq!(count, 2, "two separated wake runs should count as 2 disturbances");
+    assert_eq!(
+        count, 2,
+        "two separated wake runs should count as 2 disturbances"
+    );
 }
 
 // ALG-SLP-01 Task 2: SleepScoreOutput new fields
@@ -3293,7 +3313,11 @@ fn goose_sleep_v0_output_carries_sol_waso_disturbance_and_rem_latency() {
         input_ids: vec!["hand-derived.task2".to_string()],
     });
 
-    assert!(result.errors.is_empty(), "expected no errors: {:?}", result.errors);
+    assert!(
+        result.errors.is_empty(),
+        "expected no errors: {:?}",
+        result.errors
+    );
     let output = result.output.expect("expected output for valid input");
 
     // sol_minutes is populated from input.sleep_latency_minutes
@@ -3309,10 +3333,7 @@ fn goose_sleep_v0_output_carries_sol_waso_disturbance_and_rem_latency() {
         output.waso_minutes
     );
     // disturbance_count is populated from input.disturbance_count
-    assert_eq!(
-        output.disturbance_count, 3,
-        "expected disturbance_count=3"
-    );
+    assert_eq!(output.disturbance_count, 3, "expected disturbance_count=3");
     // rem_latency_minutes: None when no stage_segments are provided (stage_minutes path)
     assert!(
         output.rem_latency_minutes.is_none(),

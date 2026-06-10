@@ -9215,11 +9215,7 @@ fn bridge_k10_gravity_extraction_lsb_to_g_conversion() {
             }]
         }
     }));
-    assert!(
-        import_resp.ok,
-        "K10 import failed: {:?}",
-        import_resp.error
-    );
+    assert!(import_resp.ok, "K10 import failed: {:?}", import_resp.error);
 
     // Call upload.get_recent_decoded_streams and assert gravity is populated
     let streams_resp = request(serde_json::json!({
@@ -9238,7 +9234,9 @@ fn bridge_k10_gravity_extraction_lsb_to_g_conversion() {
         streams_resp.error
     );
     let result = streams_resp.result.unwrap();
-    let gravity = result["gravity"].as_array().expect("gravity must be an array");
+    let gravity = result["gravity"]
+        .as_array()
+        .expect("gravity must be an array");
 
     // K10 has 100 samples per axis — expect 100 gravity rows
     assert_eq!(
@@ -9295,7 +9293,11 @@ fn bridge_k10_gravity_row_count_and_base_ts() {
             }]
         }
     }));
-    assert!(import_resp.ok, "K10 import-2 failed: {:?}", import_resp.error);
+    assert!(
+        import_resp.ok,
+        "K10 import-2 failed: {:?}",
+        import_resp.error
+    );
 
     let streams_resp = request(serde_json::json!({
         "schema": "goose.bridge.request.v1",
@@ -9307,12 +9309,22 @@ fn bridge_k10_gravity_row_count_and_base_ts() {
             "device_id": ""
         }
     }));
-    assert!(streams_resp.ok, "streams-2 failed: {:?}", streams_resp.error);
+    assert!(
+        streams_resp.ok,
+        "streams-2 failed: {:?}",
+        streams_resp.error
+    );
     let result = streams_resp.result.unwrap();
-    let gravity = result["gravity"].as_array().expect("gravity must be an array");
+    let gravity = result["gravity"]
+        .as_array()
+        .expect("gravity must be an array");
 
     // 100 samples per axis, min(100,100,100) = 100 rows
-    assert_eq!(gravity.len(), 100, "row count should be 100 (min of axis lengths)");
+    assert_eq!(
+        gravity.len(),
+        100,
+        "row count should be 100 (min of axis lengths)"
+    );
 
     // First row ts should equal base ts (0.0 for zero-filled header)
     let ts = gravity[0]["ts"].as_f64().expect("ts must be f64");
@@ -9348,11 +9360,7 @@ fn bridge_gravity_insert_query_roundtrip() {
         insert_resp.error
     );
     let insert_result = insert_resp.result.unwrap();
-    assert_eq!(
-        insert_result["inserted"],
-        3,
-        "should have inserted 3 rows"
-    );
+    assert_eq!(insert_result["inserted"], 3, "should have inserted 3 rows");
 
     // Query via gravity_rows_between [1000.0, 1002.0)
     let query_resp = request(serde_json::json!({
@@ -9372,19 +9380,41 @@ fn bridge_gravity_insert_query_roundtrip() {
         query_resp.error
     );
     let query_result = query_resp.result.unwrap();
-    let rows = query_result["rows"].as_array().expect("rows must be an array");
+    let rows = query_result["rows"]
+        .as_array()
+        .expect("rows must be an array");
 
     // Half-open window [1000.0, 1002.0) — should return ts 1000.0 and 1001.0, not 1002.0
-    assert_eq!(rows.len(), 2, "half-open window should return 2 rows, got: {}", rows.len());
+    assert_eq!(
+        rows.len(),
+        2,
+        "half-open window should return 2 rows, got: {}",
+        rows.len()
+    );
 
     let r0 = &rows[0];
-    assert!((r0["ts"].as_f64().unwrap() - 1000.0).abs() < 1e-9, "first ts should be 1000.0");
-    assert!((r0["x"].as_f64().unwrap() - 1.0).abs() < 1e-9, "first x should be 1.0");
-    assert!((r0["y"].as_f64().unwrap() - 0.5).abs() < 1e-9, "first y should be 0.5");
-    assert!((r0["z"].as_f64().unwrap() - (-0.25)).abs() < 1e-9, "first z should be -0.25");
+    assert!(
+        (r0["ts"].as_f64().unwrap() - 1000.0).abs() < 1e-9,
+        "first ts should be 1000.0"
+    );
+    assert!(
+        (r0["x"].as_f64().unwrap() - 1.0).abs() < 1e-9,
+        "first x should be 1.0"
+    );
+    assert!(
+        (r0["y"].as_f64().unwrap() - 0.5).abs() < 1e-9,
+        "first y should be 0.5"
+    );
+    assert!(
+        (r0["z"].as_f64().unwrap() - (-0.25)).abs() < 1e-9,
+        "first z should be -0.25"
+    );
 
     let r1 = &rows[1];
-    assert!((r1["ts"].as_f64().unwrap() - 1001.0).abs() < 1e-9, "second ts should be 1001.0");
+    assert!(
+        (r1["ts"].as_f64().unwrap() - 1001.0).abs() < 1e-9,
+        "second ts should be 1001.0"
+    );
 
     // Full window [1000.0, 1003.0) should return all 3 rows
     let query_all_resp = request(serde_json::json!({
@@ -9398,7 +9428,11 @@ fn bridge_gravity_insert_query_roundtrip() {
             "ts_end": 1003.0
         }
     }));
-    assert!(query_all_resp.ok, "gravity_rows_between all failed: {:?}", query_all_resp.error);
+    assert!(
+        query_all_resp.ok,
+        "gravity_rows_between all failed: {:?}",
+        query_all_resp.error
+    );
     let all_rows = query_all_resp.result.unwrap()["rows"]
         .as_array()
         .expect("rows must be array")
@@ -9495,7 +9529,9 @@ fn bridge_v24_gravity_extraction() {
         streams_resp.error
     );
     let result = streams_resp.result.unwrap();
-    let gravity = result["gravity"].as_array().expect("gravity must be an array");
+    let gravity = result["gravity"]
+        .as_array()
+        .expect("gravity must be an array");
     assert_eq!(
         gravity.len(),
         1,
@@ -9588,7 +9624,9 @@ fn bridge_v24_gravity_insert_roundtrip() {
     );
 
     // Verify the persisted x value
-    let x = query_result["rows"][0]["x"].as_f64().expect("x must be f64");
+    let x = query_result["rows"][0]["x"]
+        .as_f64()
+        .expect("x must be f64");
     assert!(
         (x - 0.98f64).abs() < 0.001,
         "persisted gravity x should be ≈ 0.98, got {x}"
@@ -9630,8 +9668,7 @@ fn bridge_band_sleep_external_session_insert() {
     );
     let result = resp.result.unwrap();
     assert_eq!(
-        result["inserted_session_count"],
-        1,
+        result["inserted_session_count"], 1,
         "should insert 1 session, got: {:?}",
         result
     );
@@ -9668,11 +9705,7 @@ fn bridge_band_sleep_no_duplicate() {
         "method": "sleep.import_external_history",
         "args": args
     }));
-    assert!(
-        resp1.ok,
-        "first insert should succeed: {:?}",
-        resp1.error
-    );
+    assert!(resp1.ok, "first insert should succeed: {:?}", resp1.error);
     assert_eq!(
         resp1.result.as_ref().unwrap()["inserted_session_count"],
         1,
@@ -9693,14 +9726,12 @@ fn bridge_band_sleep_no_duplicate() {
     );
     let result2 = resp2.result.unwrap();
     assert_eq!(
-        result2["inserted_session_count"],
-        0,
+        result2["inserted_session_count"], 0,
         "second insert should have inserted_session_count=0 (idempotent), got: {:?}",
         result2
     );
     assert_eq!(
-        result2["unchanged_session_count"],
-        1,
+        result2["unchanged_session_count"], 1,
         "second insert should have unchanged_session_count=1, got: {:?}",
         result2
     );

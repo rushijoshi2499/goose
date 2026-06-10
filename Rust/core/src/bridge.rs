@@ -13,7 +13,6 @@ use serde_json::{Value, json};
 
 use crate::{
     GooseError, GooseResult,
-    baselines::{EwmaBaseline, EwmaTrustLevel},
     activity_sessions::{
         ActivitySessionCorrectionKind, activity_session_correction_plans,
         append_activity_session_correction_history,
@@ -24,6 +23,7 @@ use crate::{
         compare_sleep_v1_goose_to_reference, compare_strain_goose_to_reference,
         compare_stress_goose_to_reference,
     },
+    baselines::{EwmaBaseline, EwmaTrustLevel},
     calibration::{
         CalibrationApplicationInput, CalibrationDataset, CalibrationOptions, CalibrationRecord,
         CalibrationReport, apply_calibration, calibration_run_record, evaluate_linear_calibration,
@@ -96,14 +96,14 @@ use crate::{
         AlgorithmRunResult, GOOSE_HRV_V0_ID, GOOSE_HRV_V0_VERSION, GOOSE_RECOVERY_V0_ID,
         GOOSE_RECOVERY_V0_VERSION, GOOSE_SLEEP_V0_ID, GOOSE_SLEEP_V0_VERSION, GOOSE_SLEEP_V1_ID,
         GOOSE_SLEEP_V1_VERSION, GOOSE_STRAIN_V0_ID, GOOSE_STRAIN_V0_VERSION, GOOSE_STRESS_V0_ID,
-        GOOSE_STRESS_V0_VERSION, HrvInput, ReadinessInput, RecoveryInput, RecoveryV1Input,
-        SleepInput, SleepModelStatusInput, SleepNightHistoryInput, SleepStageSegment, SleepV1Input,
-        StrainInput, StressInput, algorithm_run_record, built_in_algorithm_definitions,
-        built_in_default_algorithm_preferences, default_algorithm_preferences_for_scope,
-        fit_strain_denominator, goose_hrv_v0, goose_readiness_v1, goose_recovery_v0,
-        goose_recovery_v1, goose_sleep_v0, goose_sleep_v1, goose_strain_v0, goose_strain_v1,
-        goose_stress_v0, imu_step_count_v1, sleep_history_night_is_usable,
-        ImuStepCountInput,
+        GOOSE_STRESS_V0_VERSION, HrvInput, ImuStepCountInput, ReadinessInput, RecoveryInput,
+        RecoveryV1Input, SleepInput, SleepModelStatusInput, SleepNightHistoryInput,
+        SleepStageSegment, SleepV1Input, StrainInput, StressInput, algorithm_run_record,
+        built_in_algorithm_definitions, built_in_default_algorithm_preferences,
+        default_algorithm_preferences_for_scope, fit_strain_denominator, goose_hrv_v0,
+        goose_readiness_v1, goose_recovery_v0, goose_recovery_v1, goose_sleep_v0, goose_sleep_v1,
+        goose_strain_v0, goose_strain_v1, goose_stress_v0, imu_step_count_v1,
+        sleep_history_night_is_usable,
     },
     openwhoop_reference::{
         OPENWHOOP_REFERENCE_ATTRIBUTION, OPENWHOOP_REFERENCE_COMMIT,
@@ -127,7 +127,9 @@ use crate::{
         rollup_resting_heart_rate_day_for_store, validate_resting_heart_rate_capture_for_store,
     },
     reference::reference_algorithm_definitions,
-    sleep_staging::{EpochHrFeature, SleepStagingInput, SleepStagingOutput, stage_sleep_four_class},
+    sleep_staging::{
+        EpochHrFeature, SleepStagingInput, SleepStagingOutput, stage_sleep_four_class,
+    },
     sleep_validation::{
         SleepStageLabelValidationOptions, SleepV1EvidenceFolderOptions,
         SleepV1ExplanationStabilityOptions, SleepV1ReleaseGateInput,
@@ -2195,13 +2197,11 @@ fn handle_bridge_request_inner(request: BridgeRequest) -> BridgeResponse {
             .map(|value| bridge_ok(&request.request_id, value))
             .unwrap_or_else(|error| bridge_error(&request.request_id, "method_error", error)),
         "metrics.fit_strain_denominator" => request_args::<FitStrainDenominatorArgs>(&request)
-            .and_then(|args| {
-                match fit_strain_denominator(&args.pairs) {
-                    Some(d) => Ok(serde_json::json!({ "denominator": d })),
-                    None => Err(GooseError::message(
-                        "insufficient_or_degenerate_pairs".to_string(),
-                    )),
-                }
+            .and_then(|args| match fit_strain_denominator(&args.pairs) {
+                Some(d) => Ok(serde_json::json!({ "denominator": d })),
+                None => Err(GooseError::message(
+                    "insufficient_or_degenerate_pairs".to_string(),
+                )),
             })
             .map(|value| bridge_ok(&request.request_id, value))
             .unwrap_or_else(|error| bridge_error(&request.request_id, "method_error", error)),
@@ -2219,15 +2219,17 @@ fn handle_bridge_request_inner(request: BridgeRequest) -> BridgeResponse {
             .unwrap_or_else(|error| bridge_error(&request.request_id, "method_error", error)),
         "metrics.goose_readiness_v1" => request_args::<ReadinessInput>(&request)
             .and_then(|input| {
-                serde_json::to_value(goose_readiness_v1(&input))
-                    .map_err(|e| GooseError::message(format!("cannot serialize readiness_v1 output: {e}")))
+                serde_json::to_value(goose_readiness_v1(&input)).map_err(|e| {
+                    GooseError::message(format!("cannot serialize readiness_v1 output: {e}"))
+                })
             })
             .map(|value| bridge_ok(&request.request_id, value))
             .unwrap_or_else(|error| bridge_error(&request.request_id, "method_error", error)),
         "metrics.imu_step_count_v1" => request_args::<ImuStepCountInput>(&request)
             .and_then(|input| {
-                serde_json::to_value(imu_step_count_v1(&input))
-                    .map_err(|e| GooseError::message(format!("cannot serialize imu_step_count output: {e}")))
+                serde_json::to_value(imu_step_count_v1(&input)).map_err(|e| {
+                    GooseError::message(format!("cannot serialize imu_step_count output: {e}"))
+                })
             })
             .map(|value| bridge_ok(&request.request_id, value))
             .unwrap_or_else(|error| bridge_error(&request.request_id, "method_error", error)),
@@ -2713,12 +2715,10 @@ fn handle_bridge_request_inner(request: BridgeRequest) -> BridgeResponse {
             .and_then(timeline_from_decoded_frames_bridge)
             .map(|value| bridge_ok(&request.request_id, value))
             .unwrap_or_else(|error| bridge_error(&request.request_id, "method_error", error)),
-        "store.ewma_baseline_fold_history" => {
-            request_args::<EwmaBaselineFoldHistoryArgs>(&request)
-                .and_then(ewma_baseline_fold_history_bridge)
-                .map(|value| bridge_ok(&request.request_id, value))
-                .unwrap_or_else(|error| bridge_error(&request.request_id, "method_error", error))
-        }
+        "store.ewma_baseline_fold_history" => request_args::<EwmaBaselineFoldHistoryArgs>(&request)
+            .and_then(ewma_baseline_fold_history_bridge)
+            .map(|value| bridge_ok(&request.request_id, value))
+            .unwrap_or_else(|error| bridge_error(&request.request_id, "method_error", error)),
         "store.ewma_baseline_update" => request_args::<EwmaBaselineUpdateArgs>(&request)
             .and_then(ewma_baseline_update_bridge)
             .map(|value| bridge_ok(&request.request_id, value))
@@ -2791,12 +2791,10 @@ fn handle_bridge_request_inner(request: BridgeRequest) -> BridgeResponse {
                 .map(|value| bridge_ok(&request.request_id, value))
                 .unwrap_or_else(|error| bridge_error(&request.request_id, "method_error", error))
         }
-        "upload.get_raw_frames_for_upload" => {
-            request_args::<UploadGetRawFramesArgs>(&request)
-                .and_then(upload_get_raw_frames_for_upload_bridge)
-                .map(|value| bridge_ok(&request.request_id, value))
-                .unwrap_or_else(|error| bridge_error(&request.request_id, "method_error", error))
-        }
+        "upload.get_raw_frames_for_upload" => request_args::<UploadGetRawFramesArgs>(&request)
+            .and_then(upload_get_raw_frames_for_upload_bridge)
+            .map(|value| bridge_ok(&request.request_id, value))
+            .unwrap_or_else(|error| bridge_error(&request.request_id, "method_error", error)),
         "storage.compact_raw_evidence" => request_args::<StorageCompactRawEvidenceArgs>(&request)
             .and_then(storage_compact_raw_evidence_bridge)
             .map(|value| bridge_ok(&request.request_id, value))
@@ -3365,7 +3363,9 @@ fn upload_get_recent_decoded_streams_bridge(
                                 hr.push(json!({"ts": ts, "bpm": *bpm}));
                             }
                         }
-                        DataPacketBodySummary::RawMotionK10 { heart_rate, axes, .. } => {
+                        DataPacketBodySummary::RawMotionK10 {
+                            heart_rate, axes, ..
+                        } => {
                             // K10 raw motion carries an HR byte and three accel axes
                             if let (Some(ts), Some(bpm)) = (ts_unix, heart_rate) {
                                 hr.push(json!({"ts": ts, "bpm": *bpm}));
@@ -3374,11 +3374,17 @@ fn upload_get_recent_decoded_streams_bridge(
                             // LSB → g via IMU_LSB_PER_G. Match axes by name (not offset)
                             // to stay robust across any future reordering.
                             // If any axis or its full_samples is absent, skip gracefully.
-                            let ax = axes.iter().find(|a| a.name == "accelerometer_x")
+                            let ax = axes
+                                .iter()
+                                .find(|a| a.name == "accelerometer_x")
                                 .and_then(|a| a.full_samples.as_ref());
-                            let ay = axes.iter().find(|a| a.name == "accelerometer_y")
+                            let ay = axes
+                                .iter()
+                                .find(|a| a.name == "accelerometer_y")
                                 .and_then(|a| a.full_samples.as_ref());
-                            let az = axes.iter().find(|a| a.name == "accelerometer_z")
+                            let az = axes
+                                .iter()
+                                .find(|a| a.name == "accelerometer_z")
                                 .and_then(|a| a.full_samples.as_ref());
                             // CR-02 fix: assign per-sample timestamp so the gravity time
                             // series is recoverable. WHOOP 5 IMU samples at 50 Hz.
@@ -3434,11 +3440,10 @@ fn upload_get_recent_decoded_streams_bridge(
                             let contact = skin_contact.unwrap_or(0) == 1;
 
                             // HR — only when skin contact is established
-                            if contact {
-                                if let (Some(ts), Some(bpm)) = (ts_unix, *v24_hr) {
+                            if contact
+                                && let (Some(ts), Some(bpm)) = (ts_unix, *v24_hr) {
                                     hr.push(json!({"ts": ts, "bpm": bpm}));
                                 }
-                            }
 
                             // RR intervals — accumulate with per-interval timestamps
                             if let Some(ts_base) = ts_unix {
@@ -3451,8 +3456,7 @@ fn upload_get_recent_decoded_streams_bridge(
 
                             // SpO2 raw red/IR — only when in contact
                             if contact {
-                                if let (Some(ts), Some(r), Some(i)) =
-                                    (ts_unix, *spo2_red, *spo2_ir)
+                                if let (Some(ts), Some(r), Some(i)) = (ts_unix, *spo2_red, *spo2_ir)
                                 {
                                     spo2.push(json!({"ts": ts, "red": r, "ir": i, "contact": 1}));
                                 }
@@ -3631,10 +3635,7 @@ fn iso8601_to_unix(s: &str) -> f64 {
     ) else {
         return 0.0;
     };
-    let ms: u64 = time_parts
-        .get(1)
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(0);
+    let ms: u64 = time_parts.get(1).and_then(|s| s.parse().ok()).unwrap_or(0);
     // Days since epoch via inverse of days_to_ymd
     let days = ymd_to_days(y, mo, d) as u64;
     let unix_secs = days * 86400 + h * 3600 + min * 60 + sec;
@@ -3941,7 +3942,10 @@ fn exercise_detect_sessions_bridge(
     let hr: Vec<crate::exercise_detection::HrSample> = args
         .hr_samples
         .iter()
-        .map(|s| crate::exercise_detection::HrSample { ts: s.ts, bpm: s.bpm })
+        .map(|s| crate::exercise_detection::HrSample {
+            ts: s.ts,
+            bpm: s.bpm,
+        })
         .collect();
     let profile = crate::exercise_detection::ExerciseProfile {
         resting_hr: args.profile.resting_hr,
@@ -3968,8 +3972,7 @@ fn exercise_detect_sessions_bridge(
             peak_hr: session.peak_hr,
             strain: session.strain,
             calories_kcal: session.calories_kcal,
-            zone_time_pct_json: serde_json::to_string(&session.zone_time_pct)
-                .unwrap_or_default(),
+            zone_time_pct_json: serde_json::to_string(&session.zone_time_pct).unwrap_or_default(),
             hrmax_source: session.hrmax_source.clone(),
             rhr_source: session.rhr_source.clone(),
             avg_hrr_pct: session.avg_hrr_pct,
@@ -4060,9 +4063,7 @@ struct Spo2FromRawArgs {
     ir: u16,
 }
 
-fn insert_v24_biometric_batch_bridge(
-    args: InsertV24BatchArgs,
-) -> GooseResult<serde_json::Value> {
+fn insert_v24_biometric_batch_bridge(args: InsertV24BatchArgs) -> GooseResult<serde_json::Value> {
     use crate::store::V24BiometricBatch;
 
     let store = open_bridge_store(&args.database_path)?;
@@ -4072,16 +4073,14 @@ fn insert_v24_biometric_batch_bridge(
     let spo2_tuples: Vec<(f64, i64, i64, i64)> = args
         .spo2
         .iter()
-        .filter_map(|row| {
-            match spo2_from_raw_uncalibrated(row.red, row.ir) {
-                Some(_) => Some((row.ts, row.red as i64, row.ir as i64, row.contact)),
-                None => {
-                    warnings.push(format!(
-                        "spo2_plausibility_reject: ts={} red={} ir={} (out of range [70,100]%)",
-                        row.ts, row.red, row.ir
-                    ));
-                    None
-                }
+        .filter_map(|row| match spo2_from_raw_uncalibrated(row.red, row.ir) {
+            Some(_) => Some((row.ts, row.red as i64, row.ir as i64, row.contact)),
+            None => {
+                warnings.push(format!(
+                    "spo2_plausibility_reject: ts={} red={} ir={} (out of range [70,100]%)",
+                    row.ts, row.red, row.ir
+                ));
+                None
             }
         })
         .collect();
@@ -4090,16 +4089,14 @@ fn insert_v24_biometric_batch_bridge(
     let skin_temp_tuples: Vec<(f64, i64, i64)> = args
         .skin_temp
         .iter()
-        .filter_map(|row| {
-            match skin_temp_celsius_from_raw(row.raw) {
-                Some(_) => Some((row.ts, row.raw as i64, row.contact)),
-                None => {
-                    warnings.push(format!(
-                        "skin_temp_plausibility_reject: ts={} raw={} (celsius outside [25,40])",
-                        row.ts, row.raw
-                    ));
-                    None
-                }
+        .filter_map(|row| match skin_temp_celsius_from_raw(row.raw) {
+            Some(_) => Some((row.ts, row.raw as i64, row.contact)),
+            None => {
+                warnings.push(format!(
+                    "skin_temp_plausibility_reject: ts={} raw={} (celsius outside [25,40])",
+                    row.ts, row.raw
+                ));
+                None
             }
         })
         .collect();
@@ -4130,9 +4127,7 @@ fn insert_v24_biometric_batch_bridge(
     Ok(json!({"inserted": true, "warnings": warnings}))
 }
 
-fn v24_biometric_samples_between_bridge(
-    args: V24BetweenArgs,
-) -> GooseResult<serde_json::Value> {
+fn v24_biometric_samples_between_bridge(args: V24BetweenArgs) -> GooseResult<serde_json::Value> {
     let store = open_bridge_store(&args.database_path)?;
     let window =
         store.v24_biometric_samples_between(&args.device_id, args.start_ts, args.end_ts)?;
@@ -4204,10 +4199,8 @@ fn sleep_staging_bridge(args: SleepStagingBridgeArgs) -> GooseResult<serde_json:
     let store = open_bridge_store(&args.database_path)?;
     let gravity_rows: Vec<GravityRow> =
         store.gravity_rows_between(&args.device_id, args.sleep_start_ts, args.sleep_end_ts)?;
-    let tuples: Vec<(f64, f64, f64, f64)> = gravity_rows
-        .iter()
-        .map(|r| (r.ts, r.x, r.y, r.z))
-        .collect();
+    let tuples: Vec<(f64, f64, f64, f64)> =
+        gravity_rows.iter().map(|r| (r.ts, r.x, r.y, r.z)).collect();
     let input = SleepStagingInput {
         device_id: args.device_id.clone(),
         sleep_start_ts: args.sleep_start_ts,
@@ -4216,7 +4209,10 @@ fn sleep_staging_bridge(args: SleepStagingBridgeArgs) -> GooseResult<serde_json:
     let hr_feats: Vec<EpochHrFeature> = args
         .hr_features
         .iter()
-        .map(|f| EpochHrFeature { ts: f.ts, hr_bpm: f.hr_bpm })
+        .map(|f| EpochHrFeature {
+            ts: f.ts,
+            hr_bpm: f.hr_bpm,
+        })
         .collect();
     // Determine resp availability: if caller did not pass resp_available=false explicitly,
     // check whether there are any resp rows in the window (lazy check).
@@ -4229,7 +4225,8 @@ fn sleep_staging_bridge(args: SleepStagingBridgeArgs) -> GooseResult<serde_json:
     } else {
         false
     };
-    let output: SleepStagingOutput = stage_sleep_four_class(&input, &tuples, &hr_feats, resp_available);
+    let output: SleepStagingOutput =
+        stage_sleep_four_class(&input, &tuples, &hr_feats, resp_available);
     serde_json::to_value(output)
         .map_err(|e| GooseError::message(format!("cannot serialize sleep_staging output: {e}")))
 }
@@ -9893,9 +9890,18 @@ mod tests {
             response.error
         );
         let result = response.result.expect("result must be present");
-        assert_eq!(result["hrv"]["night_count"], 0, "empty store: hrv night_count = 0");
-        assert_eq!(result["resting_hr"]["night_count"], 0, "empty store: rhr night_count = 0");
-        assert_eq!(result["hrv"]["trust"], "calibrating", "empty store: trust = calibrating");
+        assert_eq!(
+            result["hrv"]["night_count"], 0,
+            "empty store: hrv night_count = 0"
+        );
+        assert_eq!(
+            result["resting_hr"]["night_count"], 0,
+            "empty store: rhr night_count = 0"
+        );
+        assert_eq!(
+            result["hrv"]["trust"], "calibrating",
+            "empty store: trust = calibrating"
+        );
     }
 
     #[test]
@@ -9922,8 +9928,7 @@ mod tests {
         );
         let update_result = update_resp.result.expect("update result");
         assert_eq!(
-            update_result["skipped"],
-            false,
+            update_result["skipped"], false,
             "first update must not be skipped"
         );
 
@@ -9943,8 +9948,7 @@ mod tests {
         assert!(update_resp2.ok, "second update must not error");
         let update_result2 = update_resp2.result.expect("second update result");
         assert_eq!(
-            update_result2["skipped"],
-            true,
+            update_result2["skipped"], true,
             "second update for same date must be skipped"
         );
 
@@ -10025,8 +10029,7 @@ mod tests {
             "cold-start: score must be null"
         );
         assert_eq!(
-            result["trust_level"],
-            "calibrating",
+            result["trust_level"], "calibrating",
             "cold-start: trust_level must be 'calibrating'"
         );
         assert!(
@@ -10057,8 +10060,7 @@ mod tests {
             assert!(
                 resp.ok,
                 "seed night {} must succeed: {:?}",
-                date,
-                resp.error
+                date, resp.error
             );
         }
 
@@ -10097,8 +10099,7 @@ mod tests {
         );
         // Trust must be provisional (exactly 4 nights) not calibrating.
         assert_ne!(
-            result["trust_level"],
-            "calibrating",
+            result["trust_level"], "calibrating",
             "after 4 nights: trust must not be calibrating"
         );
     }
@@ -10115,7 +10116,11 @@ mod tests {
             args: json!({ "daily_strain": [] }),
         };
         let response = handle_bridge_request(request);
-        assert!(response.ok, "empty input must succeed: {:?}", response.error);
+        assert!(
+            response.ok,
+            "empty input must succeed: {:?}",
+            response.error
+        );
         let result = response.result.expect("result must be present");
         assert_eq!(
             result["insufficient_data"],
@@ -10123,8 +10128,7 @@ mod tests {
             "empty input: insufficient_data must be true"
         );
         assert_eq!(
-            result["level"],
-            "unknown",
+            result["level"], "unknown",
             "empty input: level must be 'unknown'"
         );
     }
@@ -10141,12 +10145,24 @@ mod tests {
             args: json!({ "daily_strain": pairs }),
         };
         let response = handle_bridge_request(request);
-        assert!(response.ok, "28 equal strains must succeed: {:?}", response.error);
-        let result = response.result.expect("result must be present");
-        assert_eq!(result["level"], "primed", "28 equal strains: level must be 'primed'");
-        assert_eq!(result["acwr_zone"], "optimal", "28 equal strains: zone must be 'optimal'");
         assert!(
-            result["acwr"].as_f64().map_or(false, |v| (v - 1.0).abs() < 1e-9),
+            response.ok,
+            "28 equal strains must succeed: {:?}",
+            response.error
+        );
+        let result = response.result.expect("result must be present");
+        assert_eq!(
+            result["level"], "primed",
+            "28 equal strains: level must be 'primed'"
+        );
+        assert_eq!(
+            result["acwr_zone"], "optimal",
+            "28 equal strains: zone must be 'optimal'"
+        );
+        assert!(
+            result["acwr"]
+                .as_f64()
+                .map_or(false, |v| (v - 1.0).abs() < 1e-9),
             "28 equal strains: acwr must be ≈1.0, got {:?}",
             result["acwr"]
         );
@@ -10175,7 +10191,10 @@ mod tests {
             serde_json::Value::Bool(true),
             "27 strains: insufficient_data must be true"
         );
-        assert_eq!(result["level"], "unknown", "27 strains: level must be 'unknown'");
+        assert_eq!(
+            result["level"], "unknown",
+            "27 strains: level must be 'unknown'"
+        );
     }
 
     #[test]
@@ -10193,11 +10212,21 @@ mod tests {
             args: json!({ "daily_strain": pairs }),
         };
         let response = handle_bridge_request(request);
-        assert!(response.ok, "high-ACWR 28 strains must succeed: {:?}", response.error);
+        assert!(
+            response.ok,
+            "high-ACWR 28 strains must succeed: {:?}",
+            response.error
+        );
         let result = response.result.expect("result must be present");
-        assert_eq!(result["level"], "rundown", "high-ACWR input: level must be 'rundown'");
+        assert_eq!(
+            result["level"], "rundown",
+            "high-ACWR input: level must be 'rundown'"
+        );
         let acwr = result["acwr"].as_f64().expect("acwr must be a number");
-        assert!(acwr >= 1.5, "high-ACWR input: acwr must be >=1.5, got {acwr}");
+        assert!(
+            acwr >= 1.5,
+            "high-ACWR input: acwr must be >=1.5, got {acwr}"
+        );
     }
 
     // ---- metrics.sleep_staging bridge tests --------------------------------
@@ -10230,7 +10259,10 @@ mod tests {
             "empty gravity table must yield staging_method=no_imu_data"
         );
         assert!(
-            result["epochs"].as_array().map(|a| a.is_empty()).unwrap_or(false),
+            result["epochs"]
+                .as_array()
+                .map(|a| a.is_empty())
+                .unwrap_or(false),
             "epochs must be empty for an empty gravity table"
         );
         // AASM fields must be present in the output (even when no IMU data).

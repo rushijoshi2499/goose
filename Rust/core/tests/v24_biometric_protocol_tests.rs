@@ -107,7 +107,11 @@ fn test_v24_body_summary_field_offsets() {
     let payload = make_82_byte_payload();
     let (summary, warnings) = parse_v24_body_for_test(&payload);
 
-    assert!(warnings.is_empty(), "Expected no warnings, got: {:?}", warnings);
+    assert!(
+        warnings.is_empty(),
+        "Expected no warnings, got: {:?}",
+        warnings
+    );
 
     let summary = summary.expect("Expected Some(V24History), got None");
 
@@ -135,7 +139,11 @@ fn test_v24_body_summary_field_offsets() {
             warnings,
         } => {
             assert_eq!(hr, Some(72), "hr mismatch");
-            assert_eq!(rr_intervals_ms, vec![900u16, 950u16], "rr_intervals_ms mismatch");
+            assert_eq!(
+                rr_intervals_ms,
+                vec![900u16, 950u16],
+                "rr_intervals_ms mismatch"
+            );
             assert_eq!(ppg_green, Some(1000), "ppg_green mismatch");
             assert_eq!(ppg_red_ir, Some(2000), "ppg_red_ir mismatch");
             assert!(
@@ -165,7 +173,11 @@ fn test_v24_body_summary_field_offsets() {
             assert_eq!(led2, Some(200), "led2 mismatch");
             assert_eq!(resp_raw, Some(450), "resp_raw mismatch");
             assert_eq!(sig_quality, Some(9000), "sig_quality mismatch");
-            assert!(warnings.is_empty(), "Unexpected warnings in variant: {:?}", warnings);
+            assert!(
+                warnings.is_empty(),
+                "Unexpected warnings in variant: {:?}",
+                warnings
+            );
         }
         other => panic!("Expected V24History, got: {:?}", other),
     }
@@ -209,16 +221,28 @@ fn test_v24_short_payload() {
             warnings: variant_warnings,
         } => {
             assert!(hr.is_none(), "hr should be None for short payload");
-            assert!(rr_intervals_ms.is_empty(), "rr_intervals_ms should be empty for short payload");
+            assert!(
+                rr_intervals_ms.is_empty(),
+                "rr_intervals_ms should be empty for short payload"
+            );
             assert!(ppg_green.is_none(), "ppg_green should be None");
             assert!(ppg_red_ir.is_none(), "ppg_red_ir should be None");
             assert!(gravity_x.is_none(), "gravity_x should be None");
             assert!(gravity_y.is_none(), "gravity_y should be None");
             assert!(gravity_z.is_none(), "gravity_z should be None");
             assert!(skin_contact.is_none(), "skin_contact should be None");
-            assert!(gravity2_x.is_none(), "gravity2_x should be None for short payload");
-            assert!(gravity2_y.is_none(), "gravity2_y should be None for short payload");
-            assert!(gravity2_z.is_none(), "gravity2_z should be None for short payload");
+            assert!(
+                gravity2_x.is_none(),
+                "gravity2_x should be None for short payload"
+            );
+            assert!(
+                gravity2_y.is_none(),
+                "gravity2_y should be None for short payload"
+            );
+            assert!(
+                gravity2_z.is_none(),
+                "gravity2_z should be None for short payload"
+            );
             assert!(spo2_red.is_none(), "spo2_red should be None");
             assert!(spo2_ir.is_none(), "spo2_ir should be None");
             assert!(skin_temp_raw.is_none(), "skin_temp_raw should be None");
@@ -228,7 +252,9 @@ fn test_v24_short_payload() {
             assert!(resp_raw.is_none(), "resp_raw should be None");
             assert!(sig_quality.is_none(), "sig_quality should be None");
             assert!(
-                variant_warnings.iter().any(|w| w == "v24_payload_too_short"),
+                variant_warnings
+                    .iter()
+                    .any(|w| w == "v24_payload_too_short"),
                 "Expected v24_payload_too_short in variant warnings"
             );
         }
@@ -261,7 +287,9 @@ fn test_v24_rr_zero_skip() {
     let summary = summary.expect("Expected Some(V24History)");
 
     match summary {
-        DataPacketBodySummary::V24History { rr_intervals_ms, .. } => {
+        DataPacketBodySummary::V24History {
+            rr_intervals_ms, ..
+        } => {
             assert_eq!(
                 rr_intervals_ms,
                 vec![880u16, 920u16],

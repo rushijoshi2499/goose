@@ -87,6 +87,7 @@ pub struct ParsedFrame {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
+#[allow(clippy::large_enum_variant)]
 pub enum ParsedPayload {
     Command {
         command: Option<u8>,
@@ -727,9 +728,21 @@ fn parse_v24_body_summary(payload: &[u8]) -> (Option<DataPacketBodySummary>, Vec
     let gravity_z = read_f32_le(data, 41);
     let skin_contact = data.get(48).copied();
     // Second gravity triplet at bytes 49–60 (present only when payload is long enough).
-    let gravity2_x = if data.len() >= 60 { read_f32_le(data, 49) } else { None };
-    let gravity2_y = if data.len() >= 60 { read_f32_le(data, 53) } else { None };
-    let gravity2_z = if data.len() >= 60 { read_f32_le(data, 57) } else { None };
+    let gravity2_x = if data.len() >= 60 {
+        read_f32_le(data, 49)
+    } else {
+        None
+    };
+    let gravity2_y = if data.len() >= 60 {
+        read_f32_le(data, 53)
+    } else {
+        None
+    };
+    let gravity2_z = if data.len() >= 60 {
+        read_f32_le(data, 57)
+    } else {
+        None
+    };
     let spo2_red = read_u16_le(data, 61);
     let spo2_ir = read_u16_le(data, 63);
     let skin_temp_raw = read_u16_le(data, 65);

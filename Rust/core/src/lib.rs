@@ -16,10 +16,10 @@
 )]
 
 pub mod activity_candidates;
-pub mod baselines;
 pub mod activity_identity;
 pub mod activity_sessions;
 pub mod algorithm_compare;
+pub mod baselines;
 pub mod bridge;
 pub mod calibration;
 pub mod capture_correlation;
@@ -30,8 +30,8 @@ pub mod debug_ws;
 #[cfg(not(target_os = "android"))]
 pub mod debug_ws_server;
 pub mod energy_rollup;
-pub mod exercise_detection;
 mod error;
+pub mod exercise_detection;
 pub mod export;
 pub mod fixtures;
 pub mod health_sync;

@@ -1083,10 +1083,7 @@ fn parser_runner_validates_indexed_frame_fixture_expectations() {
         );
         let owned_history_payload =
             serde_json::to_value(&owned_history.parsed.as_ref().unwrap().parsed_payload).unwrap();
-        assert_eq!(
-            owned_history_payload["body_summary"]["kind"],
-            "v24_history"
-        );
+        assert_eq!(owned_history_payload["body_summary"]["kind"], "v24_history");
     }
 
     for (fixture_id, expected_summary_kind) in [

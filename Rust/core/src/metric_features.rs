@@ -13,8 +13,8 @@ use crate::{
         AlgorithmRunResult, GOOSE_HRV_V0_ID, GOOSE_HRV_V0_VERSION, HrvInput, HrvOutput,
         RecoveryInput, RecoveryScoreOutput, SleepInput, SleepScoreOutput, StrainInput,
         StrainScoreOutput, StressInput, StressScoreOutput, goose_hrv_v0, goose_recovery_v0,
-        goose_sleep_v0, goose_strain_v0, goose_stress_v0,
-        heart_rate_dip_pct, hr_disturbance_count, sol_from_hr, waso_from_hr,
+        goose_sleep_v0, goose_strain_v0, goose_stress_v0, heart_rate_dip_pct, hr_disturbance_count,
+        sol_from_hr, waso_from_hr,
     },
     protocol::{
         DataPacketBodySummary, I16SeriesSummary, ParsedPayload, decode_hex_with_whitespace,
@@ -1674,13 +1674,11 @@ pub fn run_hrv_feature_report_for_store(
     // When no HRV data came from decoded_frames, fall back to the rr_intervals table.
     // This covers simulator testing and fresh-install scenarios where HR/RR data
     // was imported directly (store.insert_hr_rr_batch) without the BLE trust chain.
-    if report.hrv_input.is_none() {
-        if let Ok(fallback) = hrv_report_from_rr_table(store, start, end, options) {
-            if fallback.hrv_input.is_some() {
+    if report.hrv_input.is_none()
+        && let Ok(fallback) = hrv_report_from_rr_table(store, start, end, options)
+            && fallback.hrv_input.is_some() {
                 return Ok(fallback);
             }
-        }
-    }
 
     Ok(report)
 }
@@ -1702,8 +1700,7 @@ fn iso8601_to_unix_approx(s: &str) -> Option<f64> {
     // Days since 1970-01-01 using a simple Gregorian calculation.
     let y = if month <= 2 { year - 1 } else { year };
     let m = if month <= 2 { month + 9 } else { month - 3 };
-    let jdn: i64 = 365 * y + y / 4 - y / 100 + y / 400
-        + (153 * m + 2) / 5 + day - 719469;
+    let jdn: i64 = 365 * y + y / 4 - y / 100 + y / 400 + (153 * m + 2) / 5 + day - 719469;
     let unix = jdn * 86400 + hour * 3600 + minute * 60 + second;
     Some(unix as f64)
 }
@@ -1741,10 +1738,7 @@ fn hrv_report_from_rr_table(
         None
     };
     let score_result = hrv_input.as_ref().map(goose_hrv_v0);
-    if score_result
-        .as_ref()
-        .is_some_and(|r| !r.errors.is_empty())
-    {
+    if score_result.as_ref().is_some_and(|r| !r.errors.is_empty()) {
         issues.push("hrv_score_errors".to_string());
     }
 
@@ -5182,45 +5176,59 @@ fn sleep_window_feature(
     // baseline_awake_hr_bpm is used as resting_hr per ALG-SLP-01 (Claude's Discretion in
     // 24-CONTEXT): the pre-sleep awake HR is the best available proxy for resting HR when
     // dedicated resting-HR sensors are not used during the sleep window.
-    let (heart_rate_dip_percent, sleep_latency_minutes, wake_after_sleep_onset_minutes, disturbance_count) =
-        if heart_rate_coverage_fraction >= 0.50 {
-            if let Some(baseline) = baseline_awake_hr_bpm {
-                let dip = heart_rate_dip_pct(&window_hr_series, baseline);
-                if dip.is_none() {
-                    quality_flags.insert("heart_rate_dip_not_detected".to_string());
-                }
-                // sol_from_hr measures latency from the first HR sample in the series.
-                // Add the offset of the first HR sample from the window start (first.0)
-                // to convert to window-relative SOL (the series timestamps are already
-                // window-relative via the `*minute - first.0` mapping above).
-                let first_hr_offset = window_hr_series.first().map(|(ts, _)| *ts).unwrap_or(0.0);
-                let sol_opt = sol_from_hr(&window_hr_series, baseline, 3.0)
-                    .map(|latency_from_first_hr| latency_from_first_hr + first_hr_offset);
-                let sol = sol_opt.unwrap_or(heuristic_sleep_latency);
-                let waso = waso_from_hr(&window_hr_series, baseline, sol);
-                let dist = hr_disturbance_count(&window_hr_series, baseline, sol);
-                (dip, sol, waso, dist)
-            } else {
-                // No baseline HR available even with good coverage; keep heuristic values.
-                quality_flags.insert("heart_rate_dip_unavailable".to_string());
-                (None, heuristic_sleep_latency, heuristic_waso, heuristic_disturbance_count)
+    let (
+        heart_rate_dip_percent,
+        sleep_latency_minutes,
+        wake_after_sleep_onset_minutes,
+        disturbance_count,
+    ) = if heart_rate_coverage_fraction >= 0.50 {
+        if let Some(baseline) = baseline_awake_hr_bpm {
+            let dip = heart_rate_dip_pct(&window_hr_series, baseline);
+            if dip.is_none() {
+                quality_flags.insert("heart_rate_dip_not_detected".to_string());
             }
+            // sol_from_hr measures latency from the first HR sample in the series.
+            // Add the offset of the first HR sample from the window start (first.0)
+            // to convert to window-relative SOL (the series timestamps are already
+            // window-relative via the `*minute - first.0` mapping above).
+            let first_hr_offset = window_hr_series.first().map(|(ts, _)| *ts).unwrap_or(0.0);
+            let sol_opt = sol_from_hr(&window_hr_series, baseline, 3.0)
+                .map(|latency_from_first_hr| latency_from_first_hr + first_hr_offset);
+            let sol = sol_opt.unwrap_or(heuristic_sleep_latency);
+            let waso = waso_from_hr(&window_hr_series, baseline, sol);
+            let dist = hr_disturbance_count(&window_hr_series, baseline, sol);
+            (dip, sol, waso, dist)
         } else {
-            // HR coverage < 50%: keep stage-segment heuristic values, add quality flag.
-            quality_flags.insert("sleep_hr_metrics_low_coverage_fallback".to_string());
-            // Also compute the old segment-based dip for backward compatibility.
-            let segment_dip = match (baseline_awake_hr_bpm, lowest_sleep_hr_bpm) {
-                (Some(baseline), Some(lowest)) if baseline > 0.0 && lowest <= baseline => {
-                    Some(((baseline - lowest) / baseline) * 100.0)
-                }
-                (Some(_), Some(_)) => {
-                    quality_flags.insert("heart_rate_dip_not_detected".to_string());
-                    Some(0.0)
-                }
-                _ => None,
-            };
-            (segment_dip, heuristic_sleep_latency, heuristic_waso, heuristic_disturbance_count)
+            // No baseline HR available even with good coverage; keep heuristic values.
+            quality_flags.insert("heart_rate_dip_unavailable".to_string());
+            (
+                None,
+                heuristic_sleep_latency,
+                heuristic_waso,
+                heuristic_disturbance_count,
+            )
+        }
+    } else {
+        // HR coverage < 50%: keep stage-segment heuristic values, add quality flag.
+        quality_flags.insert("sleep_hr_metrics_low_coverage_fallback".to_string());
+        // Also compute the old segment-based dip for backward compatibility.
+        let segment_dip = match (baseline_awake_hr_bpm, lowest_sleep_hr_bpm) {
+            (Some(baseline), Some(lowest)) if baseline > 0.0 && lowest <= baseline => {
+                Some(((baseline - lowest) / baseline) * 100.0)
+            }
+            (Some(_), Some(_)) => {
+                quality_flags.insert("heart_rate_dip_not_detected".to_string());
+                Some(0.0)
+            }
+            _ => None,
         };
+        (
+            segment_dip,
+            heuristic_sleep_latency,
+            heuristic_waso,
+            heuristic_disturbance_count,
+        )
+    };
 
     let midpoint_minutes_since_midnight = (((first.0 + last.0) / 2).rem_euclid(24 * 60)) as f64;
     let midpoint_deviation_minutes = circular_minute_deviation(

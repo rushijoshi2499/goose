@@ -339,7 +339,10 @@ fn parses_k10_raw_motion_offsets_without_claiming_units() {
             ..
         } => {
             assert!(warnings.is_empty());
-            assert!(body_hex.is_empty(), "body_hex must be empty for K10 after PERF-05 exclusion");
+            assert!(
+                body_hex.is_empty(),
+                "body_hex must be empty for K10 after PERF-05 exclusion"
+            );
             let Some(DataPacketBodySummary::RawMotionK10 {
                 heart_rate,
                 axes,
@@ -394,7 +397,10 @@ fn parses_k21_grouped_motion_offsets_and_counts() {
             ..
         } => {
             assert!(warnings.is_empty());
-            assert!(body_hex.is_empty(), "body_hex must be empty for K21 after PERF-05 exclusion");
+            assert!(
+                body_hex.is_empty(),
+                "body_hex must be empty for K21 after PERF-05 exclusion"
+            );
             let Some(DataPacketBodySummary::RawMotionK21 {
                 field_x,
                 group_1_count,
