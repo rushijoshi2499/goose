@@ -46,11 +46,11 @@ extension GooseBLEClient: CBCentralManagerDelegate {
       let now = Date()
       connectedAt = now
       lastSyncAt = now
-      updateConnectionState("discovering")
+      bondingManager.transition(to: .subscribed)
       peripheral.discoverServices(serviceDiscoveryIDs)
       processCachedServicesIfAvailable(peripheral, reason: "restore.connected")
     case .connecting:
-      updateConnectionState("connecting")
+      bondingManager.transition(to: .started)
     case .disconnected, .disconnecting:
       if central.state == .poweredOn {
         connect(peripheral, reason: "restore")
@@ -93,7 +93,7 @@ extension GooseBLEClient: CBCentralManagerDelegate {
       debugMenuCharacteristic = nil
       clientHelloSentForCurrentConnection = false
       connectedPeripheralUUID = nil
-      updateConnectionState("disconnected")
+      bondingManager.transition(to: .notStarted)
       updateReconnectState("waiting for bluetooth")
       connectedAt = nil
     }
@@ -213,7 +213,7 @@ extension GooseBLEClient: CBCentralManagerDelegate {
     let now = Date()
     connectedAt = now
     lastSyncAt = now
-    updateConnectionState("discovering")
+    bondingManager.transition(to: .subscribed)
     updateReconnectState("connected")
     connectedPeripheralUUID = peripheral.identifier.uuidString
     record(source: "ble", title: "connect.succeeded", body: "\(peripheral.name ?? fallbackName ?? "WHOOP") \(peripheral.identifier.uuidString) evidence=\(evidence)")

@@ -741,7 +741,7 @@ extension GooseBLEClient {
     updateActiveDevice(peripheral, fallbackName: fallbackName)
     activePeripheral = peripheral
     peripheral.delegate = self
-    updateConnectionState("connecting")
+    bondingManager.transition(to: .started)
     updateReconnectState(reason.hasPrefix("auto") || reason == "restore" ? "connecting" : reconnectState)
     record(source: "ble", title: "connect.started", body: "reason=\(reason) evidence=\(evidence) \(peripheral.name ?? fallbackName ?? rememberedDeviceName ?? "WHOOP") \(peripheral.identifier.uuidString)")
     pendingConnectionReason = reason
@@ -1034,13 +1034,15 @@ extension GooseBLEClient {
     }
 
     if commandCharacteristic != nil {
-      updateConnectionState("ready")
+      if let peripheralID = activePeripheral?.identifier {
+        bondingManager.transition(to: .completed(deviceID: peripheralID))
+      }
       sendClientHelloIfNeeded(reason: cached ? "cached_gatt" : "gatt_discovery")
       scheduleDebugSkinTemperatureCommandIfNeeded(reason: cached ? "cached_ready" : "ready")
       scheduleAutomaticHistoricalSyncIfNeeded()
       scheduleAutomaticPhysiologyCaptureIfNeeded()
     } else if connectionState == "discovering" {
-      updateConnectionState("connected")
+      bondingManager.transition(to: .subscribed)
     }
   }
 
