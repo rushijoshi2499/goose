@@ -17,6 +17,7 @@ struct GooseUploadStatus {
 private enum UploadAttemptResult {
   case success(Int)       // 2xx — count of upserted rows
   case serverError(Int)   // 500-599 — server-side failure, retry with backoff
+  case clientError(Int)   // 400-499 — non-retryable; abort immediately
   case transientError     // network/transport error (nil response), also retried
 }
 
@@ -184,6 +185,7 @@ final class GooseUploadService: @unchecked Sendable {
     var uploadSucceeded = false
     var syncedCount: Int?
     var lastServerErrorStatus: Int? = nil
+    var clientErrorStatus: Int? = nil
     for attempt in 0..<maxAttempts {
       if attempt > 0 {
         let delaySeconds = min(1.0 * pow(2.0, Double(attempt - 1)), 60.0)
@@ -199,14 +201,20 @@ final class GooseUploadService: @unchecked Sendable {
       case .serverError(let status):
         lastServerErrorStatus = status
         logger.debug("upload 5xx (attempt \(attempt)): \(status)")
+      case .clientError(let status):
+        // 4xx responses are never recoverable by retry — abort immediately.
+        clientErrorStatus = status
+        logger.warning("upload 4xx (attempt \(attempt)): \(status) — aborting retries")
       case .transientError:
         logger.debug("upload transient error (attempt \(attempt))")
       }
-      if uploadSucceeded { break }
+      if uploadSucceeded || clientErrorStatus != nil { break }
     }
 
     if !uploadSucceeded {
-      if let status = lastServerErrorStatus {
+      if let status = clientErrorStatus {
+        uploadErrorState = "Upload failed — client error (\(status))"
+      } else if let status = lastServerErrorStatus {
         uploadErrorState = "Upload failed — server error (\(status))"
       } else {
         uploadErrorState = "Upload failed — server unavailable"
@@ -311,6 +319,10 @@ final class GooseUploadService: @unchecked Sendable {
     if (500..<600).contains(http.statusCode) {
       logger.debug("upload server error: \(http.statusCode)")
       return .serverError(http.statusCode)
+    }
+    if (400..<500).contains(http.statusCode) {
+      logger.warning("upload client error \(http.statusCode) — not retrying")
+      return .clientError(http.statusCode)
     }
     guard (200..<300).contains(http.statusCode) else {
       logger.debug("upload non-2xx non-5xx: \(http.statusCode)")
