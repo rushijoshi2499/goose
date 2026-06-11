@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v9.0
 milestone_name: BLE Reliability & Protocol Parity
-status: executing
-stopped_at: Completed 65-01-PLAN.md
-last_updated: "2026-06-11T14:42:51Z"
-last_activity: 2026-06-11 -- Phase 65 Plan 01 executed
+status: shipped
+stopped_at: v9.0 milestone archived — 5/6 phases shipped, Phase 66 hardware-gated
+last_updated: "2026-06-11T15:00:00Z"
+last_activity: 2026-06-11 -- v9.0 milestone closed; Phase 66 CAPSENSE-01 deferred (hardware gate)
 progress:
-  total_phases: 22
+  total_phases: 6
   completed_phases: 5
-  total_plans: 11
-  completed_plans: 13
-  percent: 25
+  total_plans: 10
+  completed_plans: 10
+  percent: 100
 ---
 
 # Project State

@@ -10,7 +10,7 @@
 - â **v6.0 UI Wiring, Algorithm Alignment & Parity Validation** â Phases 36-45 (shipped 2026-06-09)
 - â **v7.0 Sync Correctness, Async & Sleep Sync** â Phases 46-50 (shipped 2026-06-10)
 - â **v8.0 Quality, Completeness & Backlog Clearance** â Phases 51-59+60 (shipped 2026-06-11)
-- ð§ **v9.0 BLE Reliability & Protocol Parity** â Phases 61-66 (in progress)
+- ✅ **v9.0 BLE Reliability & Protocol Parity** — Phases 61-65+66 (shipped 2026-06-11)
 
 ## Phases
 
@@ -97,17 +97,21 @@ Known deferred: ble-api-misuse-state-restore debug session (awaiting_human_verif
 
 </details>
 
-### v9.0 BLE Reliability & Protocol Parity (Planned)
+<details>
+<summary>✅ v9.0 BLE Reliability & Protocol Parity (Phases 61-65+66) — SHIPPED 2026-06-11</summary>
 
-**Milestone Goal:** Close the critical architectural gaps identified by Ghidra RE of WHOOP v5.37.0. Phases derived from `.planning/research/whoop-re/WHOOP-GOOSE-CROSS-COMPARE.md`.
+Full details: `.planning/milestones/v9.0-ROADMAP.md`
 
-- [x] **Phase 60: Band-First Sync** - Align sync architecture with WHOOP's foreground-trigger + silent push + BGAppRefreshTask model; remove overnight poll loop (completed 2026-06-11)
-- [x] **Phase 61: BLE Bonding State Machine** - Formal 5-state bonding manager (WHPBLEBondingManager parity); replace implicit OS bonding (completed 2026-06-11)
-- [x] **Phase 62: Upload Watermark per Sensor** - Per-type upload watermark to prevent re-uploads after crash/restart (WHPStrapLatestUploadedMetricDateKey parity) (completed 2026-06-11)
-- [x] **Phase 63: Network Monitor & Upload Gating** - NWPathMonitor-based reachability gating + exponential backoff (WHPNetworkMonitor parity) (completed 2026-06-11)
-- [x] **Phase 64: HR Data Sanitizer** - Swift-side HR spike filter before HeartRateSeriesStore (WHPHeartRateDataSanitizer parity) (completed 2026-06-11)
-- [x] **Phase 65: Generic BLE State Machine** - Minimal StateMachine<State, Event> type; migrate BLE connection/bonding states into it (WHPStateMachine parity) (completed 2026-06-11)
-- [ ] **Phase 66: Cap Sense / On-Wrist Detection** - Ghidra investigation of cap sense GATT UUID; on-wrist flag on HR/HRV samples (WHPWhoopStrapOnWrist parity; blocked until UUID identified)
+- [x] Phase 61: BLE Bonding State Machine — 5-state GooseBLEBondingManager (WHPBLEBondingManager parity)
+- [x] Phase 62: Upload Watermark per Sensor — per-type watermarks (rawFrames + decodedStreams)
+- [x] Phase 63: Network Monitor & Upload Gating — NWPathMonitor gate + exponential backoff
+- [x] Phase 64: HR Data Sanitizer — 25-220 BPM filter at BLE parsing chokepoint
+- [x] Phase 65: Generic BLE State Machine — StateMachine<State: Hashable, Event> struct
+- [ ] Phase 66: Cap Sense / On-Wrist Detection — DEFERRED (GATT UUID hardware-gated; 11500X series candidates documented)
+
+Known deferred: CAPSENSE-01 hardware gate (requires real WHOOP 5.x device for UUID identification)
+
+</details>
 
 ## Phase Details
 
@@ -257,7 +261,7 @@ Known deferred: ble-api-misuse-state-restore debug session (awaiting_human_verif
 | 62. Upload Watermark per Sensor | v9.0 | 2/2 | Complete   | 2026-06-11 |
 | 63. Network Monitor & Upload Gating | v9.0 | 2/2 | Complete   | 2026-06-11 |
 | 64. HR Data Sanitizer | v9.0 | 2/2 | Complete   | 2026-06-11 |
-| 65. Generic BLE State Machine | v9.0 | 0/TBD | Not started | - |
+| 65. Generic BLE State Machine | v9.0 | 1/1 | Complete   | 2026-06-11 |
 | 66. Cap Sense / On-Wrist Detection | v9.0 | 0/TBD | Not started | - |
 
 ## Backlog
@@ -600,10 +604,11 @@ Plans:
 3. Invalid state transitions are asserted in DEBUG builds; in RELEASE they are no-ops that log an OSLog error
 4. No reduction in observable behaviour â existing UI reflecting connection state continues to work
 
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 65-01-PLAN.md — Add generic StateMachine<State, Event> struct + migrate GooseBLEBondingManager onto it (SM-01)
+
+- [x] 65-01-PLAN.md — Add generic StateMachine<State, Event> struct + migrate GooseBLEBondingManager onto it (SM-01)
 
 ---
 
