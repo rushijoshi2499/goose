@@ -42,6 +42,11 @@ struct GooseSwiftApp: App {
         .onAppear {
           GooseSwiftApp.sharedModel = model
           model.scheduleNextBGAppRefresh()
+          // Apply any APNs token that arrived before sharedModel was set.
+          if let token = GooseAppDelegate.pendingAPNSToken {
+            model.setAPNSDeviceToken(token)
+            GooseAppDelegate.pendingAPNSToken = nil
+          }
         }
         .onOpenURL { url in
           if model.handleDebugCommandDeepLink(url) {

@@ -2,6 +2,11 @@ import UIKit
 
 
 final class GooseAppDelegate: NSObject, UIApplicationDelegate {
+  // Buffer for the APNs device token when it arrives before sharedModel is set.
+  // The iOS runtime may deliver didRegisterForRemoteNotificationsWithDeviceToken
+  // before the first SwiftUI .onAppear fires (cold launch, cached token). This
+  // static stores the token so GooseSwiftApp.onAppear can apply it immediately.
+  nonisolated(unsafe) static var pendingAPNSToken: String?
 
   func application(
     _ application: UIApplication,
@@ -17,7 +22,13 @@ final class GooseAppDelegate: NSObject, UIApplicationDelegate {
   ) {
     let hex = deviceToken.map { String(format: "%02x", $0) }.joined()
     Task { @MainActor in
-      GooseSwiftApp.sharedModel?.setAPNSDeviceToken(hex)
+      if let model = GooseSwiftApp.sharedModel {
+        model.setAPNSDeviceToken(hex)
+      } else {
+        // sharedModel not yet set — buffer the token. GooseSwiftApp.onAppear
+        // will consume and apply it when the model becomes available.
+        GooseAppDelegate.pendingAPNSToken = hex
+      }
     }
   }
 
