@@ -255,7 +255,7 @@ Known deferred: ble-api-misuse-state-restore debug session (awaiting_human_verif
 | 60. Band-First Sync | v8.0âv9.0 | 3/3 | Complete   | 2026-06-11 |
 | 61. BLE Bonding State Machine | v9.0 | 3/3 | Complete   | 2026-06-11 |
 | 62. Upload Watermark per Sensor | v9.0 | 2/2 | Complete   | 2026-06-11 |
-| 63. Network Monitor & Upload Gating | v9.0 | 0/2 | Planned | - |
+| 63. Network Monitor & Upload Gating | v9.0 | 1/2 | In Progress|  |
 | 64. HR Data Sanitizer | v9.0 | 0/TBD | Not started | - |
 | 65. Generic BLE State Machine | v9.0 | 0/TBD | Not started | - |
 | 66. Cap Sense / On-Wrist Detection | v9.0 | 0/TBD | Not started | - |
@@ -545,12 +545,12 @@ Plans:
 3. Upload failures due to server error (5xx) use exponential backoff (1s, 2s, 4s, max 60s) with a visible error state in the UI
 4. Upload is gated on a non-empty device token (APNs registration must have succeeded at least once)
 
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 Plans:
 
 **Wave 1**
 
-- [ ] 63-01-PLAN.md — Create GooseNetworkMonitor (NWPathMonitor wrapper) + wire isNetworkReachable into GooseAppModel + register in project.pbxproj
+- [x] 63-01-PLAN.md — Create GooseNetworkMonitor (NWPathMonitor wrapper) + wire isNetworkReachable into GooseAppModel + register in project.pbxproj
 
 **Wave 2** *(blocked on Wave 1)*
 

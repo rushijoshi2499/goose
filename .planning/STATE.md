@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v9.0
 milestone_name: BLE Reliability & Protocol Parity
 status: executing
-stopped_at: Completed 62-upload-watermark-per-sensor-02-PLAN.md
-last_updated: "2026-06-11T14:10:00.000Z"
+stopped_at: Completed 62-upload-watermark-per-sensor-01-PLAN.md
+last_updated: "2026-06-11T13:53:02.728Z"
 last_activity: 2026-06-11 -- Phase 62 Plan 02 executed
 progress:
   total_phases: 22
-  completed_phases: 3
-  total_plans: 9
-  completed_plans: 9
-  percent: 14
+  completed_phases: 4
+  total_plans: 11
+  completed_plans: 10
+  percent: 18
 ---
 
 # Project State
@@ -64,6 +64,8 @@ Recent decisions affecting current work:
 - [Phase ?]: Band-first lifecycle: scenePhase active/foreground triggers purgeLegacyOvernightGuardDirectory then triggerForegroundBLESync; overnight guard gate eliminated
 - Phase 62 Plan 01: WatermarkType enum with rawFrames/decodedStreams cases; separate UserDefaults keys per type; Foundation-only store
 - Phase 62 Plan 02: effectiveSince gate inside service (not call site); watermark writes on 2xx only per type; clearAllUploadWatermarks resets both keys + lastUploadAt
+- [Phase ?]: Callback pattern (not Combine) for GooseNetworkMonitor.onReachabilityChange — consistent with GooseBLEBondingManager
+- [Phase ?]: isReachable initialised to true to avoid false upload block before first async NWPath update
 
 ### Roadmap Evolution
 
@@ -89,9 +91,10 @@ Items deferred from v8.0 milestone close (2026-06-11):
 | verification_gap | Phase 26 — ALG-SLP-04 4-class staging validation | human_needed | v5.0 close |
 | Phase 62-upload-watermark-per-sensor P01 | 15 | 2 tasks | 2 files |
 | Phase 62-upload-watermark-per-sensor P02 | 20 | 2 tasks | 2 files |
+| Phase 63-network-monitor-upload-gating P01 | 8 | 3 tasks | 3 files |
 
 ## Session Continuity
 
-Last session: 2026-06-11T13:28:52.187Z
+Last session: 2026-06-11T13:52:58.754Z
 Stopped at: Completed 62-upload-watermark-per-sensor-01-PLAN.md
 Resume file: None
