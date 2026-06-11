@@ -123,14 +123,6 @@ enum CoachLocalToolContext {
         "summary": appModel.liveDeviceDataSummary,
         "recent": appModel.recentDeviceSignalPoints.prefix(8).map(deviceSignal),
       ],
-      "overnight_guard": [
-        "active": appModel.overnightGuardActive,
-        "status": appModel.overnightGuardStatus,
-        "readiness": appModel.overnightGuardReadinessSummary,
-        "targets": appModel.overnightGuardTargetSummary,
-        "last_packet": appModel.overnightGuardLastPacketSummary,
-        "spool": appModel.overnightGuardSpoolSizeSummary,
-      ],
       "ble": [
         "device": appModel.ble.activeDeviceName,
         "connection_state": appModel.ble.connectionState,

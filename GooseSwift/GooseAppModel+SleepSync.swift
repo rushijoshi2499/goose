@@ -39,10 +39,9 @@ extension GooseAppModel {
     return (yesterdayEvening.timeIntervalSince1970, todayNoon.timeIntervalSince1970)
   }
 
-  // Gate check: called from handleBLEConnectionStateChange when state == "ready"
-  // and overnightGuardActive == false. Synchronous — launches Task if all guards pass.
+  // Gate check: called from handleBLEConnectionStateChange when state == "ready".
+  // Synchronous — launches Task if all guards pass.
   func maybeScheduleMorningSleepSync() {
-    guard !overnightGuardActive else { return }
     guard Calendar.current.component(.hour, from: Date()) >= 4 else { return }
     if let lastSync = UserDefaults.standard.object(forKey: Self.lastBandSleepSyncDateKey) as? Date,
        Calendar.current.isDateInToday(lastSync) {

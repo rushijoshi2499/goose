@@ -182,21 +182,6 @@ extension String {
     }
   }
 
-  // MARK: - Overnight Guard Status (GooseAppModel.overnightGuardStatus)
-  // Raw values include "Not started", "Already recording overnight guard",
-  //   "Connect WHOOP first...", "Recording overnight guard", "Start failed: ...",
-  //   "Start overnight guard before final sync", dynamic lifecycle strings.
-
-  var localizedOvernightGuardStatus: String {
-    switch self {
-    case "Not started": return String(localized: "Não iniciado")
-    case "Recording overnight guard": return String(localized: "A gravar guarda nocturna")
-    case "Already recording overnight guard": return String(localized: "Já a gravar guarda nocturna")
-    case "Start overnight guard before final sync": return String(localized: "Inicie a guarda nocturna antes da sincronização final")
-    default: return self
-    }
-  }
-
   // MARK: - Activity Detection Status (GooseAppModel.activityDetectionStatus)
   // Raw values include "Watching for movement packets", "Movement detected; priming GPS",
   //   "Candidate <title> recording", "Candidate <title> stored", dynamic pipeline strings.

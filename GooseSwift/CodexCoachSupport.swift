@@ -116,18 +116,6 @@ enum CodexLocalToolContext {
           ]
         },
       ],
-      "overnight_guard": [
-        "active": appModel.overnightGuardActive,
-        "status": appModel.overnightGuardStatus,
-        "readiness": appModel.overnightGuardReadinessSummary,
-        "raw_notifications": appModel.overnightGuardRawNotificationCount,
-        "target": appModel.overnightGuardTargetSummary,
-        "last_packet": appModel.overnightGuardLastPacketSummary,
-        "spool": appModel.overnightGuardSpoolSizeSummary,
-        "sqlite_mirror": appModel.overnightGuardSQLiteMirrorSummary,
-        "power": appModel.overnightGuardPowerSummary,
-        "watchdog": appModel.overnightGuardWatchdogSummary,
-      ],
       "device": devicePayload(appModel.ble),
     ]
   }

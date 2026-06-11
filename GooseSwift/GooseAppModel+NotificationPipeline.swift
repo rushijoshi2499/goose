@@ -630,7 +630,6 @@ extension GooseAppModel {
       publishParsedFrameSummary(summary, at: event.capturedAt)
       ble.record(source: "rust", title: "notification.frame.parsed", body: summary)
     }
-    recordOvernightPacketTypeTarget(interpretation.packetType)
     if let family = interpretation.healthPacketFamily {
       recordHealthPacketCaptureFamily(family, capturedAt: event.capturedAt)
     }
