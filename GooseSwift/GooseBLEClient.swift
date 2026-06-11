@@ -97,6 +97,7 @@ import OSLog
     flushInterval: GooseBLEClient.displayedMessageFlushInterval
   )
   let hrMonitorManager = GooseBLEHRMonitorManager()
+  let bondingManager = GooseBLEBondingManager()
   let notificationContextLock = NSLock()
   var notificationContextActiveDeviceName = "WHOOP"
   var notificationContextConnectionState = "disconnected"
@@ -999,6 +1000,10 @@ import OSLog
       DispatchQueue.main.async {
         self?.applyBLEUIStateSnapshot(snapshot)
       }
+    }
+    bondingManager.onBondingStateChange = { [weak self] newState in
+      guard let self else { return }
+      self.updateConnectionState(newState.connectionStateString)
     }
     loadRememberedDevice()
     loadPersistedBatterySample()

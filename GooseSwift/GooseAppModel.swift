@@ -108,6 +108,7 @@ final class GooseAppModel {
   var autoStartRespiratoryPacketWatchAttempt = 0
   var passiveActivityCaptureWorkItem: DispatchWorkItem?
   var healthPacketCaptureFamilyRowsByID: [String: HealthPacketCaptureFamily] = [:]
+  var bondingState: GooseBLEBondingState { ble.bondingManager.bondingState }
   var lastParsedFrameSummary: String { packetMonitor.lastParsedFrameSummary }
   var movementPacketStatus: String { packetMonitor.movementPacketStatus }
   var latestWhoopEventStatus: String { packetMonitor.latestWhoopEventStatus }
