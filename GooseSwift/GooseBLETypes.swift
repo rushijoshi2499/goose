@@ -326,3 +326,45 @@ enum GooseBLEBondingState: Equatable {
   }
 }
 
+// MARK: - BLE Bonding Events
+
+/// Events that drive `GooseBLEBondingState` transitions inside `GooseBLEBondingManager`.
+enum GooseBLEBondingEvent {
+  case start
+  case subscribe
+  case complete(deviceID: UUID)
+  case cancel(reason: String)
+  case reset
+}
+
+/// Transition table encoding the legal bonding graph.
+///
+/// Legal edges:
+///   notStarted  + start    → started
+///   started     + subscribe → subscribed
+///   subscribed  + complete  → completed(deviceID:)
+///   any         + reset     → notStarted
+///   any         + cancel    → cancelled(reason:)
+///
+/// All other (state, event) pairs return nil — invalid transition.
+func gooseBLEBondingTransition(
+  _ state: GooseBLEBondingState,
+  _ event: GooseBLEBondingEvent
+) -> GooseBLEBondingState? {
+  switch event {
+  case .reset:
+    return .notStarted
+  case .cancel(let reason):
+    return .cancelled(reason: reason)
+  case .start:
+    guard case .notStarted = state else { return nil }
+    return .started
+  case .subscribe:
+    guard case .started = state else { return nil }
+    return .subscribed
+  case .complete(let deviceID):
+    guard case .subscribed = state else { return nil }
+    return .completed(deviceID: deviceID)
+  }
+}
+
