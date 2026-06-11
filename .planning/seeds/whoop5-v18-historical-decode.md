@@ -62,7 +62,7 @@ Location: `Rust/core/src/historical_sync.rs` (timestamp converter).
 ## Files to modify
 
 - `Rust/core/src/protocol.rs` — `parse_v18_body()` function, arm split
-- `Rust/core/src/historical_sync.rs` — timestamp converter (stale-clock + event bypass)
+- `Rust/core/src/historical_sync.rs` — timestamp converter (stale-clock + event bypass) — **but also check `store.rs` and `step_counter.rs`**: the epoch→wall-clock conversion spans at least three files; confirm all sites before implementing to avoid partial fixes
 - `Rust/core/tests/protocol_tests.rs` — v18 fixture test
 
 ## Open questions

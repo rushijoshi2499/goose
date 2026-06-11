@@ -38,22 +38,14 @@ The `get_all_haptics_pattern` command (already in `commands.rs`) would return th
 
 `AdvancedHapticRange` and `HapticHeartbeat` likely map to a mode flag on `RunHapticsPatternCommandPacket` or a separate command — needs Ghidra decompile of `enableAdvancedHaptics` to find the wire encoding.
 
-## Immediate unblock (no RE needed)
+## Prerequisite
 
-The `run_haptic_pattern_maverick` (cmd `0x13`) payload is already fully documented:
-```
-[0x01, 0x2F, 0x98, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, loops]
-```
+`buzz(loops: UInt8)` — the basic cmd `0x13` notification haptic — is documented and extracted into its own seed: **`haptic-buzz-primitive.md`**. Implement that first. This seed covers the richer pattern system that builds on top.
 
-This alone unblocks the seeded Breathe screen and Interval Timer. Add `buzz(loops: UInt8)` to `GooseBLEClient+Commands.swift` as the first step — no RE required.
+## Implementation plan
 
-## Full implementation plan
-
-### Step 1 — Immediate (no RE)
-- Add `func buzz(loops: UInt8)` to `GooseBLEClient+Commands.swift`
-- Build `notificationBuzz(loops:)` payload, wrap in `puffinCommandFrame(cmd: 0x13, seq:, payload:)`
-- Write to `commandCharacteristic`
-- Shared prerequisite with Breathe + Interval Timer + alarm
+### Step 1 — buzz(loops:) primitive
+See `haptic-buzz-primitive.md`. ~2 hours, no RE.
 
 ### Step 2 — After `get_all_haptics_pattern` RE
 - Send `get_all_haptics_pattern` to live WHOOP 5.0, parse response → `[PatternID: String]` map

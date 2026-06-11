@@ -15,10 +15,9 @@ Add a decimation layer to `HeartRateSeriesStore` that reduces stored samples bas
 
 The WHOOP device sends one HR sample per second via BLE. `HeartRateSeriesStore.shared` retains all samples in memory without reduction. Over an overnight session (~8h) this is ~28,800 points. SwiftUI renders all of them when drawing the HR chart, regardless of zoom level.
 
-Currently this is acceptable for short sessions. It becomes a problem at scale:
-- Overnight runs: 28k+ points
-- Multi-day continuous capture (future)
-- Chart animations on older devices
+**Memory growth is already mitigated:** `HeartRateSeriesStores.swift` has `maxSamples = 100_000` + a `prune()` call — so memory explosion is not the real risk.
+
+The remaining problem is **chart render performance at high zoom-out**: when rendering a full overnight or multi-day view, passing 28k+ points to SwiftUI Charts causes dropped frames on older devices. Decimation fixes render cost without touching the persistence layer.
 
 ## What to build
 

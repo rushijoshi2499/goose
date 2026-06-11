@@ -19,22 +19,30 @@ Checked against `Rust/core/src/store.rs` and `bridge.rs`. None of these tables c
 
 ## Table 1 — `journal`
 
-Daily behaviour tracking (alcohol, caffeine, stress, sleep quality, etc.). This is the prerequisite for the seeded Correlation Engine — you can't correlate "alcohol yesterday → HRV today" without storing the journal answers.
+Daily behaviour tracking per recovery cycle. Prerequisite for the Correlation Engine.
+
+**Merged from `journal-behaviour-tracking.md` (Ghidra RE, 2026-06-11).** WHOOP's `WhoopJournal` framework (39+ classes):
+- `JournalBehaviorTracker` / `JournalTrackedBehavior` / `JournalDraftService` / `JournalCalendarModule`
+- One entry per recovery cycle in WHOOP's model — Goose uses day-key for simpler joins
+
+**Fixed behaviour set** (WHOOP's known categories):
+`alcohol` (units) · `caffeine` (mg) · `stress` (1–5) · `illness` (bool) · `supplements` (bool) · `sleep_environment` (bool)
+
+**Migration note:** `CoachView.swift:747–892` already has `tags: [String]` stored in UserDefaults. This is the existing UI entry point — it must migrate to SQLite, not be replaced.
 
 ```sql
 CREATE TABLE journal (
-  deviceId TEXT NOT NULL,
-  day      TEXT NOT NULL,   -- YYYY-MM-DD
-  question TEXT NOT NULL,   -- e.g. "alcohol", "caffeine", "stress", "nap"
-  answeredYes INTEGER NOT NULL,  -- 1 = yes, 0 = no
-  notes    TEXT,
-  PRIMARY KEY (deviceId, day, question)
+  deviceId  TEXT NOT NULL,
+  day       TEXT NOT NULL,    -- YYYY-MM-DD; join on daily_recovery_metrics.date_key
+  behaviour TEXT NOT NULL,    -- "alcohol" | "caffeine" | "stress" | "illness" | ...
+  value     REAL NOT NULL,    -- 1.0 for boolean yes; units/mg/level for quantitative
+  notes     TEXT,
+  PRIMARY KEY (deviceId, day, behaviour)
 );
 ```
 
-Bridge methods needed: `journal.upsert(deviceId, day, question, answeredYes, notes?)` and `journal.list_for_day(deviceId, day)`. Day-keyed to join `daily_recovery_metrics.date_key`.
-
-UI: simple checklist in the Home or Health tab for today's journal.
+Bridge methods: `journal.upsert` · `journal.list_for_day` · `journal.range(startDay, endDay)`.
+UI: extend existing tags picker in Coach tab; add calendar browse.
 
 ## Table 2 — `workout`
 

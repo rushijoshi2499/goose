@@ -11,27 +11,18 @@ metadata:
 
 Implement three SwiftUI screens that are **pure presentation** — the underlying algorithms and data already exist in the Goose Rust core. These are among the fastest paths to visible feature improvements.
 
-## Screen 1 — Stress / ANS View (highest ROI)
+## Screen 1 — Stress / ANS View — delta additions only
 
-**Algorithm already exists.** `goose_stress_v0` is implemented at `Rust/core/src/metrics.rs:2434` with the exact logistic z-score model:
-```
-z = 0.60 * zHRV - 0.20 * zRHR
-score = 100 / (1 + exp(-1.6 * (z + 0.20)))
-```
+**Partially built.** `StressV2OverviewPage` exists in `GooseSwift/HealthRecoveryStressViews.swift`. The base stress view is not missing.
 
-Only the SwiftUI screen is missing. Reference: `NoopApp/noop` — `Strand/Screens/StressView.swift` (30KB).
+**Algorithm reference (corrected):** `goose_stress_v0` at `Rust/core/src/metrics.rs:2434` uses `heart_rate_elevation_score`, `hrv_suppression_score`, and `motion_adjusted_hr` with a 0.60 weight — not the logistic/exp z-score formula previously cited here.
 
-**UI elements to build:**
-- 180° animated semicircular gauge (blue → mint → amber → red) showing today's score 0–100
-- Daily trend area chart (14-day default, W/M/3M/6M/1Y/ALL selector)
-- 14-day sparkline (same as recovery sparkline pattern in `HomeScoreViews.swift`)
-- "Calm Time" stat: percentage of last 30 days scoring <40
-- Two tiles: RHR with delta vs 30-day baseline; HRV with delta vs baseline
-- "What drives this?" explainer card (static copy + dynamic driver from HRV/RHR z-scores)
+**What's still genuinely absent** (re-scoped from building a full screen to adding missing tiles):
+- "Calm Time" stat: percentage of last 30 days where stress score < 40 — not in current view
+- Baseline-delta tiles: RHR and HRV shown with Δ vs 30-day personal baseline — current tiles show raw values only
+- W/M/3M/6M/1Y/ALL range selector on the trend chart
 
-Data source: `bridge.call("metrics.goose_stress_v0", args: {database_path, ...})` — same pattern as recovery/readiness calls in `HealthDataStore`.
-
-**Effort: 2 days.** Zero algorithm work.
+**Effort: 0.5 days.** Additive only — do not rewrite the existing screen.
 
 ## Screen 2 — Long-range Trends Dashboard
 

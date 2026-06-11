@@ -93,32 +93,40 @@ This is a single focused session (~30 min). Should be planned as a standalone ta
 ### GET_ALL_HAPTICS_PATTERN — cmd `0x3F` (63)
 Already catalogued in `commands.rs`. Send this command to get the full list of available waveform pattern IDs from the WHOOP 5.0. Could reveal additional patterns beyond `[47, 152]`.
 
-## Goose current state
+## Goose current state (verified 2026-06-11)
 
-- `GooseBLEClient` can write arbitrary BLE commands (`commandCharacteristic`, `writeValue`)
-- Rust core has sleep staging and can compute optimal wake window from staging output
-- `commands.rs` has all haptic/alarm command IDs registered (`run_haptic_pattern_maverick`, `set_alarm_time`, `run_alarm`, `disable_alarm`, `stop_haptics`)
-- **Missing in Swift:** no `buzz(loops:)` function in `GooseBLEClient+Commands.swift`; the haptic commands in Rust are catalogued but not wired to Swift
+**Already implemented in Swift:**
+- `AlarmCommandKind` enum — `GooseBLEClient.swift:637`
+- `AlarmHapticsPattern` struct with exact documented payload — `GooseBLEClient.swift:612`
+- `writeAlarmCommand()` — writes SET_ALARM_TIME, GET_ALARM_TIME, RUN_ALARM, DISABLE_ALARM
+- ACK parse for alarm responses
+- `GooseBLEClient+UserActions.swift` — user-facing alarm wiring
 
-## Implementation plan (once RE complete)
+**Still missing:**
+1. `buzz(loops: UInt8)` — the simple notification haptic (cmd `0x13`) for Breathe/Intervals (see `haptic-buzz-primitive.md`)
+2. `STRAP_DRIVEN_ALARM_EXECUTED` (event 57, `protocol.rs:891`) — event named but inbound payload field-level parse is partial
+3. Smart alarm UI — confirmation/cancel feedback in the Sleep Coach view
 
-### Phase A — Prerequisite (unblock Breathe + Intervals + Alarm)
-1. Add `func buzz(loops: UInt8)` to `GooseBLEClient+Commands.swift`
-   - Build `MaverickHaptics.notificationBuzz(loops:)` payload
-   - Wrap in `puffinCommandFrame(cmd: 0x13, seq:, payload:)`
-   - Write to `commandCharacteristic`
+## Implementation plan
 
-### Phase B — Smart Alarm
-1. `GooseSmartAlarmManager.swift` — computes wake window from sleep staging output
-2. `GooseBLEClient+AlarmCommands.swift` — `setAlarm(wakeEpochMs:)`, `disableAlarm()`, `runAlarm()`
-3. Event handler — listen for `STRAP_DRIVEN_ALARM_EXECUTED` on notification characteristic
-4. UI in Sleep Coach view — set alarm window, show confirmation, cancel
+### Step 1 — buzz(loops:) primitive
+See `haptic-buzz-primitive.md`. Shared prerequisite with Breathe + Interval Timer.
 
-## Files to create
+### Step 2 — Event-57 payload RE
+RE `StrapDrivenAlarmSetEventPacketRev1/Rev3` via BTSnoop:
+1. Arm alarm for T+2 min via existing `writeAlarmCommand()`
+2. Capture with tshark at `/opt/homebrew/bin/tshark`
+3. Identify inbound payload layout: `[Rev:u8][Type:u8][Epoch:u32][AlarmId][DurationSeconds][HapticsPattern][Padding]`
+4. Add field-level parser to `strap_events.rs`
 
-- `GooseSwift/GooseBLEClient+AlarmCommands.swift`
-- `GooseSwift/GooseSmartAlarmManager.swift`
-- (update) `GooseSwift/GooseBLEClient+Commands.swift` — add `buzz(loops:)`
+### Step 3 — Smart alarm UI
+In existing Sleep Coach view: show confirmation when alarm is armed, cancel button, fire notification on `STRAP_DRIVEN_ALARM_EXECUTED`.
+
+## Files to modify
+
+- `GooseSwift/GooseBLEClient+Commands.swift` — add `buzz(loops:)` (Step 1)
+- `Rust/core/src/strap_events.rs` (or protocol.rs) — event-57 field parser (Step 2)
+- Sleep Coach UI views — confirmation/cancel (Step 3)
 
 ## Related seeds
 
