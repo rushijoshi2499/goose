@@ -1,5 +1,17 @@
 # Milestones
 
+## v8.0 : Quality, Completeness & Backlog Clearance (Backfilled: 2026-06-11)
+
+**Note:** Synthesized from archive snapshot by `/gsd-health --backfill`. Original completion date unknown.
+
+---
+
+## v6.0 : UI Wiring, Algorithm Alignment & Parity Validation (Backfilled: 2026-06-11)
+
+**Note:** Synthesized from archive snapshot by `/gsd-health --backfill`. Original completion date unknown.
+
+---
+
 ## v7.0 Sync Correctness, Async & Sleep Sync (Shipped: 2026-06-10)
 
 **Phases completed:** 5 phases (46-50), 18 plans
