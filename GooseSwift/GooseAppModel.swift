@@ -29,7 +29,7 @@ final class GooseAppModel {
   var respiratoryPacketWatchStatus = "Not watching K18 respiratory history"
   var serverReachable: Bool? = nil
   private(set) var isNetworkReachable: Bool = true
-  private(set) var apnsDeviceToken: String? = nil
+  var apnsDeviceToken: String? = nil
   var uploadErrorState: String? = nil
   var hasPendingUploadAfterReconnect: Bool = false
   var lastUploadAt: Date? = nil
