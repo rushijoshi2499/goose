@@ -58,23 +58,21 @@ Deferred — not in v10.0 scope:
 
 ## Traceability
 
-_Filled by roadmapper — maps each REQ-ID to the phase that implements it._
-
 | REQ-ID | Phase | Notes |
 |--------|-------|-------|
-| BLE5-01 | — | |
-| BLE5-02 | — | |
-| BLE5-03 | — | |
-| BLE5-04 | — | |
-| HAP-01 | — | |
-| HAP-02 | — | |
-| HAP-03 | — | |
-| HAP-04 | — | RE-gated |
-| FEAT-01 | — | |
-| FEAT-02 | — | |
-| FEAT-03 | — | |
-| DATA-01 | — | |
-| DATA-02 | — | |
-| DATA-03 | — | |
-| DATA-04 | — | |
-| ARCH-01 | — | |
+| BLE5-01 | Phase 67 | R22 type 0x10 + R17/R22 dedup — pure Rust, protocol.rs |
+| BLE5-02 | Phase 67 | v18 per-second decode + sequence_id dedup — pure Rust |
+| BLE5-03 | Phase 68 | GooseBLEHistoricalManager decoupled from GooseBLEClient |
+| BLE5-04 | Phase 68 | GooseBLEDataValidator Swift struct — structural invariants only |
+| HAP-01 | Phase 70 | buzz(loops:) cmd 0x13 — GooseBLEClient+Haptics.swift |
+| HAP-02 | Phase 70 | Breathe screen + paced haptic cues; depends on HAP-01 |
+| HAP-03 | Phase 73 | Single-shot alarm UI; depends on HAP-01 |
+| HAP-04 | Phase 73 | RE-gated wake-window engine; SetAlarmInfoCommandPacketRev4 required |
+| FEAT-01 | Phase 71 | Coach VOW nudges — local bridge decision tree |
+| FEAT-02 | Phase 71 | Breathe UI + Interval Timer + Metric Explorer; Breathe UI depends on HAP-01 |
+| FEAT-03 | Phase 71 | iOS local notifications — NotificationScheduler actor |
+| DATA-01 | Phase 69 | 4 SQLite tables — schema v20 migration in store.rs |
+| DATA-02 | Phase 69 | GooseStrainAccumulator Swift actor — realtime strain during workout |
+| DATA-03 | Phase 72 | Stress/ANS view + Trends dashboard + Manual Workout Entry sheet |
+| DATA-04 | Phase 71 | HR decimation via stride/LTTB in HeartRateSeriesStore |
+| ARCH-01 | Phase 72 | GooseBLEManaging + GooseRustBridging + HealthDataStoring protocols + mocks + 2 tests |
