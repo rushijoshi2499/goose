@@ -43,8 +43,10 @@ jobs:
           persist-credentials: false
 
       - name: Bump versions from tag
+        env:
+          RELEASE_TAG: ${{ steps.resolve-tag.outputs.tag }}
         run: |
-          TAG="${{ steps.resolve-tag.outputs.tag }}"
+          TAG="$RELEASE_TAG"
           VERSION="${TAG#v}"
           MAJOR="${VERSION%%.*}"
           CARGO_VERSION="${VERSION}.0"
@@ -79,8 +81,10 @@ jobs:
 
       - name: Package as IPA
         id: package
+        env:
+          RELEASE_TAG: ${{ steps.resolve-tag.outputs.tag }}
         run: |
-          TAG="${{ steps.resolve-tag.outputs.tag }}"
+          TAG="$RELEASE_TAG"
           APP=$(find build/DerivedData/Build/Products -name "GooseSwift.app" | head -1)
           mkdir -p Payload
           cp -r "$APP" Payload/
