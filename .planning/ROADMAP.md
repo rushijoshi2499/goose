@@ -91,6 +91,18 @@ Known deferred: Phase 51 (VAL-HRV-01, VAL-SLP-01, SLP-SYNC real-device validatio
 - [x] **Phase 58: More Tab, Previews & Health Algorithms** - Complete More tab actions, app-wide SwiftUI previews, and algorithm preference properties
 - [x] **Phase 59: Band Sleep Import** - Direct sleep record ingestion from BLE band packets
 
+### v9.0 BLE Reliability & Protocol Parity (Planned)
+
+**Milestone Goal:** Close the critical architectural gaps identified by Ghidra RE of WHOOP v5.37.0. Phases derived from `.planning/research/whoop-re/WHOOP-GOOSE-CROSS-COMPARE.md`.
+
+- [ ] **Phase 60: Band-First Sync** - Align sync architecture with WHOOP's foreground-trigger + silent push + BGAppRefreshTask model; remove overnight poll loop
+- [ ] **Phase 61: BLE Bonding State Machine** - Formal 5-state bonding manager (WHPBLEBondingManager parity); replace implicit OS bonding
+- [ ] **Phase 62: Upload Watermark per Sensor** - Per-type upload watermark to prevent re-uploads after crash/restart (WHPStrapLatestUploadedMetricDateKey parity)
+- [ ] **Phase 63: Network Monitor & Upload Gating** - NWPathMonitor-based reachability gating + exponential backoff (WHPNetworkMonitor parity)
+- [ ] **Phase 64: HR Data Sanitizer** - Swift-side HR spike filter before HeartRateSeriesStore (WHPHeartRateDataSanitizer parity)
+- [ ] **Phase 65: Generic BLE State Machine** - Minimal StateMachine<State, Event> type; migrate BLE connection/bonding states into it (WHPStateMachine parity)
+- [ ] **Phase 66: Cap Sense / On-Wrist Detection** - Ghidra investigation of cap sense GATT UUID; on-wrist flag on HR/HRV samples (WHPWhoopStrapOnWrist parity; blocked until UUID identified)
+
 ## Phase Details
 
 ### Phase 51: Bug Audit
@@ -460,16 +472,6 @@ WHOOP uses Approov (`ApproovURLSession`, `ApproovURLSessionAdapter`) for all ser
 - Add `server/ingest/app/apns.py` module using `httpx` async client (HTTP/2, APNs requires it)
 
 **Plans:** 0 plans
-
----
-
-## v9.0 — BLE Reliability & Protocol Parity
-
-**Milestone Goal:** Close the critical architectural gaps identified by Ghidra reverse-engineering of WHOOP v5.37.0. Each phase targets a specific subsystem where Goose diverges from the WHOOP reference in ways that affect real-world reliability. Source: `.planning/research/whoop-re/WHOOP-GOOSE-CROSS-COMPARE.md`.
-
-**Depends on:** Phase 60
-
----
 
 ### Phase 61: BLE Bonding State Machine
 
