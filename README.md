@@ -86,6 +86,8 @@ The current health metric UI draws heavily from [Bevel](https://www.bevel.health
 
 This fork is built on top of [b-nnett/goose](https://github.com/b-nnett/goose), the original Goose iOS project. The iOS app shell, BLE protocol work, Rust core architecture, and WHOOP packet parsing are derived from that upstream codebase.
 
+The BLE pairing model, on-wrist detection approach, and background sync architecture draw from [Noop](https://github.com/NoopApp/noop), an offline WHOOP companion that pioneered local-first WHOOP data access on iOS. Noop is not affiliated with Goose; this credit is here because it established many of the patterns this project builds on.
+
 The self-hosted server and biometric algorithm pipeline are adapted from [my-whoop](https://github.com/tigercraft4/my-whoop), a prior personal project for storing and analysing WHOOP data on a self-hosted FastAPI + TimescaleDB stack, itself forked from [johnmiddleton12/wearable](https://github.com/johnmiddleton12/wearable). The server in `server/ingest/` maintains API compatibility with my-whoop so existing deployments continue to work.
 
 ## Current Scope
