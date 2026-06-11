@@ -82,6 +82,12 @@ Goose is an independent project and is not affiliated with WHOOP. This repositor
 
 The current health metric UI draws heavily from [Bevel](https://www.bevel.health/), especially the Sleep, Recovery, Strain, Stress, and trend-detail surfaces. Bevel is not affiliated with Goose; this credit is here because their product design has been a major visual reference.
 
+## Acknowledgements
+
+This fork is built on top of [b-nnett/goose](https://github.com/b-nnett/goose), the original Goose iOS project. The iOS app shell, BLE protocol work, Rust core architecture, and WHOOP packet parsing are derived from that upstream codebase.
+
+The self-hosted server and biometric algorithm pipeline are adapted from [my-whoop](https://github.com/tigercraft4/my-whoop), a prior personal project for storing and analysing WHOOP data on a self-hosted FastAPI + TimescaleDB stack. The server in `server/ingest/` maintains API compatibility with my-whoop so existing deployments continue to work.
+
 ## Current Scope
 
 - SwiftUI app shell with Home, Health, Coach, and More tabs.
