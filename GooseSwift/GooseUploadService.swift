@@ -9,6 +9,15 @@ struct GooseUploadStatus {
   let lastSyncedCount: Int?
   // Total rows with synced=0 across primary hr_samples stream.
   var pendingRowCount: Int = 0
+  // Non-nil when the last upload attempt failed (5xx exhausted); nil on success.
+  var uploadErrorState: String? = nil
+}
+
+// Result of a single HTTP upload attempt, used to drive the exponential backoff retry loop.
+private enum UploadAttemptResult {
+  case success(Int)       // 2xx — count of upserted rows
+  case serverError(Int)   // 500-599 — server-side failure, retry with backoff
+  case transientError     // network/transport error (nil response), also retried
 }
 
 final class GooseUploadService: @unchecked Sendable {
@@ -25,6 +34,7 @@ final class GooseUploadService: @unchecked Sendable {
   private var _pendingBatchCount: Int = 0
   private var _lastSyncedCount: Int?
   private var _pendingRowCount: Int = 0
+  private var _uploadErrorState: String? = nil
 
   private var lastUploadTimestamp: Date? {
     get { stateLock.withLock { _lastUploadTimestamp } }
@@ -41,6 +51,10 @@ final class GooseUploadService: @unchecked Sendable {
   private var pendingRowCount: Int {
     get { stateLock.withLock { _pendingRowCount } }
     set { stateLock.withLock { _pendingRowCount = newValue } }
+  }
+  private var uploadErrorState: String? {
+    get { stateLock.withLock { _uploadErrorState } }
+    set { stateLock.withLock { _uploadErrorState = newValue } }
   }
 
   var onStatusUpdate: (@MainActor (GooseUploadStatus) -> Void)?
@@ -163,18 +177,39 @@ final class GooseUploadService: @unchecked Sendable {
     request.setValue("application/json", forHTTPHeaderField: "Content-Type")
     request.httpBody = body
 
-    // Retry with async backoff — no thread blocking
-    let delays: [UInt64] = [1_000_000_000, 2_000_000_000, 4_000_000_000]
+    // Exponential backoff retry for 5xx and transient errors.
+    // Delays: 1s, 2s, 4s, 8s, 16s, 32s, 60s (capped), 60s … — matching ReconnectBackoff semantics.
+    // Attempt 0 fires immediately (no pre-sleep). Max 6 retry attempts (7 total including attempt 0).
+    let maxAttempts = 7
     var uploadSucceeded = false
     var syncedCount: Int?
-    for attempt in 0..<3 {
+    var lastServerErrorStatus: Int? = nil
+    for attempt in 0..<maxAttempts {
       if attempt > 0 {
-        try? await Task.sleep(nanoseconds: delays[attempt - 1])
+        let delaySeconds = min(1.0 * pow(2.0, Double(attempt - 1)), 60.0)
+        let delayNanos = UInt64(delaySeconds * 1_000_000_000)
+        try? await Task.sleep(nanoseconds: delayNanos)
       }
-      if let count = await performRequest(request) {
+      let result = await performRequest(request)
+      switch result {
+      case .success(let count):
         uploadSucceeded = true
         syncedCount = count
-        break
+        uploadErrorState = nil
+      case .serverError(let status):
+        lastServerErrorStatus = status
+        logger.debug("upload 5xx (attempt \(attempt)): \(status)")
+      case .transientError:
+        logger.debug("upload transient error (attempt \(attempt))")
+      }
+      if uploadSucceeded { break }
+    }
+
+    if !uploadSucceeded {
+      if let status = lastServerErrorStatus {
+        uploadErrorState = "Upload failed — server error (\(status))"
+      } else {
+        uploadErrorState = "Upload failed — server unavailable"
       }
     }
 
@@ -265,22 +300,27 @@ final class GooseUploadService: @unchecked Sendable {
     }
   }
 
-  private func performRequest(_ request: URLRequest) async -> Int? {
+  private func performRequest(_ request: URLRequest) async -> UploadAttemptResult {
     guard let (data, response) = try? await session.data(for: request) else {
       logger.debug("upload request error")
-      return nil
+      return .transientError
     }
-    guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-      if let http = response as? HTTPURLResponse {
-        logger.debug("upload server error: \(http.statusCode)")
-      }
-      return nil
+    guard let http = response as? HTTPURLResponse else {
+      return .transientError
+    }
+    if (500..<600).contains(http.statusCode) {
+      logger.debug("upload server error: \(http.statusCode)")
+      return .serverError(http.statusCode)
+    }
+    guard (200..<300).contains(http.statusCode) else {
+      logger.debug("upload non-2xx non-5xx: \(http.statusCode)")
+      return .transientError
     }
     if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
        let upserted = json["upserted"] as? [String: Int] {
-      return upserted.values.reduce(0, +)
+      return .success(upserted.values.reduce(0, +))
     }
-    return 0
+    return .success(0)
   }
 
   // Pure payload builder — no async, no URLSession, no Rust bridge access.
@@ -448,7 +488,8 @@ final class GooseUploadService: @unchecked Sendable {
         lastUploadTimestamp: _lastUploadTimestamp,
         pendingBatchCount: _pendingBatchCount,
         lastSyncedCount: _lastSyncedCount,
-        pendingRowCount: _pendingRowCount
+        pendingRowCount: _pendingRowCount,
+        uploadErrorState: _uploadErrorState
       )
     }
     Task { @MainActor [weak self] in
