@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v9.0
 milestone_name: BLE Reliability & Protocol Parity
 status: executing
-stopped_at: Completed Phase 61 Plan 01 — BLE bonding foundation types (enum + manager + localized strings) complete, build clean
-last_updated: "2026-06-11T13:05:00.000Z"
-last_activity: 2026-06-11 -- Phase 61 Plan 01 complete
+stopped_at: Completed Phase 61 Plan 02 — bondingManager wired into GooseBLEClient, bond loss detection, GooseAppModel observability, build clean
+last_updated: "2026-06-11T13:08:00.000Z"
+last_activity: 2026-06-11 -- Phase 61 Plan 02 complete
 progress:
   total_phases: 22
   completed_phases: 2
   total_plans: 7
-  completed_plans: 5
+  completed_plans: 6
   percent: 9
 ---
 
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-06-11)
 ## Current Position
 
 Phase: 61 (BLE Bonding State Machine) — EXECUTING
-Plan: 2 of 3
-Status: Executing Phase 61 (Plan 01 complete — proceeding to Plan 02)
-Last activity: 2026-06-11 -- Phase 61 Plan 01 complete
+Plan: 3 of 3
+Status: Executing Phase 61 (Plan 02 complete — proceeding to Plan 03)
+Last activity: 2026-06-11 -- Phase 61 Plan 02 complete
 
 Progress: [██████████] 100%
 
@@ -54,6 +54,7 @@ Progress: [██████████] 100%
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
+- Phase 61 Plan 02: Non-bonding error strings remain direct updateConnectionState calls; .notStarted on every disconnect; bondingState computed on GooseAppModel (no @Published)
 - Phase 61 Plan 01: GooseBLEBondingManager is plain final class with callback (not @Observable); UserDefaults keys owned by manager type; .cancelled persists as notStarted (Pitfall 5)
 - Phase 51 (Bug Audit): reviews phases 36–50; HIGH findings must be closed before phase closes
 - Phase 52: QT-01 bt-button and QT-02 CodeQL and QT-03 HealthKit importer are all long-deferred from v2.0/v3.0
