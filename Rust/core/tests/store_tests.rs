@@ -2665,7 +2665,8 @@ fn algorithm_preferences_select_primary_algorithms_by_scope_and_family() {
         .map(|d| (d.algorithm_id.clone(), d.version.clone()))
         .collect();
     for preference in built_in_default_algorithm_preferences() {
-        if definition_keys.contains(&(preference.algorithm_id.clone(), preference.version.clone())) {
+        if definition_keys.contains(&(preference.algorithm_id.clone(), preference.version.clone()))
+        {
             store.set_algorithm_preference(&preference).unwrap();
         }
     }

@@ -866,11 +866,8 @@ fn recovery_v1_definition() -> AlgorithmDefinitionRecord {
             "recovery_policy": "ewma_baseline_z_score"
         })
         .to_string(),
-        quality_gates_json: json!([
-            "positive_hrv_baseline",
-            "heart_rate_at_or_above_resting"
-        ])
-        .to_string(),
+        quality_gates_json: json!(["positive_hrv_baseline", "heart_rate_at_or_above_resting"])
+            .to_string(),
         status: "experimental".to_string(),
     }
 }

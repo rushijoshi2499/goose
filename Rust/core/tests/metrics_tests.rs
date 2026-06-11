@@ -19,7 +19,10 @@ use goose_core::{
 #[test]
 fn goose_hrv_v0_computes_hand_derived_time_domain_metrics() {
     // 20 values: mean_nn=800.5, RMSSD=11.3555, SDNN_sample=6.6689, pNN50=0
-    let rr = vec![800.0, 810.0, 790.0, 800.0, 805.0, 795.0, 810.0, 800.0, 790.0, 805.0, 800.0, 795.0, 810.0, 800.0, 790.0, 805.0, 800.0, 795.0, 810.0, 800.0];
+    let rr = vec![
+        800.0, 810.0, 790.0, 800.0, 805.0, 795.0, 810.0, 800.0, 790.0, 805.0, 800.0, 795.0, 810.0,
+        800.0, 790.0, 805.0, 800.0, 795.0, 810.0, 800.0,
+    ];
     let result = goose_hrv_v0(&HrvInput {
         start_time: "2026-05-27T00:00:00Z".to_string(),
         end_time: "2026-05-27T00:01:00Z".to_string(),
@@ -51,8 +54,10 @@ fn goose_hrv_v0_pnn50_uses_strictly_greater_than_50_ms() {
     // diff=50 is NOT strictly > 50ms → not counted; diff=51 IS → counted.
     // 20 values → 19 diffs. Pattern [50, 51, -101] repeats 6 times (18 diffs) + [50].
     // abs > 50ms: 6 × (51, 101) = 12 out of 19 diffs. pnn50 = 12/19.
-    let rr = vec![800.0, 850.0, 901.0, 800.0, 850.0, 901.0, 800.0, 850.0, 901.0, 800.0,
-                  850.0, 901.0, 800.0, 850.0, 901.0, 800.0, 850.0, 901.0, 800.0, 850.0];
+    let rr = vec![
+        800.0, 850.0, 901.0, 800.0, 850.0, 901.0, 800.0, 850.0, 901.0, 800.0, 850.0, 901.0, 800.0,
+        850.0, 901.0, 800.0, 850.0, 901.0, 800.0, 850.0,
+    ];
     let result = goose_hrv_v0(&HrvInput {
         start_time: "2026-05-27T00:00:00Z".to_string(),
         end_time: "2026-05-27T00:01:00Z".to_string(),
@@ -64,17 +69,24 @@ fn goose_hrv_v0_pnn50_uses_strictly_greater_than_50_ms() {
 
     let output = result.output.unwrap();
     // pnn50 > 0: some diffs (51ms, 101ms) exceed 50ms; boundary diff (50ms) excluded.
-    assert!(output.pnn50_fraction > 0.0, "expected pnn50 > 0 since diffs of 51ms qualify");
-    assert!(output.pnn50_fraction < 1.0, "expected pnn50 < 1 since 50ms diffs do not qualify");
+    assert!(
+        output.pnn50_fraction > 0.0,
+        "expected pnn50 > 0 since diffs of 51ms qualify"
+    );
+    assert!(
+        output.pnn50_fraction < 1.0,
+        "expected pnn50 < 1 since 50ms diffs do not qualify"
+    );
 }
 
 #[test]
 fn goose_hrv_v0_drops_nonphysiological_intervals_and_flags_quality() {
     // 22 total: 2 invalid (100.0 and 2500.0) + 20 valid (800-810 range).
     // After filtering: 20 valid intervals, produces output with invalid_rr_interval_dropped flag.
-    let rr = vec![800.0, 100.0, 810.0, 2500.0, 790.0, 800.0, 805.0, 795.0, 810.0, 800.0,
-                  790.0, 805.0, 800.0, 795.0, 810.0, 800.0, 790.0, 805.0, 800.0, 795.0,
-                  810.0, 800.0];
+    let rr = vec![
+        800.0, 100.0, 810.0, 2500.0, 790.0, 800.0, 805.0, 795.0, 810.0, 800.0, 790.0, 805.0, 800.0,
+        795.0, 810.0, 800.0, 790.0, 805.0, 800.0, 795.0, 810.0, 800.0,
+    ];
     let result = goose_hrv_v0(&HrvInput {
         start_time: "2026-05-27T00:00:00Z".to_string(),
         end_time: "2026-05-27T00:01:00Z".to_string(),
@@ -130,8 +142,10 @@ fn hrv_definition_and_run_persist_to_sqlite() {
     let result = goose_hrv_v0(&HrvInput {
         start_time: "2026-05-27T00:00:00Z".to_string(),
         end_time: "2026-05-27T00:01:00Z".to_string(),
-        rr_intervals_ms: vec![800.0, 810.0, 790.0, 800.0, 805.0, 795.0, 810.0, 800.0, 790.0, 805.0,
-                              800.0, 795.0, 810.0, 800.0, 790.0, 805.0, 800.0, 795.0, 810.0, 800.0],
+        rr_intervals_ms: vec![
+            800.0, 810.0, 790.0, 800.0, 805.0, 795.0, 810.0, 800.0, 790.0, 805.0, 800.0, 795.0,
+            810.0, 800.0, 790.0, 805.0, 800.0, 795.0, 810.0, 800.0,
+        ],
         input_ids: vec!["fixture.synthetic".to_string()],
         rr_timestamps_s: None,
         stage_segments: None,
@@ -183,12 +197,12 @@ fn goose_hrv_v0_excludes_cross_gap_differences() {
     // Gap: 4.4 s between ts=8.0 and ts=12.4 (> 3.0 s threshold)
     // Segment 2: 10 intervals at [12.4, 13.2, ..., 20.0] s
     let intervals: Vec<f64> = vec![
-        800.0, 810.0, 790.0, 800.0, 805.0, 795.0, 810.0, 800.0, 790.0, 805.0,
-        800.0, 810.0, 790.0, 800.0, 805.0, 795.0, 810.0, 800.0, 790.0, 805.0,
+        800.0, 810.0, 790.0, 800.0, 805.0, 795.0, 810.0, 800.0, 790.0, 805.0, 800.0, 810.0, 790.0,
+        800.0, 805.0, 795.0, 810.0, 800.0, 790.0, 805.0,
     ];
     let timestamps: Vec<f64> = vec![
-        0.0, 0.8, 1.6, 2.4, 3.2, 4.0, 4.8, 5.6, 6.4, 7.2,
-        12.0, 12.8, 13.6, 14.4, 15.2, 16.0, 16.8, 17.6, 18.4, 19.2,
+        0.0, 0.8, 1.6, 2.4, 3.2, 4.0, 4.8, 5.6, 6.4, 7.2, 12.0, 12.8, 13.6, 14.4, 15.2, 16.0, 16.8,
+        17.6, 18.4, 19.2,
     ];
 
     let result_with_timestamps = goose_hrv_v0(&HrvInput {
@@ -237,8 +251,10 @@ fn goose_hrv_v0_timestamps_none_matches_legacy() {
     let result = goose_hrv_v0(&HrvInput {
         start_time: "2026-05-27T00:00:00Z".to_string(),
         end_time: "2026-05-27T00:01:00Z".to_string(),
-        rr_intervals_ms: vec![800.0, 810.0, 790.0, 800.0, 805.0, 795.0, 810.0, 800.0, 790.0, 805.0,
-                              800.0, 795.0, 810.0, 800.0, 790.0, 805.0, 800.0, 795.0, 810.0, 800.0],
+        rr_intervals_ms: vec![
+            800.0, 810.0, 790.0, 800.0, 805.0, 795.0, 810.0, 800.0, 790.0, 805.0, 800.0, 795.0,
+            810.0, 800.0, 790.0, 805.0, 800.0, 795.0, 810.0, 800.0,
+        ],
         input_ids: Vec::new(),
         rr_timestamps_s: None,
         stage_segments: None,
@@ -255,9 +271,10 @@ fn goose_hrv_v0_removes_ectopic_beat_and_reports_fraction() {
     let result = goose_hrv_v0(&HrvInput {
         start_time: "2026-05-27T00:00:00Z".to_string(),
         end_time: "2026-05-27T00:10:00Z".to_string(),
-        rr_intervals_ms: vec![800.0, 810.0, 790.0, 1500.0, 805.0, 795.0, 800.0, 810.0,
-                              800.0, 805.0, 795.0, 810.0, 800.0, 790.0, 805.0, 800.0,
-                              795.0, 810.0, 800.0, 790.0, 805.0, 800.0],
+        rr_intervals_ms: vec![
+            800.0, 810.0, 790.0, 1500.0, 805.0, 795.0, 800.0, 810.0, 800.0, 805.0, 795.0, 810.0,
+            800.0, 790.0, 805.0, 800.0, 795.0, 810.0, 800.0, 790.0, 805.0, 800.0,
+        ],
         input_ids: Vec::new(),
         rr_timestamps_s: None,
         stage_segments: None,
@@ -293,8 +310,10 @@ fn goose_hrv_v0_clean_input_has_zero_removal_fraction() {
     let result = goose_hrv_v0(&HrvInput {
         start_time: "2026-05-27T00:00:00Z".to_string(),
         end_time: "2026-05-27T00:01:00Z".to_string(),
-        rr_intervals_ms: vec![800.0, 810.0, 790.0, 800.0, 805.0, 795.0, 810.0, 800.0, 790.0, 805.0,
-                              800.0, 795.0, 810.0, 800.0, 790.0, 805.0, 800.0, 795.0, 810.0, 800.0],
+        rr_intervals_ms: vec![
+            800.0, 810.0, 790.0, 800.0, 805.0, 795.0, 810.0, 800.0, 790.0, 805.0, 800.0, 795.0,
+            810.0, 800.0, 790.0, 805.0, 800.0, 795.0, 810.0, 800.0,
+        ],
         input_ids: Vec::new(),
         rr_timestamps_s: None,
         stage_segments: None,
@@ -423,8 +442,10 @@ fn goose_hrv_v0_sws_tier3_full_night_fallback() {
     let result = goose_hrv_v0(&HrvInput {
         start_time: "2026-05-27T00:00:00Z".to_string(),
         end_time: "2026-05-27T00:01:00Z".to_string(),
-        rr_intervals_ms: vec![800.0, 810.0, 790.0, 800.0, 805.0, 795.0, 810.0, 800.0, 790.0, 805.0,
-                              800.0, 795.0, 810.0, 800.0, 790.0, 805.0, 800.0, 795.0, 810.0, 800.0],
+        rr_intervals_ms: vec![
+            800.0, 810.0, 790.0, 800.0, 805.0, 795.0, 810.0, 800.0, 790.0, 805.0, 800.0, 795.0,
+            810.0, 800.0, 790.0, 805.0, 800.0, 795.0, 810.0, 800.0,
+        ],
         input_ids: Vec::new(),
         rr_timestamps_s: None,
         stage_segments: None,
