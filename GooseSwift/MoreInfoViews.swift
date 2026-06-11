@@ -118,8 +118,14 @@ struct MoreAboutView: View {
       }
 
       Section("Runtime") {
-        MoreInfoRow(title: "Model", value: model.ble.activeDeviceName, systemImage: "sensor.tag.radiowaves.forward", status: model.ble.connectionState == "ready" ? .ready : .pending)
+        MoreInfoRow(title: "Device", value: model.ble.activeDeviceName, systemImage: "sensor.tag.radiowaves.forward", status: model.ble.connectionState == "ready" ? .ready : .pending)
         MoreInfoRow(title: "Hello", value: model.helloSummary, systemImage: "hand.wave", status: model.helloSummary.hasPrefix("GET_HELLO") ? .ready : .pending)
+      }
+
+      Section("License") {
+        MoreInfoRow(title: "License", value: "GNU GPL v3", systemImage: "doc.text", status: .ready)
+        MoreInfoRow(title: "Copyright", value: "© 2026 tigercraft4", systemImage: "c.circle", status: .ready)
+        MoreInfoRow(title: "Source", value: "github.com/tigercraft4/goose", systemImage: "chevron.left.forwardslash.chevron.right", status: .ready)
       }
 
     }
