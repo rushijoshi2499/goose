@@ -77,6 +77,26 @@ The user must be able to capture WHOOP data on iPhone and have it persisted auto
 - ✓ Test Connection: verificação de auth inline (/healthz + /v1/devices) — v6.0
 - ✓ pt-PT localização completa: 0 strings não traduzidas (era 49) — v6.0
 
+### Validated (v8.0)
+
+- ✓ Bug audit (v6.0–v7.0): 3 HIGH + 6 MEDIUM fixed; GooseRustBridge NSLock data race eliminated; main-thread FFI safety net added — v8.0 (AUDIT-01)
+- ✓ BT Settings button: DeviceView opens iOS Bluetooth Settings directly — v8.0 (QT-01)
+- ✓ CodeQL CI confirmed in .github/workflows/codeql.yml; HealthKit importer confirmed in MoreView — v8.0 (QT-02, QT-03)
+- ✓ previewMissingData + applyPreviewState gated in #if DEBUG — v8.0 (SURF-01)
+- ✓ HomeDashboardView: Device Status Card, Tools Grid, Evidence Footer — v8.0 (HOME-01, HOME-02, HOME-03)
+- ✓ Coach score summaries grid (sleep/recovery/strain/stress) from live bridge — v8.0 (COACH-07)
+- ✓ Daily journal with UserDefaults persistence, TextEditor, tag chips — v8.0 (COACH-08)
+- ✓ Coach routes: Sleep Coach, Recovery Insights, Strain Guidance, Stress Guidance — v8.0 (COACH-09, COACH-10, COACH-11, COACH-12)
+- ✓ Fabricated 55.0 bpm RHR baseline eliminated; real 7-night history or neutral 70.0 — v8.0 (BIO-05)
+- ✓ Non-activity stress excludes HR samples within exercise session windows — v8.0 (ACT-01)
+- ✓ Energy daily rollup persisted to SQLite via metrics.energy_daily_rollup — v8.0 (ENB-01)
+- ✓ Calibration pipeline uses real train/holdout splits from calibration.evaluate_stored_labels — v8.0 (CAL-01)
+- ✓ MorePrivacyView: ShareLink export + destructive confirmation for local data deletion — v8.0 (MORE-01)
+- ✓ #Preview macros for HomeDashboardView (disconnected + populated) and More views — v8.0 (PREV-01)
+- ✓ algorithmPreferences and referenceAlgorithmDefinitions wired to bridge catalog — v8.0 (HALG-01)
+- ✓ bandSleepImportStatus replaces static "band sleep import not available" UI — v8.0 (BAND-01)
+- ✓ Band-first sync: overnight poll loop removed; foreground-trigger + BGAppRefreshTask; cooldown guard — v8.0/v9.0 (Phase 60)
+
 ### Validated (v7.0)
 
 - ✓ Upload route pair: POST /v1/ingest-frames + GET /v1/export/frames/{device_id} com cursor + auth — v7.0 (ROUTE-01, ROUTE-02)
@@ -88,30 +108,14 @@ The user must be able to capture WHOOP data on iPhone and have it persisted auto
 - ✓ Sleep V2 "A aguardar sincronização" label confirmed in simulator — v7.0 (SLP-SYNC-03 partial)
 - ✓ Algorithm defaults promoted: sleep v1, strain v1, recovery v1; readiness v1 added — v7.0
 
-### Active (v8.0 — Quality & Backlog)
+### Active (v9.0 — BLE Reliability & Protocol Parity)
 
-- [ ] AUDIT-01: Code review de v6.0–v7.0 (fases 36–50) — bugs, races, edge cases
-- [ ] QT-01: bt-button → abre iOS Bluetooth Settings
-- [ ] QT-02: CodeQL no CI (GitHub Actions)
-- [ ] QT-03: HealthKit Full Importer (260603-s5w)
-- [ ] HOME-01: Device Status Card em HomeDashboardView (nome, ligação, battery, live HR, sync)
-- [ ] HOME-02: Tools Grid em HomeDashboardView (Coach, Activity, Journal, Calibration shortcuts)
-- [ ] HOME-03: Evidence Footer em HomeDashboardView (Rust version, store path, provenance)
-- [ ] COACH-07: Score summaries (sleep, recovery, strain, stress) em CoachSummaries
-- [ ] COACH-08: Journal — prompt diário, tags, nota de texto, persistência local
-- [ ] COACH-09: Sleep Coach route — bedtime, wake time, sleep debt
-- [ ] COACH-10: Recovery Insights route
-- [ ] COACH-11: Strain Guidance route
-- [ ] COACH-12: Stress Guidance route
-- [ ] BIO-05: SpO2/Resp Rate/Wrist Temp packet semantics → corrigir z_rhr no recovery score
-- [ ] ACT-01: Activity Masking — stress windows particionados por sessões de exercício
-- [ ] ENB-01: Energy Bank & Stress History persistence em SQLite
-- [ ] CAL-01: Real Calibration Pipeline (train/holdout splits de métricas locais)
-- [ ] SURF-01: Runtime Surface Cleanup — previewMissingData gated em #if DEBUG
-- [ ] MORE-01: More tab remaining gaps (capture imports, raw export, debug, privacy)
-- [ ] PREV-01: App-wide SwiftUI Previews (Home, Coach, More) com simulator screenshots
-- [ ] HALG-01: Health Algorithm Preference Properties em HealthDataStore
-- [ ] BAND-01: Band Sleep Import — ingestion de sleep records directamente de pacotes BLE
+- [ ] BLE-BOND-01: GooseBLEBondingManager — 5-state formal bonding (NotStarted/Started/Subscribed/Completed/Cancelled); bond-loss detection and recovery; persistence across restart
+- [ ] UPLOAD-WM-01: Per-sensor upload watermark — persisted per data type; atomic update on success; duplicate prevention after crash
+- [ ] NET-MON-01: NWPathMonitor-based upload gating + exponential backoff (1s/2s/4s/max 60s); isReachable published to GooseAppModel
+- [ ] HR-SAN-01: GooseHRSanitizer — HR spike filter (25–220 BPM); logged and counted in debug counter
+- [ ] SM-01: StateMachine<State, Event> generic type; migrate BLE connection/bonding states
+- [ ] CAPSENSE-01: Cap sense GATT UUID identified via Ghidra; on-wrist detection (WHPWhoopStrapOnWrist parity)
 
 ### Deferred (hardware gate — sem device físico)
 
@@ -158,27 +162,20 @@ The user must be able to capture WHOOP data on iPhone and have it persisted auto
 | Google OAuth via WKWebView (no SDK) | Zero external dependency; user-supplied client_id; PKCE mandatory | ✓ Good — v4.0 |
 | Inline L10N gap closure (9 strings, no new phase) | Faster than planning a new phase for 9-string fix | ✓ Good — v4.0 |
 
-## Current Milestone: v8.0 Quality, Completeness & Backlog Clearance
+## Current Milestone: v9.0 BLE Reliability & Protocol Parity
 
-**Goal:** Auditar o código recente para bugs, limpar quick tasks acumuladas, e completar todas as superfícies UI em falta que ficaram no backlog.
+**Goal:** Close the critical architectural gaps identified by Ghidra RE of WHOOP v5.37.0. Formal bonding state machine, per-sensor upload watermarks, network monitor gating, HR sanitizer, generic state machine, and cap sense on-wrist detection.
 
 **Target features:**
-- Bug audit: code review de v6.0–v7.0 (fases 36–50) para bugs de correctness, races e edge cases
-- Quick tasks pendentes: bt-button → iOS Bluetooth Settings, CodeQL CI, HealthKit Full Importer
-- Home Missing Surfaces (999.13): Device Status Card, Tools Grid, Evidence Footer
-- Coach Content Routes (999.14): score summaries, Journal, Sleep Coach, Recovery/Strain/Stress guidance routes
-- Band Sleep Import (999.7): sleep records directamente de pacotes BLE
-- SpO2/Resp/Temp packet semantics (999.8): corrigir recovery score (eliminar baseline 55.0 fabricada)
-- Activity Masking para stress (999.9)
-- Energy Bank & Stress History persistence (999.10)
-- Real Calibration Pipeline (999.11)
-- Runtime Surface Cleanup (999.12): previewMissingData gating
-- More tab remaining gaps (999.15)
-- App-wide Previews & Simulator Screenshots (999.16)
-- Health Algorithm Preference Properties (999.17)
+- Phase 61: Formal BLE bonding state machine (WHPBLEBondingManager parity)
+- Phase 62: Per-sensor upload watermark (WHPStrapLatestUploadedMetricDateKey parity)
+- Phase 63: NWPathMonitor-based upload gating + exponential backoff
+- Phase 64: HR spike sanitizer before HeartRateSeriesStore
+- Phase 65: Generic StateMachine<State, Event> type; BLE states migrated
+- Phase 66: Cap sense GATT UUID identification + on-wrist detection (blocked until UUID found)
 
 ---
-*Last updated: 2026-06-10 after v7.0 milestone*
+*Last updated: 2026-06-11 after v8.0 milestone*
 
 ## Evolution
 

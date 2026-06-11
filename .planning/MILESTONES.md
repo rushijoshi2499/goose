@@ -1,8 +1,23 @@
 # Milestones
 
-## v8.0 : Quality, Completeness & Backlog Clearance (Backfilled: 2026-06-11)
+## v8.0 Quality, Completeness & Backlog Clearance (Shipped: 2026-06-11)
 
-**Note:** Synthesized from archive snapshot by `/gsd-health --backfill`. Original completion date unknown.
+**Phases completed:** 9 phases (51–59) + Phase 60 (Band-First Sync, v9.0 start)
+**Plans:** 9 autonomous + 3 (Phase 60) = 12 plans
+**Requirements shipped:** 22/22
+**Known deferred items at close:** 1 (see STATE.md Deferred Items — ble-api-misuse-state-restore debug session)
+
+**Key accomplishments:**
+
+- Bug audit (Phase 51): 3 HIGH + 6 MEDIUM bugs fixed in v6.0–v7.0 code; data race on GooseRustBridge NSLock eliminated; main-thread FFI safety net added
+- Quick tasks & surface cleanup (Phase 52): BT Settings button wired; CodeQL CI confirmed; HealthKit importer confirmed; previewMissingData gated in #if DEBUG
+- Home dashboard (Phase 53): Device Status Card (live name/state/battery/HR/sync), Tools Grid (Coach/Activity/Journal/Calibration), Evidence Footer (Rust version, store path, provenance)
+- Coach content (Phases 54–55): Score summaries grid; daily journal with UserDefaults persistence; 4 route views (Sleep, Recovery, Strain, Stress) populated from bridge data
+- Biometrics & activity (Phase 56): Fabricated 55.0 bpm RHR baseline eliminated; non-activity stress computation now excludes exercise session windows
+- Persistence & calibration (Phase 57): Energy daily rollup persisted to SQLite; calibration pipeline uses real train/holdout splits from bridge
+- More tab, previews & health algorithms (Phase 58): MorePrivacyView with export/deletion; #Preview macros for Home and More; algorithmPreferences wired to bridge catalog
+- Band sleep import (Phase 59): bandSleepImportStatus replaces static "not available" UI; pipeline was already complete since Phase 50
+- Band-first sync (Phase 60): Overnight poll loop removed; foreground-trigger + BGAppRefreshTask added; aligned with WHOOP's WHPBLEHistoricalDataManager pattern
 
 ---
 

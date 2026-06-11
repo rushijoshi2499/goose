@@ -1,27 +1,27 @@
 ---
 gsd_state_version: 1.0
-milestone: v8.0
-milestone_name: Quality, Completeness & Backlog Clearance
-status: completed
-stopped_at: Completed Phase 60 Plan 03 — band-first sync integration complete, all tasks done and human-verified
-last_updated: "2026-06-11T10:19:59.981Z"
-last_activity: 2026-06-11 -- Phase 60 marked complete
+milestone: v9.0
+milestone_name: BLE Reliability & Protocol Parity
+status: planning
+stopped_at: v8.0 milestone archived — ready to execute Phase 61
+last_updated: "2026-06-11T12:00:00.000Z"
+last_activity: 2026-06-11 -- v8.0 milestone closed; Phase 60 complete
 progress:
-  total_phases: 10
-  completed_phases: 2
-  total_plans: 4
-  completed_plans: 4
-  percent: 20
+  total_phases: 6
+  completed_phases: 1
+  total_plans: 3
+  completed_plans: 3
+  percent: 16
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-06-10)
+See: .planning/PROJECT.md (updated 2026-06-11)
 
 **Core value:** The user captures WHOOP data on iPhone and it is automatically persisted on their personal server — without depending on external infrastructure. Metrics align with WHOOP from the same raw data.
-**Current focus:** Phase 60 — band-first-sync-align-goose-ble-sync-architecture-with-whoop
+**Current focus:** v9.0 — BLE Reliability & Protocol Parity (Phase 61 next)
 
 ## Current Position
 
@@ -75,14 +75,14 @@ Recent decisions affecting current work:
 
 ## Deferred Items
 
-Items deferred from v7.0 milestone close (2026-06-10):
+Items deferred from v8.0 milestone close (2026-06-11):
 
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
+| debug_session | ble-api-misuse-state-restore | awaiting_human_verify | v8.0 close |
 | hardware_gate | Phase 51 — VAL-HRV-01, VAL-SLP-01, SLP-SYNC real-device | blocked | v7.0 close |
 | verification_gap | Phase 22 — ALG-HRV-04 RMSSD parity (≥5 real sessions) | human_needed | v5.0 close |
 | verification_gap | Phase 26 — ALG-SLP-04 4-class staging validation | human_needed | v5.0 close |
-| Phase 60 P03 | 45min | 4 tasks | 8 files |
 
 ## Session Continuity
 

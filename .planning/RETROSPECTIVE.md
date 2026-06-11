@@ -2,6 +2,48 @@
 
 *A living document updated after each milestone. Lessons feed forward into future planning.*
 
+## Milestone: v8.0 — Quality, Completeness & Backlog Clearance
+
+**Shipped:** 2026-06-11
+**Phases:** 9 (51–59) + Phase 60 (Band-First Sync, v9.0 start) | **Plans:** 12
+
+### What Was Built
+
+- Bug audit across 10 Swift + 4 Rust files; 3 HIGH + 6 MEDIUM correctness bugs fixed; data race on GooseRustBridge NSLock eliminated
+- Home dashboard surfaces: Device Status Card, Tools Grid, Evidence Footer — HomeDashboardView now fully populated
+- Coach content: score summaries grid + daily journal + 4 dedicated route views (Sleep/Recovery/Strain/Stress)
+- Fabricated 55.0 bpm RHR baseline removed; non-activity stress now excludes exercise windows
+- Energy daily rollup and real calibration pipeline (train/holdout from local data)
+- More tab privacy actions, #Preview macros, algorithm preference properties wired to bridge
+- Band sleep import UI wired; "not available" string replaced with live status
+- Band-first sync architecture: overnight poll loop removed; foreground + BGAppRefreshTask aligned with WHOOP pattern
+
+### What Worked
+
+- **Autonomous execution pattern**: phases 51–59 ran as autonomous quick tasks — 9 phases in one session. Efficient for well-scoped backlog clearance where each phase has 1–2 clear deliverables
+- **Parallel code-reviewer agents** (Phase 51): 2 agents across Swift and Rust files surfaced real bugs without requiring full manual audit
+- **Ghidra-guided architecture** (Phase 60): reverse-engineering WHOOP 5.37.0 gave concrete rationale for removing the overnight poll loop — no guesswork about the correct pattern
+
+### What Was Inefficient
+
+- **Missing SUMMARY.md files**: autonomous phases 52–59 didn't generate GSD SUMMARY artifacts — milestone close required reading v8.0-ROADMAP.md instead
+- **REQUIREMENTS.md not updated during execution**: traceability table left as "Pending" for all requirements despite phases being complete; had to update at close time
+- **Partial v8.0 close**: v8.0-ROADMAP.md was created but REQUIREMENTS archival and MILESTONES.md were not completed in the same session — required a catch-up at next session start
+
+### Patterns Established
+
+- When running autonomous/quick phases, write a brief SUMMARY.md at phase close — even 5 lines — to make milestone close straightforward
+- Band-first sync (foreground trigger + BGAppRefreshTask) is the correct iOS BLE sync pattern for WHOOP parity; overnight guard remains capture-research-only
+- `localRust = GooseRustBridge()` per-function instance pattern confirmed as the correct approach for async functions
+
+### Key Lessons
+
+- Autonomous mode works well for backlog clearance phases where the requirement is already fully specified — the planning overhead is mostly friction
+- Always close REQUIREMENTS.md traceability table at phase complete time, not at milestone close — the close step should be mechanical, not investigative
+- Ghidra RE findings should gate architecture decisions before implementation, not after — Phase 60 benefited from having the WHPBLEHistoricalDataManager pattern confirmed before writing any code
+
+---
+
 ## Milestone: v7.0 — Sync Correctness, Async & Sleep Sync
 
 **Shipped:** 2026-06-10

@@ -9,8 +9,8 @@
 - â **v5.0 Metrics Accuracy, IMU & Upstream Fixes** â Phases 20-35 (shipped 2026-06-08)
 - â **v6.0 UI Wiring, Algorithm Alignment & Parity Validation** â Phases 36-45 (shipped 2026-06-09)
 - â **v7.0 Sync Correctness, Async & Sleep Sync** â Phases 46-50 (shipped 2026-06-10)
-- â **v8.0 Quality, Completeness & Backlog Clearance** â Phases 51-59 (shipped 2026-06-11)
-- ð **v9.0 BLE Reliability & Protocol Parity** â Phases 61-66 (planned)
+- â **v8.0 Quality, Completeness & Backlog Clearance** â Phases 51-59+60 (shipped 2026-06-11)
+- ð§ **v9.0 BLE Reliability & Protocol Parity** â Phases 61-66 (in progress)
 
 ## Phases
 
@@ -77,20 +77,25 @@ Known deferred: Phase 51 (VAL-HRV-01, VAL-SLP-01, SLP-SYNC real-device validatio
 
 </details>
 
-### v8.0 Quality, Completeness & Backlog Clearance (In Progress)
+<details>
+<summary>✅ v8.0 Quality, Completeness & Backlog Clearance (Phases 51-59+60) — SHIPPED 2026-06-11</summary>
 
-**Milestone Goal:** Audit recent code for bugs, clear accumulated quick tasks, and complete all missing UI surfaces that accumulated in the backlog since v6.0.
+Full details: `.planning/milestones/v8.0-ROADMAP.md`
 
-- [x] **Phase 51: Bug Audit** - Code review of v6.0âv7.0 (phases 36â50) to find and fix correctness bugs, data races, and edge cases
-- [x] **Phase 52: Quick Tasks & Surface Cleanup** - Bluetooth Settings shortcut, CodeQL CI, HealthKit importer, and debug-only preview gating
-- [x] **Phase 53: Home Dashboard Completion** - Device Status Card, Tools Grid, and Evidence Footer in HomeDashboardView
-- [x] **Phase 54: Coach Score Summaries & Journal** - Score summary functions for all four metrics and daily journal with local persistence
-- [x] **Phase 55: Coach Routes** - Dedicated child views for Sleep Coach, Recovery Insights, Strain Guidance, and Stress Guidance
-- [x] **Phase 56: Biometrics & Activity** - Real z_rhr from V24 packet data and activity-masked non-activity stress computation
-- [x] **Phase 57: Persistence & Calibration** - SQLite persistence for stress history/Energy Bank and a real train/holdout calibration pipeline
-- [x] **Phase 58: More Tab, Previews & Health Algorithms** - Complete More tab actions, app-wide SwiftUI previews, and algorithm preference properties
-- [x] **Phase 59: Band Sleep Import** - Direct sleep record ingestion from BLE band packets
+- [x] Phase 51: Bug Audit — 3 HIGH + 6 MEDIUM bugs fixed in v6.0–v7.0 code
+- [x] Phase 52: Quick Tasks & Surface Cleanup — BT Settings, CodeQL CI, HealthKit importer, #if DEBUG gating
+- [x] Phase 53: Home Dashboard Completion — Device Status Card, Tools Grid, Evidence Footer
+- [x] Phase 54: Coach Score Summaries & Journal — metric highlight grid, daily journal with persistence
+- [x] Phase 55: Coach Routes — Sleep Coach, Recovery Insights, Strain Guidance, Stress Guidance views
+- [x] Phase 56: Biometrics & Activity — fabricated 55.0 bpm eliminated; exercise-masked stress
+- [x] Phase 57: Persistence & Calibration — energy_daily_rollup to SQLite; real train/holdout calibration
+- [x] Phase 58: More Tab, Previews & Health Algorithms — MorePrivacyView, #Preview macros, algorithmPreferences
+- [x] Phase 59: Band Sleep Import — bandSleepImportStatus replaces static "not available" UI
+- [x] Phase 60: Band-First Sync — overnight poll loop removed; foreground-trigger + BGAppRefreshTask
 
+Known deferred: ble-api-misuse-state-restore debug session (awaiting_human_verify); hardware gates (VAL-HRV-01, VAL-SLP-01, SLP-SYNC)
+
+</details>
 ### v9.0 BLE Reliability & Protocol Parity (Planned)
 
 **Milestone Goal:** Close the critical architectural gaps identified by Ghidra RE of WHOOP v5.37.0. Phases derived from `.planning/research/whoop-re/WHOOP-GOOSE-CROSS-COMPARE.md`.
