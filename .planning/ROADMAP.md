@@ -9,7 +9,7 @@
 - ✅ **v5.0 Metrics Accuracy, IMU & Upstream Fixes** — Phases 20-35 (shipped 2026-06-08)
 - ✅ **v6.0 UI Wiring, Algorithm Alignment & Parity Validation** — Phases 36-45 (shipped 2026-06-09)
 - ✅ **v7.0 Sync Correctness, Async & Sleep Sync** — Phases 46-50 (shipped 2026-06-10)
-- 🚧 **v8.0 Quality, Completeness & Backlog Clearance** — Phases 51-59 (in progress)
+- ✅ **v8.0 Quality, Completeness & Backlog Clearance** — Phases 51-59 (shipped 2026-06-11)
 
 ## Phases
 
@@ -85,10 +85,10 @@ Known deferred: Phase 51 (VAL-HRV-01, VAL-SLP-01, SLP-SYNC real-device validatio
 - [x] **Phase 53: Home Dashboard Completion** - Device Status Card, Tools Grid, and Evidence Footer in HomeDashboardView
 - [x] **Phase 54: Coach Score Summaries & Journal** - Score summary functions for all four metrics and daily journal with local persistence
 - [x] **Phase 55: Coach Routes** - Dedicated child views for Sleep Coach, Recovery Insights, Strain Guidance, and Stress Guidance
-- [ ] **Phase 56: Biometrics & Activity** - Real z_rhr from V24 packet data and activity-masked non-activity stress computation
-- [ ] **Phase 57: Persistence & Calibration** - SQLite persistence for stress history/Energy Bank and a real train/holdout calibration pipeline
-- [ ] **Phase 58: More Tab, Previews & Health Algorithms** - Complete More tab actions, app-wide SwiftUI previews, and algorithm preference properties
-- [ ] **Phase 59: Band Sleep Import** - Direct sleep record ingestion from BLE band packets
+- [x] **Phase 56: Biometrics & Activity** - Real z_rhr from V24 packet data and activity-masked non-activity stress computation
+- [x] **Phase 57: Persistence & Calibration** - SQLite persistence for stress history/Energy Bank and a real train/holdout calibration pipeline
+- [x] **Phase 58: More Tab, Previews & Health Algorithms** - Complete More tab actions, app-wide SwiftUI previews, and algorithm preference properties
+- [x] **Phase 59: Band Sleep Import** - Direct sleep record ingestion from BLE band packets
 
 ## Phase Details
 
@@ -316,23 +316,78 @@ WHOOP has NO overnight guard equivalent. The band stores raw sensor data autonom
 
 **Goose change:** the overnight guard remains available for capture research / protocol validation (its current purpose per `MoreCaptureViews.swift`), but is removed from the primary sync path. Normal users never need to enable it. The primary sync path becomes: foreground trigger + SPN trigger (Dimensions 1 & 2).
 
+#### Additional findings — ObjC_RESOLVED.txt symbol analysis
+
+Full ObjC symbol table at: `.planning/research/whoop-re/ObjC_RESOLVED.txt` (8.4MB, 290k lines)
+
+**A — BGAppRefreshTask (3rd background mechanism, not found via Ghidra strings alone)**
+
+WHOOP ships a dedicated `WhoopBackgroundTask` framework with:
+- `RuntimeBGAppRefreshTask` — implementation of `BGAppRefreshTask` (iOS `BackgroundTasks.framework`)
+- `RuntimeBackgroundTaskRunner` — runs the task; logs `"ERROR: Could not schedule BGTask"` and `"WARNING: No BackgroundTask implementation found for identifier:"`
+- `RuntimeBackgroundTaskScheduler` — schedules periodic BGAppRefreshTask wakeups with `BGTaskScheduler`
+- `BackgroundTaskManager` — orchestrator in the main Whoop module
+- `BGAppRefreshTaskRequest` + `BGTaskScheduler` both imported (confirmed from `_OBJC_CLASS_$_` symbols)
+
+WHOOP therefore has **3 background triggers**, not 2:
+1. `applicationWillEnterForeground` → foreground historical pull
+2. `start-sync-data` silent push → SPN historical pull
+3. `BGAppRefreshTask` → scheduled background wakeup (every few hours, iOS-controlled)
+
+**Goose addition:** register a BGAppRefreshTask identifier in `Info.plist` (`BGTaskSchedulerPermittedIdentifiers`) and implement `BGAppRefreshTask` handler in `GooseSwiftApp.swift`. On wake: trigger historical BLE sync + server upload, then call `task.setTaskCompleted(success:)`.
+
+**B — WhoopPushNotifications module classes (relevant for Goose's push handler)**
+
+- `RecoveryProcessedPushNotificationResponder` — dedicated class for `recovery_processed_v1`; Goose needs an equivalent `DailyReadyPushResponder`
+- `PushNotificationHandlerObjCAdapter` — routes push types to typed responders; Goose should follow this routing pattern
+- `RuntimeStrapStateSnapshotWriter` — on push receipt, writes strap state snapshot for crash safety; Goose should write pending-sync state to UserDefaults before starting background work
+- `PushNotificationPermissionsManager` — manages UNUserNotificationCenter authorisation
+- `RuntimePushSettingsReporter` — reports push permission state to analytics
+
+**C — WhoopDataSyncing watermark system**
+
+WHOOP tracks upload progress via watermarks (not just `synced` flags):
+- `anfHighWaterMark`, `ecgHighWaterMark`, `highWatermarkDate` — per-sensor high watermarks
+- `StoredWatermarksAtHistoryCompleteExecutor` — persists watermarks atomically when `HISTORY_COMPLETE` fires
+- `RuntimeWaterMarkReporter` — reports watermark state to server
+- `ProcessNowReadyToUploadTrigger` — fires when data is ready (post-history-complete)
+- Background data transmission uses separate BGTask per type: `"for console/events/processed/raw data transmission"`
+
+WHOOP uploads incrementally (only data above the last watermark), which is more efficient than Goose's `synced=0` scan. This is a stretch-goal optimisation for Phase 60 — the `synced` flag is functionally equivalent but less granular.
+
+**D — BTHR (Background Tracked Heart Rate) — separate feature**
+
+Not relevant to Phase 60 but documented for reference:
+- BTHR = continuous background HR monitoring via BLE strap (not historical download)
+- Feature-flagged: `dwl_background_bthr`
+- Has a timer (`bthrStopTime`) and cooldown (`"Background BTHR Timer Finished"`)
+- Sends a disconnected notification (`bthr_disconnected`) when strap goes out of range
+- Goose does NOT need to implement this — its overnight guard is a superset
+
+**E — Approov API security**
+
+WHOOP uses Approov (`ApproovURLSession`, `ApproovURLSessionAdapter`) for all server calls — certificate pinning + app attestation. Not relevant for Goose's self-hosted server but explains why direct API calls to WHOOP's servers are not feasible.
+
 #### Implementation scope
 
 **iOS (Swift):**
 - Remove 30s range poll loop from `GooseAppModel+OvernightRun.swift`
 - Add `scenePhase == .active` trigger to `GooseAppModel+Upload.swift` that fires `GooseBLEClient` historical sync
-- Add cooldown guard (UserDefaults timestamp of last `HISTORY_COMPLETE`) matching WHOOP's pattern
+- Add cooldown guard (UserDefaults timestamp of last `HISTORY_COMPLETE`) — same pattern as WHOOP's `"FETCH BLE DATA - Cancelled, last History Complete Event within %.fmin"`
 - Register for APNs in `GooseSwiftApp.swift`: `UIApplication.shared.registerForRemoteNotifications()`
-- Implement `application(_:didReceiveRemoteNotification:fetchCompletionHandler:)`: handle `"start-sync-data"` (trigger BLE sync) and `"goose-daily-ready"` (cache metrics payload)
-- Store APNs device token in Keychain / UserDefaults; upload to Goose server via `POST /v1/profile` or new `POST /v1/device-token` endpoint
+- Implement `application(_:didReceiveRemoteNotification:fetchCompletionHandler:)`: handle `"start-sync-data"` (trigger BLE sync) and `"goose-daily-ready"` (cache metrics payload from push body)
+- Register `BGAppRefreshTask` identifier in `Info.plist` (`BGTaskSchedulerPermittedIdentifiers: ["com.goose.swift.bg-sync"]`)
+- Implement `BGAppRefreshTask` handler: schedule next wakeup + trigger historical BLE sync
+- Write strap state snapshot to UserDefaults on push receipt before starting background work (mirrors WHOOP's `RuntimeStrapStateSnapshotWriter`)
+- Store APNs device token in Keychain; upload to Goose server
 
 **Server (FastAPI + TimescaleDB):**
-- Add `device_tokens` table: `(device_id, apns_token, updated_at)`
+- Add `device_tokens` table: `(device_id, apns_token, platform, updated_at)`
 - Add `POST /v1/device-token` endpoint (Bearer-gated)
-- After `daily.compute_day()` completes: call APNs HTTP/2 API with `content-available: 1` push to all tokens for the device
-- Push payload: `{"start-sync-data": 1, "daily": {<daily_metrics row>}}`
-- APNs credentials: P8 key + Team ID + Bundle ID stored as server env vars (`GOOSE_APNS_KEY_P8`, `GOOSE_APNS_KEY_ID`, `GOOSE_APNS_TEAM_ID`)
-- Use `httpx` async client for APNs HTTP/2; add `server/ingest/app/apns.py` module
+- After `daily.compute_day()` completes: call APNs HTTP/2 API with `content-available: 1` + `"goose-daily-ready"` payload containing the computed `daily_metrics` row
+- Reuse same APNs call for `"start-sync-data"` type when new BLE data is ingested
+- APNs credentials via env: `GOOSE_APNS_KEY_P8`, `GOOSE_APNS_KEY_ID`, `GOOSE_APNS_TEAM_ID`, `GOOSE_APNS_BUNDLE_ID`
+- Add `server/ingest/app/apns.py` module using `httpx` async client (HTTP/2, APNs requires it)
 
 **Plans:** 0 plans
 
