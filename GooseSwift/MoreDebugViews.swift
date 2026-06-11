@@ -177,6 +177,15 @@ struct MoreDebugView: View {
         }
       }
 
+      Section("HR Sanitizer") {
+        MoreInfoRow(
+          title: "Spikes Filtered",
+          value: "\(model.hrSpikeCount) | valid \(GooseHRSanitizer.minValidBPM)-\(GooseHRSanitizer.maxValidBPM) bpm",
+          systemImage: "heart.slash",
+          status: model.hrSpikeCount == 0 ? .ready : .stale
+        )
+      }
+
       Section("WHOOP Event Signals") {
         MoreInfoRow(
           title: "Latest Event",

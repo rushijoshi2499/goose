@@ -29,6 +29,7 @@ final class GooseAppModel {
   var respiratoryPacketWatchStatus = "Not watching K18 respiratory history"
   var serverReachable: Bool? = nil
   private(set) var isNetworkReachable: Bool = true
+  private(set) var hrSpikeCount: Int = 0
   var apnsDeviceToken: String? = nil
   var uploadErrorState: String? = nil
   var hasPendingUploadAfterReconnect: Bool = false
@@ -313,6 +314,9 @@ final class GooseAppModel {
         source: source,
         capturedAt: capturedAt
       )
+    }
+    ble.onHRSpike = { [weak self] _, _ in
+      Task { @MainActor in self?.hrSpikeCount += 1 }
     }
     // Override the default onBondingStateChange set in GooseBLEClient.init() so we can
     // (a) keep driving connectionState via updateConnectionState, and
