@@ -3385,6 +3385,21 @@ fn imu_step_count_from_decoded_frames_bridge(
                     ]);
                 }
             }
+        } else if let Some(ParsedPayload::DataPacket {
+            body_summary:
+                Some(DataPacketBodySummary::V18History {
+                    gravity_x: Some(x),
+                    gravity_y: Some(y),
+                    gravity_z: Some(z),
+                    ..
+                }),
+            ..
+        }) = parsed
+        {
+            // V18History gravity fields are already in g-units (f32 LE) — no IMU_LSB_PER_G
+            // conversion, unlike K10 raw LSB values. This is the WHOOP 5.0 (Gen5 v18) path;
+            // without this arm, step count returns zero for all Gen5 devices.
+            gravity_samples.push([x as f64, y as f64, z as f64]);
         }
     }
 
