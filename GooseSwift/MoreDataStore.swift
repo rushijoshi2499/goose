@@ -437,8 +437,45 @@ final class MoreDataStore: ObservableObject {
     }
   }
 
+  enum ExportPreset {
+    case framesAndMetrics
+    case fullDiagnostic
+    case includeDatabase
+    case custom
+
+    var families: Set<String> {
+      switch self {
+      case .framesAndMetrics:
+        return ["decoded_frames", "packet_timeline", "sensor_samples", "metric_features", "metric_outputs", "algorithm_runs", "local_health_metrics"]
+      case .fullDiagnostic:
+        return ["raw_evidence", "decoded_frames", "packet_timeline", "sensor_samples", "metric_features", "metric_outputs", "algorithm_runs", "local_health_metrics", "command_validation"]
+      case .includeDatabase:
+        return ["raw_evidence", "decoded_frames", "packet_timeline", "sensor_samples", "metric_features", "metric_outputs", "algorithm_runs", "local_health_metrics", "command_validation", "sqlite"]
+      case .custom:
+        return []
+      }
+    }
+
+    var rawBytes: Bool { self == .includeDatabase }
+  }
+
+  var sqliteDBSizeLabel: String {
+    guard !databasePath.isEmpty,
+          let attrs = try? FileManager.default.attributesOfItem(atPath: databasePath),
+          let bytes = attrs[.size] as? Int64 else { return "" }
+    let mb = Double(bytes) / 1_048_576
+    if mb > 20 { return " (\(Int(mb))MB — OOM risk)" }
+    return " (\(Int(mb))MB)"
+  }
+
   var canRunRawExport: Bool {
     databaseExists && rawExportWindowIssueSummary() == nil && !selectedRawFamilies.isEmpty
+  }
+
+  func runRawExport(preset: ExportPreset) {
+    selectedRawFamilies = preset.families
+    includeRawBytes = preset.rawBytes
+    runRawExport()
   }
 
   func runRawExport() {
