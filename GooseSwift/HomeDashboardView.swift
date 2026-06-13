@@ -21,7 +21,6 @@ struct HomeDashboardView: View {
       LazyVStack(alignment: .leading, spacing: 18) {
         HomeDailyScoreCard(
           scores: scoreSnapshots(using: cached),
-          actionSummary: dailyActionSummary,
           coachTip: CoachTipFactory.homeTip(healthStore: healthStore, appModel: model),
           openScore: openHealth,
           openCoach: openCoach
@@ -155,6 +154,23 @@ struct HomeDashboardView: View {
     .sheet(item: $selectedHealthMonitorTrend) { snapshot in
       SleepV2BevelTrendSheet(snapshot: snapshot)
     }
+  }
+
+  private var dailyActionSummary: String {
+    let inputAction = healthStore.metricInputReadinessNextActionSummary()
+    if !inputAction.isEmpty {
+      return inputAction
+    }
+    return healthStore.packetDerivedScoreNextActionSummary()
+  }
+
+  private var landingSnapshots: [HealthMetricSnapshot] {
+    healthStore.landingSnapshots(
+      liveHeartRateBPM: model.ble.liveHeartRateBPM,
+      liveHeartRateSource: model.ble.liveHeartRateSource,
+      liveHeartRateUpdatedAt: model.ble.liveHeartRateUpdatedAt,
+      stableDailyMetrics: true
+    )
   }
 
   private func scoreSnapshots(using cached: [HealthMetricSnapshot]) -> [HealthMetricSnapshot] {

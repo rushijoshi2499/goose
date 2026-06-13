@@ -17,10 +17,10 @@ final class ActivitySessionModel: ObservableObject {
   // Private backing stores updated at full 60 Hz sample rate.
   // @Published properties are only flushed at uiPublishInterval to avoid
   // driving a SwiftUI re-render on every sample tick.
-  private var _elapsed: TimeInterval = 0
-  private var _averageHeartRate: Int?
-  private var _maxHeartRate: Int?
-  private var _zoneDurations: [Int: TimeInterval] = [:]
+  private var tickElapsed: TimeInterval = 0
+  private var tickAverageHR: Int?
+  private var tickMaxHR: Int?
+  private var tickZoneDurations: [Int: TimeInterval] = [:]
   private var lastPublishedAt: Date = .distantPast
   private static let uiPublishInterval: TimeInterval = 1.0 / 4.0
 
@@ -109,16 +109,16 @@ final class ActivitySessionModel: ObservableObject {
     }
     let previousTick = lastTick ?? now
     let delta = max(0, now.timeIntervalSince(previousTick))
-    _elapsed += delta
+    tickElapsed += delta
     lastTick = now
 
     if delta > 0, let heartRate {
       let zoneID = HeartRateZone.zoneID(for: heartRate)
-      _zoneDurations[zoneID, default: 0] += delta
+      tickZoneDurations[zoneID, default: 0] += delta
       heartRateWeightedTotal += Double(heartRate) * delta
       heartRateMeasuredSeconds += delta
-      _averageHeartRate = Int((heartRateWeightedTotal / max(heartRateMeasuredSeconds, 1)).rounded())
-      _maxHeartRate = max(_maxHeartRate ?? heartRate, heartRate)
+      tickAverageHR = Int((heartRateWeightedTotal / max(heartRateMeasuredSeconds, 1)).rounded())
+      tickMaxHR = max(tickMaxHR ?? heartRate, heartRate)
     }
 
     if now.timeIntervalSince(lastPublishedAt) >= Self.uiPublishInterval {
@@ -130,10 +130,10 @@ final class ActivitySessionModel: ObservableObject {
   // synchronous block so SwiftUI coalesces them into one re-render.
   private func flushToUI(now: Date) {
     lastPublishedAt = now
-    elapsed = _elapsed
-    averageHeartRate = _averageHeartRate
-    maxHeartRate = _maxHeartRate
-    zoneDurations = _zoneDurations
+    elapsed = tickElapsed
+    averageHeartRate = tickAverageHR
+    maxHeartRate = tickMaxHR
+    zoneDurations = tickZoneDurations
   }
 
   private func scheduleTimer() {
@@ -155,10 +155,10 @@ final class ActivitySessionModel: ObservableObject {
     if !keepingSelection {
       selectedActivity = .run
     }
-    _elapsed = 0
-    _averageHeartRate = nil
-    _maxHeartRate = nil
-    _zoneDurations = [:]
+    tickElapsed = 0
+    tickAverageHR = nil
+    tickMaxHR = nil
+    tickZoneDurations = [:]
     heartRateWeightedTotal = 0
     heartRateMeasuredSeconds = 0
     lastTick = nil
