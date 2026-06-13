@@ -19,11 +19,14 @@ struct HomeDashboardView: View {
       LazyVStack(alignment: .leading, spacing: 18) {
         HomeDailyScoreCard(
           scores: scoreSnapshots,
-          actionSummary: dailyActionSummary,
           coachTip: CoachTipFactory.homeTip(healthStore: healthStore, appModel: model),
           openScore: openHealth,
           openCoach: openCoach
         )
+
+        if !baselineProgress.allReady {
+          HomeBaselineProgressCard(progress: baselineProgress)
+        }
 
         HomeStressEnergySection(
           stress: landingSnapshot(for: .stress),
@@ -114,6 +117,9 @@ struct HomeDashboardView: View {
     }
     .task {
       await healthStore.loadBridgeCatalogsIfNeeded()
+      // Fire-and-forget: this spawns its own Task internally, so the view task
+      // intentionally does not await the packet-input run; results publish later.
+      healthStore.refreshPacketInputsIfNeeded()
       model.refreshActivityTimeline(for: selectedDate)
       refreshSnapshots()
     }
@@ -180,12 +186,8 @@ struct HomeDashboardView: View {
     return state == "ready" || state == "connected"
   }
 
-  private var dailyActionSummary: String {
-    let inputAction = healthStore.metricInputReadinessNextActionSummary()
-    if !inputAction.isEmpty {
-      return inputAction
-    }
-    return healthStore.packetDerivedScoreNextActionSummary()
+  private var baselineProgress: BaselineProgressModel {
+    healthStore.baselineProgress()
   }
 
   private func refreshSnapshots() {
@@ -270,6 +272,14 @@ private struct HomeDeviceStatusCard: View {
     return rel.localizedString(for: date, relativeTo: Date()).capitalized
   }
 
+  private var syncProgressText: String {
+    if let fraction = ble.historicalSyncFraction {
+      let percentText = "\(Int((fraction * 100).rounded()))%"
+      return String(localized: "Syncing \(percentText) — \(ble.historicalPacketCount) packets")
+    }
+    return String(localized: "Syncing — \(ble.historicalPacketCount) packets")
+  }
+
   var body: some View {
     VStack(alignment: .leading, spacing: 10) {
       HStack {
@@ -283,6 +293,18 @@ private struct HomeDeviceStatusCard: View {
         Text(ble.connectionState.localizedConnectionState)
           .font(.caption.weight(.medium))
           .foregroundStyle(stateColor)
+      }
+
+      if ble.isHistoricalSyncing {
+        HStack(spacing: 8) {
+          SyncProgressRing(fraction: ble.historicalSyncFraction, lineWidth: 3, tint: .blue)
+            .frame(width: 18, height: 18)
+          Text(syncProgressText)
+            .font(.caption.weight(.semibold))
+            .monospacedDigit()
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
+        }
       }
 
       HStack(spacing: 20) {
