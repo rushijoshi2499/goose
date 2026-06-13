@@ -404,7 +404,7 @@ extension GooseBLEClient {
       && rememberedDeviceLooksLikeWhoop
       && activePeripheral == nil
       && rememberedDeviceID != nil
-      && peripheral.identifier != rememberedDeviceID
+      && peripheral.identifier == rememberedDeviceID
   }
 
   func rejectNonWhoopPeripheral(
