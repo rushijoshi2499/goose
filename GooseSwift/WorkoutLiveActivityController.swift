@@ -140,7 +140,8 @@ final class WorkoutLiveActivityController {
       activeCalories: max(Int(elapsed / 8), 0),
       distanceMeters: distanceMeters > 0 ? distanceMeters : nil,
       isPaused: session.isPaused,
-      updatedAt: now
+      updatedAt: now,
+      usesImperialUnits: UnitPreference.isImperial
     )
   }
 
