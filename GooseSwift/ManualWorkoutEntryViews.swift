@@ -48,6 +48,8 @@ final class WorkoutEntryViewModel: ObservableObject {
       isSubmitting = false
       // success — caller dismisses
     } catch {
+      // Keep user-facing message brief; log details for debugging
+      print("[WorkoutEntryViewModel] submitWorkout failed: \(error)")
       errorMessage = "Could not save workout. Please try again."
       isSubmitting = false
     }
