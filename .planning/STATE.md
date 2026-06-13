@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-06-11)
 Phase: Not started (defining requirements)
 Plan: —
 Status: Defining requirements
-Last activity: 2026-06-13 — Milestone v11.0 started
+Last activity: 2026-06-13 — Completed quick task 260613-owu: wrap HealthPreviewRouteHost in #if DEBUG to fix Release CI
 
 ## Performance Metrics
 
@@ -126,6 +126,7 @@ Items acknowledged and deferred at v10.0 milestone close on 2026-06-13:
 | Date | Slug | Description | Commit |
 |------|------|-------------|--------|
 | 2026-06-11 | ci-cleanup-add-dependabot | Remove rust-core-ci.yml (duplicate); add dependabot.yml + swift-build.yml | f629dd7 |
+| 2026-06-13 | 260613-owu | Wrap HealthPreviewRouteHost in #if DEBUG to fix Release build CI on v10.0 tag | TBD |
 
 ## Session Continuity
 
