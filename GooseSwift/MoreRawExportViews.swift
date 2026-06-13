@@ -3,6 +3,7 @@ import SwiftUI
 struct MoreRawExportView: View {
   @ObservedObject var store: MoreDataStore
   @State private var showExportPresetSheet = false
+  @State private var sqliteDBSizeLabel = ""
 
   var body: some View {
     List {
@@ -62,6 +63,7 @@ struct MoreRawExportView: View {
         .disabled(store.localExportInProgress)
 
         Button {
+          sqliteDBSizeLabel = store.fetchSQLiteDBSizeLabel()
           showExportPresetSheet = true
         } label: {
           Label("Export", systemImage: "square.and.arrow.up")
@@ -74,7 +76,7 @@ struct MoreRawExportView: View {
           Button("Full Diagnostic") {
             store.runRawExport(preset: .fullDiagnostic)
           }
-          Button("Include Database\(store.sqliteDBSizeLabel)") {
+          Button("Include Database\(sqliteDBSizeLabel)") {
             store.runRawExport(preset: .includeDatabase)
           }
           Button("Custom (current settings)") {

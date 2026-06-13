@@ -459,7 +459,7 @@ final class MoreDataStore: ObservableObject {
     var rawBytes: Bool { self == .includeDatabase }
   }
 
-  var sqliteDBSizeLabel: String {
+  func fetchSQLiteDBSizeLabel() -> String {
     guard !databasePath.isEmpty,
           let attrs = try? FileManager.default.attributesOfItem(atPath: databasePath),
           let bytes = attrs[.size] as? Int64 else { return "" }
@@ -473,13 +473,15 @@ final class MoreDataStore: ObservableObject {
   }
 
   func runRawExport(preset: ExportPreset) {
-    selectedRawFamilies = preset.families
-    includeRawBytes = preset.rawBytes
-    runRawExport()
+    performRawExport(families: preset.families, rawBytes: preset.rawBytes)
   }
 
   func runRawExport() {
-    guard canRunRawExport else {
+    performRawExport(families: selectedRawFamilies, rawBytes: includeRawBytes)
+  }
+
+  private func performRawExport(families: Set<String>, rawBytes: Bool) {
+    guard databaseExists && rawExportWindowIssueSummary() == nil && !families.isEmpty else {
       rawExportStatus = rawExportWindowIssueSummary() ?? "No database or data family selected"
       return
     }
@@ -507,9 +509,9 @@ final class MoreDataStore: ObservableObject {
       "end": rawExportEnd,
       "app_version": Self.appVersion,
       "core_version": coreVersionStatus,
-      "include_sqlite": selectedRawFamilies.contains("sqlite"),
-      "data_families": Array(selectedRawFamilies).sorted(),
-      "include_raw_bytes": includeRawBytes,
+      "include_sqlite": families.contains("sqlite"),
+      "data_families": Array(families).sorted(),
+      "include_raw_bytes": rawBytes,
       "capture_session_ids": Self.csvValues(rawCaptureSessions),
       "packet_type_names": Self.csvValues(rawPacketTypes),
       "sensor_source_signals": Self.csvValues(rawSensorSignals),
