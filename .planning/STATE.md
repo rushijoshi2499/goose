@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v12.0
 milestone_name: milestone
-status: executing
-stopped_at: Completed 85-04-PLAN.md
-last_updated: "2026-06-14T20:00:36.915Z"
+status: verifying
+stopped_at: Completed 85-06-PLAN.md
+last_updated: "2026-06-14T20:25:07.997Z"
 last_activity: 2026-06-14 -- Phase 85 execution started
 progress:
   total_phases: 9
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 15
-  completed_plans: 14
-  percent: 22
+  completed_plans: 15
+  percent: 33
 ---
 
 # Project State
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-06-13)
 
 Phase: 85 (rust-crash-safety) — EXECUTING
 Plan: 6 of 6
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-06-14 -- Phase 85 execution started
 
 Progress: [██████████] 100%
@@ -76,6 +76,7 @@ Recent decisions affecting current work:
 - [Phase 84-03]: Cmd 26 auto-send gated on batteryViaCMD26 && wireProtocol == .gen4 — Gen5 also has batteryViaCMD26=true (RESEARCH Pitfall 5); historicalDirectWriteBridge reused; project.pbxproj must be manually updated when adding new Swift source files
 - [Phase ?]: [Phase 85-02]: store.rs test .unwrap() converted to .expect(); allow shield removed — store.rs now exposed to deny lint
 - [Phase ?]: [Phase 85-04]: capabilities.rs test .unwrap() converted to .expect() with call-site-specific messages; shield removal proves no production .unwrap() remains
+- [Phase 85-06]: Pre-existing export_tests failures (sensor_sample_rows 18 vs expected 19) confirmed not caused by Phase 85 — export_tests.rs was not modified during Phase 85; root cause is Phase 84 schema/fixture change; needs separate debug session
 
 ### Roadmap Evolution
 
@@ -113,10 +114,7 @@ Items deferred from previous milestones:
 | verification_gap | Phase 70 — 70-VERIFICATION.md | human_needed | v10.0 close |
 | quick_task | historical-sync-direct-write | missing | v10.0 close |
 | quick_task | fix-imu-step-count | missing | v10.0 close |
-| Phase 85-rust-crash-safety P01 | 335 | 2 tasks | 9 files |
-| Phase 85 P02 | 8m | 1 tasks | 1 files |
-| Phase 85-rust-crash-safety P03 | 8m | 2 tasks | 1 files |
-| Phase 85-rust-crash-safety P04 | 5m | 1 tasks | 1 files |
+| debug_session | export_tests-sensor_sample_rows-18_vs_19 | investigating | Phase 85 gate |
 
 ## Quick Tasks Completed
 
@@ -127,12 +125,13 @@ Items deferred from previous milestones:
 
 ## Session Continuity
 
-Last session: 2026-06-14T20:00:36.909Z
-Stopped at: Completed 85-04-PLAN.md
+Last session: 2026-06-14T20:25:07.991Z
+Stopped at: Completed 85-06-PLAN.md
 Resume file: None
-Next action: Run /gsd-plan-phase 85 to begin Phase 85 (Rust Crash Safety — independent of Gen4 battery)
+Next action: Run /gsd-verify-work 85 after resolving export_tests sensor_sample_rows pre-existing failures; then proceed to Phase 86 (bridge.rs split)
 
 ## Operator Next Steps
 
-- Run /gsd-plan-phase 84 to start Phase 84 (Gen4 Battery — DeviceCapabilities.battery_via_event48 / battery_via_cmd26 now available from Phase 83)
-- Phase 85 (Rust Crash Safety) is independent and can be planned in parallel with Phase 84 if desired
+- Phase 85 gate plan complete — ARCH-03 SC1 (lint) and SC2 (catch_unwind) confirmed. SC3 partial: 2 pre-existing export_tests failures (sensor_sample_rows 18 vs 19) not caused by Phase 85.
+- Run /gsd-debug to investigate export_tests sensor_sample_rows failures before /gsd-verify-work
+- After verification: proceed to Phase 86 (bridge.rs split)
