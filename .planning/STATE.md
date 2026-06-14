@@ -20,7 +20,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-13)
 
 **Core value:** The user captures WHOOP data on iPhone and it is automatically persisted on their personal server — without depending on external infrastructure. Metrics align with WHOOP from the same raw data.
-**Current focus:** v11.0 — Phase 80 (Resting HR Floor Filter)
+**Current focus:** v11.0 — Milestone audit (Phases 80-82 complete)
 
 ## Current Position
 

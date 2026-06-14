@@ -12,7 +12,7 @@
 - ✅ **v8.0 Quality, Completeness & Backlog Clearance** — Phases 51-59+60 (shipped 2026-06-11)
 - ✅ **v9.0 BLE Reliability & Protocol Parity** — Phases 61-65+66 (shipped 2026-06-11)
 - ✅ **v10.0 Protocol Parity, Haptics & Feature Completeness** — Phases 67-73 (shipped 2026-06-13)
-- **v11.0 PR Integration, Code Health & App Polish** — Phases 74-79 (active)
+- **v11.0 PR Integration, Code Health & App Polish** — Phases 74-82 (active)
 
 ## Phases
 
@@ -140,9 +140,9 @@ Known deferred: BLE5-01/02 (hardware-gated, real WHOOP 5.0 device), HAP-04 (RE-g
 - [x] **Phase 77: Codebase Audit** - Full codebase map + deep review of phases 67-73 + fix all critical findings
 - [x] **Phase 78: Performance & BLE Reliability** - SQLite query optimisation, startup lazy-init, BLE auth retry (SEED-001)
 - [x] **Phase 79: Polish & Deferred Features** - Debug tab 3-tabs, Support rename, Breathe haptics, live strain accumulator
-- [ ] **Phase 80: Resting HR Floor Filter** - Fix anomalously low resting HR values from historical sync (issue #130)
-- [ ] **Phase 81: Battery Level Fix** - Fix battery always showing 100% for Gen4/Gen5 devices (issue #149, SEED-002)
-- [ ] **Phase 82: HealthKit Import Persistence** - Persist HealthKit imported data to SQLite (issue #150)
+- [x] **Phase 80: Resting HR Floor Filter** - Fix anomalously low resting HR values from historical sync (issue #130)
+- [x] **Phase 81: Battery Level Fix** - Fix battery always showing 100% for Gen4/Gen5 devices (issue #149, SEED-002)
+- [x] **Phase 82: HealthKit Import Persistence** - Persist HealthKit imported data to SQLite (issue #150)
 
 ## Phase Details
 
@@ -240,18 +240,6 @@ Known deferred: BLE5-01/02 (hardware-gated, real WHOOP 5.0 device), HAP-04 (RE-g
   2. HealthKit data is written to the appropriate SQLite tables (apple_daily or metric_series) via the Rust bridge
 **Plans**: TBD
 
-### Phase 83: Protocol Architecture Refactor — Gen4/Gen5 Capability Model
-**Goal**: Separate device identity from wire protocol from device capabilities in the Rust core and Swift client; eliminate string-based protocol dispatch; move frame reassembly entirely to Rust; normalise DB device_type values
-**Depends on**: Phase 77
-**Requirements**: ARCH-PROTO-01
-**Success Criteria** (what must be TRUE):
-  1. `DeviceKind` (identity) and `WireProtocol` (frame parsing) are distinct types in `protocol.rs`; `DeviceCapabilities` struct derived from `DeviceKind` and used by the bridge for feature dispatch
-  2. Frame reassembly (header-length detection, CRC validation) runs entirely in Rust — Swift sends raw notification bytes and receives parsed frames, no `rustDeviceType == "GEN4"` string comparisons in Swift
-  3. `activeDeviceGeneration` replaced by `connectedCapabilities: DeviceCapabilities?` in `GooseBLEClient`; all `if activeDeviceGeneration == .gen4` call sites replaced by capability checks
-  4. DB migration: rows with `device_type IN ('MAVERICK', 'PUFFIN')` updated to `'GOOSE'`; `parse_device_type` continues to accept legacy strings for backward compat
-  5. Existing Rust and Swift tests pass without modification; `cargo test` clean
-**Plans**: TBD
-
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -281,9 +269,9 @@ Known deferred: BLE5-01/02 (hardware-gated, real WHOOP 5.0 device), HAP-04 (RE-g
 | 77. Codebase Audit | v11.0 | 3/3 | Complete | 2026-06-14 |
 | 78. Performance & BLE Reliability | v11.0 | 3/3 | Complete | 2026-06-14 |
 | 79. Polish & Deferred Features | v11.0 | 4/4 | Complete | 2026-06-14 |
-| 80. Resting HR Floor Filter | v11.0 | 0/TBD | Not started | - |
-| 81. Battery Level Fix | v11.0 | 0/TBD | Not started | - |
-| 82. HealthKit Import Persistence | v11.0 | 0/TBD | Not started | - |
+| 80. Resting HR Floor Filter | v11.0 | 1/1 | Complete | 2026-06-14 |
+| 81. Battery Level Fix | v11.0 | 1/1 | Complete | 2026-06-14 |
+| 82. HealthKit Import Persistence | v11.0 | 1/1 | Complete | 2026-06-14 |
 
 ## Backlog
 
