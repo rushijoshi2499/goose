@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v12.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 83-01-PLAN.md
-last_updated: "2026-06-14T15:18:01.560Z"
-last_activity: 2026-06-14 -- Completed Plan 04 (Swift WireProtocol types + connectedCapabilities)
+stopped_at: Completed 83-06-PLAN.md (Phase 83 Complete)
+last_updated: "2026-06-14T15:45:22.000Z"
+last_activity: 2026-06-14 -- Phase 83 verified and complete
 progress:
   total_phases: 9
-  completed_phases: 0
+  completed_phases: 2
   total_plans: 6
-  completed_plans: 5
-  percent: 0
+  completed_plans: 6
+  percent: 22
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-13)
 
 **Core value:** The user captures WHOOP data on iPhone and it is automatically persisted on their personal server — without depending on external infrastructure. Metrics align with WHOOP from the same raw data.
-**Current focus:** Phase 83 — protocol-architecture-refactor-gen4-gen5-capability-model
+**Current focus:** Phase 84 — Gen4 Battery
 
 ## Current Position
 
-Phase: 83 (protocol-architecture-refactor-gen4-gen5-capability-model) — EXECUTING
+Phase: 83 (protocol-architecture-refactor-gen4-gen5-capability-model) — COMPLETE
 Plan: 6 of 6
-Status: Ready to execute
-Last activity: 2026-06-14 -- Completed Plan 04 (Swift WireProtocol types + connectedCapabilities)
+Status: Phase 83 complete — verified 2026-06-14
+Last activity: 2026-06-14 -- Phase 83 verified and complete
 
-Progress: [Phase 83 of 91] ░░░░░░░░░░ 0% complete
+Progress: [Phase 84 of 91] ░░░░░░░░░░ 22% complete
 
 ## Performance Metrics
 
@@ -42,7 +42,7 @@ Progress: [Phase 83 of 91] ░░░░░░░░░░ 0% complete
 
 **Recent Trend:**
 
-- Last 5 plans: Phase 82 P01, Phase 81 P01, Phase 80 P01, Phase 79 P02, Phase 79 P01
+- Last 5 plans: Phase 83 P06, Phase 83 P05, Phase 83 P04, Phase 83 P03, Phase 83 P02
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -68,10 +68,10 @@ Recent decisions affecting current work:
 - v11.0 roadmap: Phase 77 (audit) follows Phase 76 so it covers the freshest codebase state including all PR integrations
 - v11.0 roadmap: Phase 78 (PERF + BLE-REL) after audit so any performance findings from audit feed directly into the optimisation work
 - v11.0 roadmap: Phase 79 (polish + deferred) last — DEF-01/DEF-02 complete HAP-02/DATA-02 which were explicitly deferred from v10.0
-- [Phase ?]: 83-01: WireProtocol in protocol.rs (co-located with DeviceType); DeviceKind and DeviceCapabilities in new capabilities.rs (avoids growing bridge.rs before Phase 86 split)
+- [Phase 83-01]: WireProtocol in protocol.rs (co-located with DeviceType); DeviceKind and DeviceCapabilities in new capabilities.rs (avoids growing bridge.rs before Phase 86 split)
 - [Phase 83-02]: Migration step 22 unit tests placed in internal #[cfg(test)] module in store.rs (not store_tests.rs) — private `conn` field access required for WHERE-filtered COUNT queries
 - [Phase 83-04]: WireProtocol/HistoricalSyncKind use String,Decodable with explicit raw values matching Rust JSON snake_case — avoids custom init(from:); whoopGenerationFromCapabilities() uses internal visibility (not private) so sibling extension files can call it
-- [Phase ?]: Wire-level guards use wireProtocol; historical-protocol guards use historicalSync — separation matches plan D-08 design intent
+- [Phase 83]: Wire-level guards use wireProtocol; historical-protocol guards use historicalSync — separation matches plan D-08 design intent
 
 ### Roadmap Evolution
 
@@ -83,7 +83,7 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-- None — Phase 83 is the first v12.0 plan to write
+- None
 
 ### Blockers/Concerns
 
@@ -109,8 +109,6 @@ Items deferred from previous milestones:
 | verification_gap | Phase 70 — 70-VERIFICATION.md | human_needed | v10.0 close |
 | quick_task | historical-sync-direct-write | missing | v10.0 close |
 | quick_task | fix-imu-step-count | missing | v10.0 close |
-| Phase 83 P01 | 1800 | 2 tasks | 3 files |
-| Phase 83 P05 | 18 | 2 tasks | 9 files |
 
 ## Quick Tasks Completed
 
@@ -121,12 +119,12 @@ Items deferred from previous milestones:
 
 ## Session Continuity
 
-Last session: 2026-06-14T15:17:45.584Z
-Stopped at: Completed 83-01-PLAN.md
+Last session: 2026-06-14T15:45:22.000Z
+Stopped at: Completed 83-06-PLAN.md (Phase 83 Complete)
 Resume file: None
-Next action: Run /gsd-plan-phase 83 to begin Protocol Architecture Refactor (83-CONTEXT.md already complete — no research step needed)
+Next action: Run /gsd-plan-phase 84 to begin Gen4 Battery (depends on Phase 83 DeviceCapabilities — now complete)
 
 ## Operator Next Steps
 
-- Run /gsd-plan-phase 83 to start Phase 83 (Protocol Architecture Refactor — all design decisions in 83-CONTEXT.md)
-- Phase 85 (Rust Crash Safety) is independent and can be planned in parallel with Phase 83/84 if desired
+- Run /gsd-plan-phase 84 to start Phase 84 (Gen4 Battery — DeviceCapabilities.battery_via_event48 / battery_via_cmd26 now available from Phase 83)
+- Phase 85 (Rust Crash Safety) is independent and can be planned in parallel with Phase 84 if desired

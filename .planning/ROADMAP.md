@@ -186,7 +186,7 @@ Known deferred: Ph74/75 physical-device BLE tests (hardware gate); ble-api-misus
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 83-06-PLAN.md — Phase gate: cargo test --locked full suite + iOS build verification (Wave 4)
+- [x] 83-06-PLAN.md — Phase gate: cargo test --locked full suite + iOS build verification (Wave 4)
 
 **Cross-cutting constraints:**
 
@@ -343,8 +343,8 @@ Plans:
 - [x] 83-02-PLAN.md — DB migration step 22: MAVERICK/PUFFIN → GOOSE, CURRENT_SCHEMA_VERSION bump (Wave 1)
 - [x] 83-03-PLAN.md — Bridge: device.capabilities method, BRIDGE_METHODS update, parse_device_type rejection (Wave 2)
 - [x] 83-04-PLAN.md — Swift types: WireProtocol enum, DeviceCapabilities, connectedCapabilities, GATT discovery call (Wave 3)
-- [ ] 83-05-PLAN.md — Swift guards: all 23 activeDeviceGeneration + 11 rustDeviceType sites across 9 files (Wave 3)
-- [ ] 83-06-PLAN.md — Phase gate: cargo test --locked full suite + iOS build verification (Wave 4)
+- [x] 83-05-PLAN.md — Swift guards: all 23 activeDeviceGeneration + 11 rustDeviceType sites across 9 files (Wave 3)
+- [x] 83-06-PLAN.md — Phase gate: cargo test --locked full suite + iOS build verification (Wave 4)
 
 **Context**: `.planning/phases/83-protocol-architecture-refactor-gen4-gen5-capability-model/83-CONTEXT.md`
 
@@ -466,7 +466,7 @@ Plans:
 | 61–65 | v9.0 | Complete | 2026-06-11 |
 | 67–73 | v10.0 | Complete | 2026-06-13 |
 | 74–82 | v11.0 | Complete | 2026-06-14 |
-| 83 | 5/6 | In Progress|  |
+| 83 | 6/6 | Complete   | 2026-06-14 |
 | 84 | v12.0 | Not started | — |
 | 85 | v12.0 | Not started | — |
 | 86 | v12.0 | Not started | — |
@@ -511,7 +511,7 @@ Promoted to Phase 18: Coach Multi-Provider.
 **Goal:** Align Goose's BLE sync architecture with the WHOOP app's band-first model, eliminating the need for continuous overnight BLE capture. The band stores data onboard; the app fetches it opportunistically on foreground and via silent push, exactly as WHOOP does.
 
 **Depends on:** Phase 59
-**Plans:** 5/6 plans executed
+**Plans:** 6/6 plans complete
 Plans:
 **Wave 1**
 
