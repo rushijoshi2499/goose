@@ -1,16 +1,15 @@
 ---
 gsd_state_version: 1.0
 milestone: v12.0
-milestone_name: milestone
+milestone_name: Code Health & Protocol Foundation
 status: executing
-stopped_at: Phase 84 context gathered
-last_updated: "2026-06-14T16:40:02.653Z"
-last_activity: 2026-06-14 -- Phase 84 execution started
+last_updated: "2026-06-14T16:49:39.835Z"
+last_activity: 2026-06-14
 progress:
   total_phases: 9
   completed_phases: 1
   total_plans: 9
-  completed_plans: 7
+  completed_plans: 8
   percent: 11
 ---
 
@@ -26,11 +25,11 @@ See: .planning/PROJECT.md (updated 2026-06-13)
 ## Current Position
 
 Phase: 84 (gen4-battery) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
-Last activity: 2026-06-14 -- Phase 84 execution started
+Last activity: 2026-06-14
 
-Progress: [Phase 84 of 91] ░░░░░░░░░░ 22% complete
+Progress: [█████████░] 89%
 
 ## Performance Metrics
 
@@ -72,6 +71,7 @@ Recent decisions affecting current work:
 - [Phase 83-02]: Migration step 22 unit tests placed in internal #[cfg(test)] module in store.rs (not store_tests.rs) — private `conn` field access required for WHERE-filtered COUNT queries
 - [Phase 83-04]: WireProtocol/HistoricalSyncKind use String,Decodable with explicit raw values matching Rust JSON snake_case — avoids custom init(from:); whoopGenerationFromCapabilities() uses internal visibility (not private) so sibling extension files can call it
 - [Phase 83]: Wire-level guards use wireProtocol; historical-protocol guards use historicalSync — separation matches plan D-08 design intent
+- [Phase ?]: [Phase 84-02]: Event-48 battery dispatch gated on batteryViaEvent48 == true AND wireProtocol == .gen4 — Gen5 shares the batteryViaEvent48 flag so wireProtocol guard is mandatory
 
 ### Roadmap Evolution
 
@@ -109,6 +109,7 @@ Items deferred from previous milestones:
 | verification_gap | Phase 70 — 70-VERIFICATION.md | human_needed | v10.0 close |
 | quick_task | historical-sync-direct-write | missing | v10.0 close |
 | quick_task | fix-imu-step-count | missing | v10.0 close |
+| Phase 84-gen4-battery P02 | 12 | 2 tasks | 2 files |
 
 ## Quick Tasks Completed
 
@@ -119,9 +120,9 @@ Items deferred from previous milestones:
 
 ## Session Continuity
 
-Last session: 2026-06-14T16:40:02.644Z
-Stopped at: Phase 84 context gathered
-Resume file: .planning/phases/84-gen4-battery/84-CONTEXT.md
+Last session: 2026-06-14T16:49:39.830Z
+Stopped at: Completed 84-02-PLAN.md
+Resume file: None
 Next action: Run /gsd-plan-phase 84 to begin Gen4 Battery (depends on Phase 83 DeviceCapabilities — now complete)
 
 ## Operator Next Steps

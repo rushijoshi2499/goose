@@ -218,7 +218,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 84-02-PLAN.md — Swift Event-48: event48BatteryPct compact/interpretation fields + Gen4-gated dispatch via applyBatteryLevel (BAT-01)
+- [x] 84-02-PLAN.md — Swift Event-48: event48BatteryPct compact/interpretation fields + Gen4-gated dispatch via applyBatteryLevel (BAT-01)
 - [ ] 84-03-PLAN.md — Swift Cmd 26: BatteryCommandKind, auto-send on Gen4 connection, handleCmd26BatteryResponse via Rust bridge (BAT-02)
 
 ---
@@ -374,7 +374,7 @@ Plans:
 
 **Wave 1**
 
-- [ ] 84-01-PLAN.md — Rust: parse_event48_battery + parse_cmd26_battery, two bridge methods, event48_battery_pct compact field, unit tests (BAT-01, BAT-02)
+- [x] 84-01-PLAN.md — Rust: parse_event48_battery + parse_cmd26_battery, two bridge methods, event48_battery_pct compact field, unit tests (BAT-01, BAT-02)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -487,7 +487,7 @@ Plans:
 | 67–73 | v10.0 | Complete | 2026-06-13 |
 | 74–82 | v11.0 | Complete | 2026-06-14 |
 | 83 | 6/6 | Complete   | 2026-06-14 |
-| 84 | 1/3 | In Progress|  |
+| 84 | 2/3 | In Progress|  |
 | 85 | v12.0 | Not started | — |
 | 86 | v12.0 | Not started | — |
 | 87 | v12.0 | Not started | — |
