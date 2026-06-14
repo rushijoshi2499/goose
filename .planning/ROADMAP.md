@@ -209,7 +209,17 @@ Known deferred: Ph74/75 physical-device BLE tests (hardware gate); ble-api-misus
   2. Cmd 26 response is parsed: payload[2..4] u16 LE / 10 with count ≥ 4 guard; used as fallback when Event-48 has not yet been received in the session
   3. `cargo test --locked` includes at least one test for each parsing path (valid payload, boundary guard, fallback trigger)
 
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+
+**Wave 1**
+
+- [ ] 84-01-PLAN.md — Rust: parse_event48_battery + parse_cmd26_battery, two bridge methods, event48_battery_pct compact field, unit tests (BAT-01, BAT-02)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 84-02-PLAN.md — Swift Event-48: event48BatteryPct compact/interpretation fields + Gen4-gated dispatch via applyBatteryLevel (BAT-01)
+- [ ] 84-03-PLAN.md — Swift Cmd 26: BatteryCommandKind, auto-send on Gen4 connection, handleCmd26BatteryResponse via Rust bridge (BAT-02)
 
 ---
 
@@ -359,7 +369,17 @@ Plans:
   2. Cmd 26 response is parsed: payload[2..4] u16 LE / 10 with count ≥ 4 guard; used as fallback when Event-48 has not yet been received in the session
   3. `cargo test --locked` includes at least one test for each parsing path (valid payload, boundary guard, fallback trigger)
 
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+
+**Wave 1**
+
+- [ ] 84-01-PLAN.md — Rust: parse_event48_battery + parse_cmd26_battery, two bridge methods, event48_battery_pct compact field, unit tests (BAT-01, BAT-02)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 84-02-PLAN.md — Swift Event-48: event48BatteryPct compact/interpretation fields + Gen4-gated dispatch via applyBatteryLevel (BAT-01)
+- [ ] 84-03-PLAN.md — Swift Cmd 26: BatteryCommandKind, auto-send on Gen4 connection, handleCmd26BatteryResponse via Rust bridge (BAT-02)
 
 ### Phase 85: Rust Crash Safety
 
