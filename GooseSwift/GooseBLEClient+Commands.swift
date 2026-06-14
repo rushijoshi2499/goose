@@ -1010,7 +1010,14 @@ extension GooseBLEClient {
               args: ["device_kind": kindString])
             let capData = try JSONSerialization.data(withJSONObject: result)
             let caps = try JSONDecoder().decode(DeviceCapabilities.self, from: capData)
-            DispatchQueue.main.async { self.connectedCapabilities = caps }
+            DispatchQueue.main.async {
+              self.connectedCapabilities = caps
+              if caps.batteryViaCMD26, caps.wireProtocol == .gen4 {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+                  self?.sendCmd26BatteryRequest()
+                }
+              }
+            }
           } catch {
             let gen = kindString
             DispatchQueue.main.async {
