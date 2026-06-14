@@ -4,7 +4,6 @@ use std::{
     fs,
     os::raw::c_char,
     path::{Path, PathBuf},
-    ptr,
     time::Instant,
 };
 
@@ -4658,6 +4657,9 @@ fn sleep_staging_bridge(args: SleepStagingBridgeArgs) -> GooseResult<serde_json:
 
 /// Format a Unix timestamp (seconds, f64) as an ISO-8601 UTC string for SQLite comparison.
 fn chrono_from_unix(ts: f64) -> String {
+    // Clamp to epoch; callers should validate before this point, but a negative ts
+    // would wrap secs as u64 to ~u64::MAX producing a wildly incorrect date string.
+    let ts = ts.max(0.0);
     let secs = ts as i64;
     let nanos = ((ts - secs as f64) * 1_000_000_000.0) as u32;
     let dt = std::time::UNIX_EPOCH + std::time::Duration::new(secs as u64, nanos);
@@ -9801,10 +9803,12 @@ fn json_to_c_string(value: serde_json::Value) -> *mut c_char {
 }
 
 fn string_to_c_string(value: String) -> *mut c_char {
-    match CString::new(value) {
-        Ok(value) => value.into_raw(),
-        Err(_) => ptr::null_mut(),
-    }
+    // Sanitize any interior null bytes before handing to CString; after this
+    // replacement the string is guaranteed null-free so the unwrap is sound.
+    let safe = value.replace('\0', "\\u0000");
+    CString::new(safe)
+        .expect("sanitized string cannot contain null bytes")
+        .into_raw()
 }
 
 fn serialize_response(response: &BridgeResponse) -> String {
