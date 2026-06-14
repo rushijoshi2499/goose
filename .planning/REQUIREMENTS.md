@@ -13,8 +13,8 @@
 
 ### Protocol Architecture (SEED-003)
 
-- [ ] **PROTO-01**: `WireProtocol { Gen4, Gen5 }` Rust enum exposed to Swift; replaces 17 `rustDeviceType == "GEN4"` string comparisons in GooseAppModel+NotificationPipeline.swift and GooseBLEClient extension files
-- [ ] **PROTO-02**: `DeviceKind { Whoop4, Whoop5, HrMonitor }` + `DeviceCapabilities` struct in Rust; bridge method `device.capabilities(device_kind)` called after GATT discovery; cached as `connectedCapabilities: DeviceCapabilities?` in GooseBLEClient
+- [x] **PROTO-01**: `WireProtocol { Gen4, Gen5 }` Rust enum exposed to Swift; replaces 17 `rustDeviceType == "GEN4"` string comparisons in GooseAppModel+NotificationPipeline.swift and GooseBLEClient extension files
+- [x] **PROTO-02**: `DeviceKind { Whoop4, Whoop5, HrMonitor }` + `DeviceCapabilities` struct in Rust; bridge method `device.capabilities(device_kind)` called after GATT discovery; cached as `connectedCapabilities: DeviceCapabilities?` in GooseBLEClient
 - [ ] **PROTO-03**: DB migration normalises MAVERICK/PUFFIN device_type → GOOSE on upgrade; `parse_device_type()` rejects MAVERICK/PUFFIN with error; `activeDeviceGeneration: WhoopGeneration` replaced by `connectedCapabilities` guards in Swift
 
 ### Architecture — Rust (SEED-004 Fase A+B)
@@ -62,8 +62,8 @@
 |-------------|-------|--------|
 | BAT-01 | Phase 84 | Pending |
 | BAT-02 | Phase 84 | Pending |
-| PROTO-01 | Phase 83 | Pending |
-| PROTO-02 | Phase 83 | Pending |
+| PROTO-01 | Phase 83 | Complete |
+| PROTO-02 | Phase 83 | Complete |
 | PROTO-03 | Phase 83 | Pending |
 | ARCH-01 | Phase 86 | Pending |
 | ARCH-02 | Phase 87 | Pending |
@@ -76,6 +76,7 @@
 | COMM-03 | Phase 91 | Pending |
 
 **Coverage:**
+
 - v1 requirements: 14 total
 - Mapped to phases: 14/14 ✓
 - Unmapped: 0 ✓

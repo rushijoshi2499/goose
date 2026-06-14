@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v12.0
 milestone_name: milestone
-status: planning
-stopped_at: v12.0 roadmap created (Phases 83-91)
-last_updated: "2026-06-14T11:35:37.824Z"
-last_activity: 2026-06-14 — v12.0 roadmap created (Phases 83-91)
+status: executing
+stopped_at: Completed 83-01-PLAN.md
+last_updated: "2026-06-14T12:23:47.907Z"
+last_activity: 2026-06-14 -- Phase 83 execution started
 progress:
   total_phases: 9
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 6
+  completed_plans: 1
   percent: 0
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-13)
 
 **Core value:** The user captures WHOOP data on iPhone and it is automatically persisted on their personal server — without depending on external infrastructure. Metrics align with WHOOP from the same raw data.
-**Current focus:** v12.0 active — Phase 83 Protocol Architecture Refactor is next
+**Current focus:** Phase 83 — protocol-architecture-refactor-gen4-gen5-capability-model
 
 ## Current Position
 
-Phase: 83 — Protocol Architecture Refactor
-Plan: —
-Status: Ready for planning (83-CONTEXT.md complete; all design decisions finalised)
-Last activity: 2026-06-14 — v12.0 roadmap created (Phases 83-91)
+Phase: 83 (protocol-architecture-refactor-gen4-gen5-capability-model) — EXECUTING
+Plan: 2 of 6
+Status: Ready to execute
+Last activity: 2026-06-14 -- Phase 83 execution started
 
 Progress: [Phase 83 of 91] ░░░░░░░░░░ 0% complete
 
@@ -68,6 +68,7 @@ Recent decisions affecting current work:
 - v11.0 roadmap: Phase 77 (audit) follows Phase 76 so it covers the freshest codebase state including all PR integrations
 - v11.0 roadmap: Phase 78 (PERF + BLE-REL) after audit so any performance findings from audit feed directly into the optimisation work
 - v11.0 roadmap: Phase 79 (polish + deferred) last — DEF-01/DEF-02 complete HAP-02/DATA-02 which were explicitly deferred from v10.0
+- [Phase ?]: 83-01: WireProtocol in protocol.rs (co-located with DeviceType); DeviceKind and DeviceCapabilities in new capabilities.rs (avoids growing bridge.rs before Phase 86 split)
 
 ### Roadmap Evolution
 
@@ -105,6 +106,7 @@ Items deferred from previous milestones:
 | verification_gap | Phase 70 — 70-VERIFICATION.md | human_needed | v10.0 close |
 | quick_task | historical-sync-direct-write | missing | v10.0 close |
 | quick_task | fix-imu-step-count | missing | v10.0 close |
+| Phase 83 P01 | 1800 | 2 tasks | 3 files |
 
 ## Quick Tasks Completed
 
@@ -115,8 +117,8 @@ Items deferred from previous milestones:
 
 ## Session Continuity
 
-Last session: 2026-06-14
-Stopped at: v12.0 roadmap created (Phases 83-91)
+Last session: 2026-06-14T12:23:47.890Z
+Stopped at: Completed 83-01-PLAN.md
 Resume file: None
 Next action: Run /gsd-plan-phase 83 to begin Protocol Architecture Refactor (83-CONTEXT.md already complete — no research step needed)
 
