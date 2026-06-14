@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v11.0
-milestone_name: PR Integration, Code Health & App Polish
-status: shipped
-last_updated: "2026-06-14T01:00:00.000Z"
+milestone: v12.0
+milestone_name: Code Health & Protocol Foundation
+status: planning
+last_updated: "2026-06-14T01:59:07.453Z"
 last_activity: 2026-06-14
 progress:
-  total_phases: 9
-  completed_phases: 6
-  total_plans: 8
-  completed_plans: 8
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -24,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-06-13)
 
 ## Current Position
 
-Phase: 80 — Resting HR Floor Filter
+Phase: Not started (defining requirements)
 Plan: —
-Status: Phases 74-79 complete, phases 80-82 added from issue backlog — ready for Phase 80
-Last activity: 2026-06-14 — Phase 79 complete: Debug 3 tabs, Logs & Export, haptic Breathe, live strain
+Status: Defining requirements
+Last activity: 2026-06-14 — Milestone v12.0 started
 
 ## Performance Metrics
 
