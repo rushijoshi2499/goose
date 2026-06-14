@@ -20,7 +20,7 @@
         {
           "version": "10.0",
           "date": "2026-06-14",
-          "localizedDescription": "Release v10.0",
+          "localizedDescription": "- WHOOP 5.0 R22 realtime + v18 historical protocol\n- BLE manager refactor + data validator\n- Haptic buzz primitive + BreatheView\n- Coach VOW nudges, Interval Timer, Metric Explorer, notifications\n- Stress/ANS, Trends, Manual Workout screens\n- Smart alarm UI + wake-window RE-gated stub\n- Schema v20 (4 new SQLite tables)",
           "downloadURL": "https://github.com/tigercraft4/goose/releases/download/v10.0/GooseSwift-v10.0-unsigned.ipa",
           "size": 12398907
         },
