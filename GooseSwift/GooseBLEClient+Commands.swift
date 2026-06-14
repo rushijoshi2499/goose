@@ -259,7 +259,7 @@ extension GooseBLEClient {
     }
 
     let sequence = nextClockSequence()
-    let frame = activeDeviceGeneration.buildCommandFrame(
+    let frame = whoopGenerationFromCapabilities().buildCommandFrame(
       sequence: sequence,
       command: kind.commandNumber,
       data: kind.payload
@@ -358,7 +358,7 @@ extension GooseBLEClient {
     }
 
     let sequence = nextAlarmSequence()
-    let frame = activeDeviceGeneration.buildCommandFrame(
+    let frame = whoopGenerationFromCapabilities().buildCommandFrame(
       sequence: sequence,
       command: kind.commandNumber,
       data: kind.payload
@@ -493,7 +493,7 @@ extension GooseBLEClient {
     }
     let sequence = nextSensorCommandSequence
     nextSensorCommandSequence = nextSensorCommandSequence == UInt8.max ? 180 : nextSensorCommandSequence + 1
-    let frame = activeDeviceGeneration.buildCommandFrame(
+    let frame = whoopGenerationFromCapabilities().buildCommandFrame(
       sequence: sequence,
       command: command.commandNumber,
       data: command.payload
@@ -520,6 +520,17 @@ extension GooseBLEClient {
       title: "sensor.command.sent",
       body: "\(command.name) seq=\(sequence) command=\(command.commandNumber) payload=\(Data(command.payload).hexString) writeType=\(writeTypeName(writeType)) frame=\(frame.hexString)"
     )
+  }
+
+  func whoopGenerationFromCapabilities() -> WhoopGeneration {
+    guard let caps = connectedCapabilities else {
+      // connectedCapabilities is nil when disconnected or if the device.capabilities
+      // bridge call failed. Log the nil access and return .gen5 as a conservative
+      // fallback; generation-specific commands should not be sent in this state.
+      os_log(.error, "[BLE] whoopGenerationFromCapabilities called with nil connectedCapabilities — generation unknown, defaulting to gen5")
+      return .gen5
+    }
+    return caps.wireProtocol == .gen4 ? .gen4 : .gen5
   }
 
   func failClockCommand(_ message: String) {
@@ -983,7 +994,15 @@ extension GooseBLEClient {
     for characteristic in characteristics {
       if shouldUseCommandCharacteristic(characteristic) {
         commandCharacteristic = characteristic
-        activeDeviceGeneration = WhoopGeneration.detect(from: characteristic)
+        let detectedGeneration = WhoopGeneration.detect(from: characteristic)
+        let deviceKindString = detectedGeneration == .gen4 ? "WHOOP4" : "WHOOP5"
+        if let result = try? historicalDirectWriteBridge.request(
+              method: "device.capabilities",
+              args: ["device_kind": deviceKindString]),
+           let capData = try? JSONSerialization.data(withJSONObject: result),
+           let caps = try? JSONDecoder().decode(DeviceCapabilities.self, from: capData) {
+          connectedCapabilities = caps
+        }
         activeDescriptor = characteristic.uuid.uuidString.lowercased().hasPrefix("61080002")
           ? .whoopGen4 : .whoopGen5
         record(

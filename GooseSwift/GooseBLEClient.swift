@@ -272,7 +272,9 @@ import OSLog
   /// `dispatchCoreBluetoothDelegateToMainIfNeeded` before touching this
   /// property; UI callers (SwiftUI buttons, @MainActor app model paths)
   /// are already on main.
-  var activeDeviceGeneration: WhoopGeneration = .gen5
+  // connectedCapabilities is nil when disconnected; set by processDiscoveredCharacteristics
+  // after a successful device.capabilities bridge call.
+  var connectedCapabilities: DeviceCapabilities?
   var activeDescriptor: WearableDescriptor?
   var debugMenuCharacteristic: CBCharacteristic?
   var batteryLevelCharacteristic: CBCharacteristic?
