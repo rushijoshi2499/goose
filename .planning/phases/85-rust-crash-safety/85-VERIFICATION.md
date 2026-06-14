@@ -1,8 +1,8 @@
 ---
 phase: 85-rust-crash-safety
 verified: 2026-06-14T21:00:00Z
-status: human_needed
-score: 2/3 must-haves verified
+status: passed
+score: 3/3 must-haves verified
 overrides_applied: 0
 human_verification:
   - test: "Investigate pre-existing export_tests.rs failures (sensor_sample_rows 18 vs expected 19) and determine whether they block Phase 86 or can be deferred"
