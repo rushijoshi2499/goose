@@ -7,6 +7,8 @@
 
 # Goose - Local Companion for WHOOP Devices
 
+[![Discord](https://img.shields.io/discord/EyZE6gzAF2?label=Discord&logo=discord&logoColor=white)](https://discord.gg/EyZE6gzAF2)
+
 > **Active fork of [b-nnett/goose](https://github.com/b-nnett/goose).** This fork extends the original with a self-hosted FastAPI + TimescaleDB server, automatic biometric upload from iOS, and an expanded health metrics pipeline. The upstream project appears inactive; development continues here.
 
 **Alpha proof of concept. This build is for developers to evaluate whether a project of this scope is viable. It is not ready to use as an app for tracking personal health data yet.**
@@ -266,7 +268,7 @@ Guides and reference docs:
 
 This project moves quickly, so small focused changes are easiest to review.
 
-Want to talk to other contributors? [Join the discussion on GitHub](https://github.com/tigercraft4/goose/discussions).
+Want to talk to other contributors? [Join the Discord](https://discord.gg/EyZE6gzAF2) or [join the discussion on GitHub](https://github.com/tigercraft4/goose/discussions).
 
 - Keep changes close to the feature or bug you are working on.
 - Match the existing SwiftUI style before introducing new patterns.
