@@ -126,11 +126,11 @@ jobs:
           RELEASE_TAG: ${{ needs.build-ipa.outputs.tag }}
         run: |
           TAG="$RELEASE_TAG"
-          PREV_TAG=$(git tag --sort=version:refname | grep "^v" | awk "/${TAG}/{found=1; next} found{print; exit}" | head -1)
-          PREV_TAG_BEFORE=$(git tag --sort=version:refname | grep "^v" | awk "p==1{print; exit} /${TAG}/{p=1}" | head -1)
+          # Find the tag immediately before TAG in version order
+          PREV_TAG=$(git tag --sort=version:refname | grep "^v" | awk -v tag="$TAG" '$0==tag{print prev; exit} {prev=$0}')
 
-          if [ -n "$PREV_TAG_BEFORE" ]; then
-            NOTES=$(git log "${PREV_TAG_BEFORE}..${TAG}" --pretty=format:"- %s" --no-merges)
+          if [ -n "$PREV_TAG" ]; then
+            NOTES=$(git log "${PREV_TAG}..${TAG}" --pretty=format:"- %s" --no-merges)
           else
             NOTES=$(git log "${TAG}" --pretty=format:"- %s" --no-merges | head -30)
           fi
