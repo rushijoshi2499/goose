@@ -429,22 +429,29 @@ fn parse_event48_battery_from_data(data: &[u8]) -> Option<u16> {
 
 /// Parse Cmd 26 (GET_BATTERY_LEVEL) response payload.
 ///
-/// Byte layout (BAT-02):
-///   0     command number (26 / 0x1a)
-///   1     sequence
-///   2-3   battery raw u16 LE
-///   4     result code (1 = SUCCESS)
+/// Byte layout of the full Gen4 COMMAND_RESPONSE payload (BAT-02):
+///   [0]   packet_type (36 = COMMAND_RESPONSE)
+///   [1]   response sequence
+///   [2]   command identifier (26 = GET_BATTERY_LEVEL)
+///   [3]   origin_sequence from the sent command
+///   [4]   result code (1 = SUCCESS)
+///   [5-6] battery raw u16 LE (data body starts here)
 ///
-/// Guard (D-05): payload.len() >= 4 before reading bytes[2..4].
+/// Guard (D-05): payload.len() >= 7 before reading bytes[5..7].
 fn parse_cmd26_battery(payload: &[u8]) -> GooseResult<u16> {
-    if payload.len() < 4 {
+    if payload.len() < 7 {
         return Err(GooseError::message(format!(
-            "cmd26 payload too short: {} < 4",
+            "cmd26 payload too short for data body: {} < 7",
             payload.len()
         )));
     }
-    // payload[2..4] u16 LE / 10 (BAT-02)
-    let raw = u16::from(payload[2]) | u16::from(payload[3]) << 8;
+    // payload[5..7]: data body, battery raw u16 LE (BAT-02)
+    let raw = u16::from(payload[5]) | u16::from(payload[6]) << 8;
+    if raw > 1000 {
+        return Err(GooseError::message(format!(
+            "cmd26 battery raw={raw} exceeds sanity guard 1000"
+        )));
+    }
     Ok(raw / 10)
 }
 
@@ -3251,13 +3258,17 @@ fn compact_parsed_frame_summary(parsed: &ParsedFrame) -> serde_json::Value {
                 .map(|value| value.to_string())
                 .unwrap_or_else(|| "?".to_string());
             let event_name_text = event_name.as_deref().unwrap_or("unknown");
-            // event48_battery_pct: decode the data body hex and read raw u16 at data-body
-            // offset 5 (== absolute payload offset 17; see parse_event48_battery_from_data).
-            // Null on any failure — the summary builder never propagates errors (matches
-            // the r22_battery_pct pattern in the DataPacket branch above).
-            let event48_battery_pct: Option<u16> = hex::decode(data_hex)
-                .ok()
-                .and_then(|data| parse_event48_battery_from_data(&data));
+            // event48_battery_pct: only BATTERY_LEVEL events (event_id == 3) carry a battery
+            // raw u16 at data-body offset 5. Other Event-48 types (BOOT=15, CHARGING_ON=7,
+            // etc.) have arbitrary bytes at that offset. Null on any failure — the summary
+            // builder never propagates errors (matches r22_battery_pct pattern above).
+            let event48_battery_pct: Option<u16> = if *event_id == Some(3) {
+                hex::decode(data_hex)
+                    .ok()
+                    .and_then(|data| parse_event48_battery_from_data(&data))
+            } else {
+                None
+            };
             json!({
                 "packet_type": parsed.packet_type,
                 "packet_type_name": packet_type_name,
@@ -11032,15 +11043,18 @@ mod battery_parse_tests {
         v
     }
 
-    // Helper: build a Cmd 26 response payload with a u16 LE at bytes [2..4].
+    // Helper: build a real Gen4 COMMAND_RESPONSE payload for Cmd 26 (GET_BATTERY_LEVEL).
+    // Layout: [36, origin_seq+1, 26, origin_seq, result_code, raw_lo, raw_hi, ...]
+    // `len` is the total payload length (minimum 7 to include the battery raw u16).
     fn cmd26_payload(len: usize, raw: u16) -> Vec<u8> {
         let mut v = vec![0u8; len];
-        if len > 2 {
-            v[2] = (raw & 0xff) as u8;
-        }
-        if len > 3 {
-            v[3] = (raw >> 8) as u8;
-        }
+        v[0] = 36; // COMMAND_RESPONSE packet type
+        if len > 1 { v[1] = 49; } // response sequence (origin_seq+1; origin_seq=48)
+        if len > 2 { v[2] = 26; } // command identifier
+        if len > 3 { v[3] = 48; } // origin_sequence
+        if len > 4 { v[4] = 1; }  // result code = SUCCESS
+        if len > 5 { v[5] = (raw & 0xff) as u8; }
+        if len > 6 { v[6] = (raw >> 8) as u8; }
         v
     }
 
@@ -11080,21 +11094,21 @@ mod battery_parse_tests {
         );
     }
 
-    // BAT-02 valid: raw=850 at payload[2..4] → battery_pct=85.
+    // BAT-02 valid: real COMMAND_RESPONSE layout, raw=850 at payload[5..7] → battery_pct=85.
     #[test]
     fn cmd26_valid_85() {
-        let payload = cmd26_payload(5, 850);
+        let payload = cmd26_payload(10, 850);
         let pct = parse_cmd26_battery(&payload).expect("should parse");
         assert_eq!(pct, 85);
     }
 
-    // BAT-02 guard reject: payload of 3 bytes → Err.
+    // BAT-02 guard reject: payload of 6 bytes (too short to contain data body) → Err.
     #[test]
     fn cmd26_rejects_short() {
-        let payload = cmd26_payload(3, 0);
+        let payload = cmd26_payload(6, 0);
         assert!(
             parse_cmd26_battery(&payload).is_err(),
-            "payload.len()=3 should be rejected"
+            "payload.len()=6 should be rejected (need >= 7)"
         );
     }
 
