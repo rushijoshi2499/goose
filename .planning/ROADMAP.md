@@ -250,7 +250,28 @@ Plans:
   3. Each WHOOP wire-format decode site (Event-48 battery layout, cmd 26 response, R22 battery_pct field) carries a comment with byte offsets, data type, empirical verification date, and source reference
   4. `cargo test --locked` passes with the reorganised module structure; no regressions in existing tests
 
-**Plans**: TBD
+**Plans**: 6 plans
+
+**Wave 1**
+
+- [ ] 86-01-PLAN.md — Create bridge/ skeleton: mod.rs router shell + 5 domain stubs, delete bridge.rs (Wave 1)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 86-02-PLAN.md — Fill bridge/metrics.rs, bridge/sleep.rs, bridge/capture.rs with domain arms (Wave 2, parallel)
+- [ ] 86-03-PLAN.md — Fill bridge/activity.rs, bridge/debug.rs with domain arms + validation.* aliases (Wave 2, parallel)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 86-04-PLAN.md — Update include_str! scanner to scan all 5 domain files (Option A multi-file) (Wave 3)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 86-05-PLAN.md — Add COMM-01 offset comments: 11 sites in protocol.rs + 3 in bridge/metrics.rs (Wave 4)
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
+- [ ] 86-06-PLAN.md — Phase gate: cargo test --locked + clippy + human checkpoint (Wave 5)
 
 ---
 
