@@ -219,7 +219,7 @@ Plans:
 **Wave 2** *(blocked on Wave 1 completion)*
 
 - [x] 84-02-PLAN.md — Swift Event-48: event48BatteryPct compact/interpretation fields + Gen4-gated dispatch via applyBatteryLevel (BAT-01)
-- [ ] 84-03-PLAN.md — Swift Cmd 26: BatteryCommandKind, auto-send on Gen4 connection, handleCmd26BatteryResponse via Rust bridge (BAT-02)
+- [x] 84-03-PLAN.md — Swift Cmd 26: BatteryCommandKind, auto-send on Gen4 connection, handleCmd26BatteryResponse via Rust bridge (BAT-02)
 
 ---
 
@@ -487,7 +487,7 @@ Plans:
 | 67–73 | v10.0 | Complete | 2026-06-13 |
 | 74–82 | v11.0 | Complete | 2026-06-14 |
 | 83 | 6/6 | Complete   | 2026-06-14 |
-| 84 | 2/3 | In Progress|  |
+| 84 | 3/3 | Complete   | 2026-06-14 |
 | 85 | v12.0 | Not started | — |
 | 86 | v12.0 | Not started | — |
 | 87 | v12.0 | Not started | — |
@@ -531,7 +531,7 @@ Promoted to Phase 18: Coach Multi-Provider.
 **Goal:** Align Goose's BLE sync architecture with the WHOOP app's band-first model, eliminating the need for continuous overnight BLE capture. The band stores data onboard; the app fetches it opportunistically on foreground and via silent push, exactly as WHOOP does.
 
 **Depends on:** Phase 59
-**Plans:** 1/3 plans executed
+**Plans:** 3/3 plans complete
 Plans:
 **Wave 1**
 
