@@ -129,10 +129,12 @@ jobs:
           # Find the tag immediately before TAG in version order
           PREV_TAG=$(git tag --sort=version:refname | grep "^v" | awk -v tag="$TAG" '$0==tag{print prev; exit} {prev=$0}')
 
+          # Filter out planning/infra commits — keep only user-facing feat/fix/perf/refactor
+          FILTER='^\- (docs|chore|test|ci|build|fix\(release\)|fix\(altstore\)|chore\(altstore\))'
           if [ -n "$PREV_TAG" ]; then
-            NOTES=$(git log "${PREV_TAG}..${TAG}" --pretty=format:"- %s" --no-merges)
+            NOTES=$(git log "${PREV_TAG}..${TAG}" --pretty=format:"- %s" --no-merges | grep -Ev "$FILTER" | head -20)
           else
-            NOTES=$(git log "${TAG}" --pretty=format:"- %s" --no-merges | head -30)
+            NOTES=$(git log "${TAG}" --pretty=format:"- %s" --no-merges | grep -Ev "$FILTER" | head -20)
           fi
 
           {
