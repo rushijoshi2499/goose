@@ -696,8 +696,7 @@ fn activity_attach_metrics_bridge(
             provenance_json: &serialized.provenance_json,
         })
         .collect::<Vec<_>>();
-    let (inserted, existing) =
-        store.immediate_transaction(|store| store.insert_activity_metrics(&inputs))?;
+    let (inserted, existing) = store.insert_activity_metrics(&inputs)?;
     let metrics = if args.include_metrics {
         args.metrics
             .iter()
@@ -801,5 +800,5 @@ fn insert_activity_metrics_in_store(
     store: &GooseStore,
     inputs: &[ActivityMetricInput<'_>],
 ) -> GooseResult<(usize, usize)> {
-    store.immediate_transaction(|store| store.insert_activity_metrics(inputs))
+    store.insert_activity_metrics(inputs)
 }
