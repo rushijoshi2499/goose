@@ -1,170 +1,26 @@
 use std::{
-    collections::{BTreeMap, BTreeSet},
     ffi::{CStr, CString},
-    fs,
     os::raw::c_char,
     path::{Path, PathBuf},
     time::Instant,
 };
 
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
+use serde_json::json;
 
 use crate::{
     GooseError, GooseResult,
-    activity_sessions::{
-        ActivitySessionCorrectionKind, activity_session_correction_plans,
-        append_activity_session_correction_history,
-    },
-    algorithm_compare::{
-        compare_hrv_goose_to_reference, compare_sleep_goose_to_external_reference_report,
-        compare_sleep_goose_to_reference, compare_sleep_v1_goose_to_external_reference_report,
-        compare_sleep_v1_goose_to_reference, compare_strain_goose_to_reference,
-        compare_stress_goose_to_reference,
-    },
-    baselines::{EwmaBaseline, EwmaTrustLevel},
-    capabilities::{DeviceCapabilities, DeviceKind},
-    calibration::{
-        CalibrationApplicationInput, CalibrationDataset, CalibrationOptions, CalibrationRecord,
-        CalibrationReport, apply_calibration, calibration_run_record, evaluate_linear_calibration,
-    },
-    capture_correlation::{
-        CaptureCorrelationNextAction, CaptureCorrelationOptions, CaptureCorrelationReport,
-        DEFAULT_MIN_OWNED_CAPTURES_PER_SUMMARY, run_capture_correlation_for_store,
-    },
-    capture_import::{
-        CapturedFrameBatchOptions, CapturedFrameBatchOutputOptions, CapturedFrameInput,
-        import_captured_frame_batch_with_output_options,
-    },
-    capture_sanitize::{CaptureSanitizeOptions, sanitize_capture_path},
-    commands::{
-        COMMAND_DEFINITIONS, CommandEmulatorLogEvidenceOptions, CommandEvidence,
-        CommandLocalFrameCandidate, CommandValidationResult, command_capture_plan_from_results,
-        command_evidence_from_emulator_log_text, command_evidence_template,
-        command_evidence_with_local_frame_matches, command_result_from_report_json,
-        direct_send_gate_from_result, direct_send_preflight_from_gate, validate_commands,
-    },
-    debug_ws::{
-        DebugBridgeConfig, DebugCommandEnvelope, DebugCommandFinishInput, DebugCommandStartInput,
-        DebugEventInput, DebugSessionStartInput, append_debug_event, debug_session_snapshot,
-        finish_debug_command, start_debug_command, start_debug_session,
-    },
-    energy_rollup::{
-        EnergyCaptureValidationOptions, EnergyDailyRollupOptions, EnergyHourlyRollupOptions,
-        rollup_energy_day_for_store, rollup_energy_hour_for_store,
-        rollup_energy_unavailable_daily_status_for_store, validate_energy_capture_for_store,
-    },
-    export::{RawExportFilters, RawExportOptions, export_raw_timeframe, validate_export_bundle},
-    health_sync::{
-        ActivityHealthSyncDryRunInput, HealthSyncDryRunInput, run_activity_health_sync_dry_run,
-        run_health_sync_dry_run,
-    },
-    historical_sync::{
-        HistoricalSyncDryRunInput, HistoricalSyncGeneration, HistoricalSyncPhysicalValidationInput,
-        historical_sync_physical_evidence_template, run_historical_sync_dry_run,
-        validate_historical_sync_physical_evidence,
-    },
-    local_health_validation::{
-        LocalHealthValidationManifestScaffoldOptions,
-        local_health_validation_manifest_runbook_markdown, review_local_health_validation_manifest,
-        scaffold_local_health_validation_manifest,
-    },
-    metric_features::{
-        HeartRateFeatureOptions, HrvCaptureValidationOptions, HrvFeatureOptions,
-        MetricFeatureNextAction, MetricWindowFeatureOptions, MotionFeatureOptions,
-        OxygenSaturationCaptureValidationOptions, RecoveryFeatureScoreOptions,
-        RecoverySensorDiscoveryOptions, RecoverySensorDiscoveryReport,
-        RespiratoryRateCaptureValidationOptions, RestingHeartRateFeatureOptions,
-        SleepFeatureScoreOptions, SleepFeatureScoreReport, SleepStageKind,
-        StrainFeatureScoreOptions, StressFeatureScoreOptions, TemperatureCaptureValidationOptions,
-        VitalEventFeatureOptions, run_heart_rate_feature_report_for_store,
-        run_hrv_capture_validation_for_store, run_hrv_feature_report_for_store,
-        run_metric_window_feature_report_for_store, run_motion_feature_report_for_store,
-        run_oxygen_saturation_capture_validation_for_store,
-        run_recovery_feature_score_report_for_store,
-        run_recovery_sensor_discovery_report_for_store,
-        run_respiratory_rate_capture_validation_for_store,
-        run_resting_heart_rate_feature_report_for_store, run_sleep_feature_score_report_for_store,
-        run_strain_feature_score_report_for_store, run_stress_feature_score_report_for_store,
-        run_temperature_capture_validation_for_store, run_vital_event_feature_report_for_store,
-    },
-    metric_readiness::{
-        MetricInputNextAction, MetricInputReadinessOptions, MetricInputReadinessReport,
-        run_metric_input_readiness,
-    },
-    metrics::{
-        AlgorithmRunResult, GOOSE_HRV_V0_ID, GOOSE_HRV_V0_VERSION, GOOSE_RECOVERY_V0_ID,
-        GOOSE_RECOVERY_V0_VERSION, GOOSE_SLEEP_V0_ID, GOOSE_SLEEP_V0_VERSION, GOOSE_SLEEP_V1_ID,
-        GOOSE_SLEEP_V1_VERSION, GOOSE_STRAIN_V0_ID, GOOSE_STRAIN_V0_VERSION, GOOSE_STRESS_V0_ID,
-        GOOSE_STRESS_V0_VERSION, HrvInput, ImuStepCountInput, ReadinessInput, RecoveryInput,
-        RecoveryV1Input, SleepInput, SleepModelStatusInput, SleepNightHistoryInput,
-        SleepStageSegment, SleepV1Input, StrainInput, StressInput, algorithm_run_record,
-        built_in_algorithm_definitions, built_in_default_algorithm_preferences,
-        default_algorithm_preferences_for_scope, fit_strain_denominator, goose_hrv_v0,
-        goose_readiness_v1, goose_recovery_v0, goose_recovery_v1, goose_sleep_v0, goose_sleep_v1,
-        goose_strain_v0, goose_strain_v1, goose_stress_v0, imu_step_count_v1,
-        sleep_history_night_is_usable,
-    },
+    metrics::built_in_algorithm_definitions,
     openwhoop_reference::{
         OPENWHOOP_REFERENCE_ATTRIBUTION, OPENWHOOP_REFERENCE_COMMIT,
         OPENWHOOP_REFERENCE_LICENSE_CAVEAT, OPENWHOOP_REFERENCE_REPOSITORY,
         OPENWHOOP_REFERENCE_SNAPSHOT_URL, openwhoop_history_field_references,
         whoop_generation_references,
     },
-    perf_budget::{DEFAULT_PERF_SCALE, PerfBudgetOptions, PerfBudgets, run_perf_budget},
-    privacy_lint::lint_privacy_path,
-    property_tests::{
-        DEFAULT_CASES_PER_GROUP, DEFAULT_PROPERTY_SEED, PropertySuiteOptions, run_property_suite,
-    },
-    protocol::{
-        DataPacketBodySummary, DeviceType, I16SeriesSummary, ParsedFrame, ParsedPayload,
-        parse_frame_hex,
-    },
-    recovery_rollup::{
-        RecoverySensorDailyRollupOptions, RecoveryUnavailableDailyStatusOptions,
-        RestingHeartRateCaptureValidationOptions, RestingHeartRateDailyRollupOptions,
-        rollup_recovery_sensor_daily_for_store, rollup_recovery_unavailable_daily_status_for_store,
-        rollup_resting_heart_rate_day_for_store, validate_resting_heart_rate_capture_for_store,
-    },
-    reference::reference_algorithm_definitions,
-    sleep_staging::{
-        EpochHrFeature, SleepStagingInput, SleepStagingOutput, stage_sleep_four_class,
-    },
-    sleep_validation::{
-        SleepStageLabelValidationOptions, SleepV1EvidenceFolderOptions,
-        SleepV1ExplanationStabilityOptions, SleepV1ReleaseGateInput,
-        SleepWindowLabelValidationOptions, run_sleep_window_label_validation_for_store,
-        validate_sleep_v1_evidence_folder_with_options,
-        validate_sleep_v1_explanation_and_stability, validate_sleep_v1_release_gates,
-        validate_sleep_v1_stage_labels_for_store,
-    },
-    step_counter::{
-        ActivityUnavailableDailyStatusOptions, StepCounterDailyRollupOptions,
-        StepCounterHourlyRollupOptions, StepCounterIngestOptions,
-        rollup_activity_unavailable_daily_status_for_store, rollup_device_step_counter_day,
-        rollup_device_step_counter_hour, run_step_counter_ingest_for_store,
-    },
-    step_discovery::{
-        StepCaptureValidationOptions, StepPacketDiscoveryOptions,
-        run_step_capture_validation_for_store, run_step_packet_discovery_for_store,
-    },
-    step_motion_estimator::{RawMotionStepEstimateOptions, run_raw_motion_step_estimate_for_store},
-    storage_check::{StorageCheckOptions, check_storage_database},
-    store::{
-        ActivityIntervalInput, ActivityMetricInput, ActivityMetricRow, ActivitySessionInput,
-        ActivitySessionRow, AlgorithmPreferenceRecord, AlgorithmRunRecord, BackfillReport,
-        CURRENT_SCHEMA_VERSION, CalibrationLabelInput, CalibrationLabelRow, CaptureSessionInput,
-        CaptureSessionRow, CommandValidationRecord, DecodedFrameRow, ExerciseSessionRow,
-        ExternalSleepSessionInput, ExternalSleepSessionRow, ExternalSleepStageInput,
-        ExternalSleepStageRow, GooseStore, GravityRow, OvernightHistoricalRangePollInput,
-        OvernightRawNotificationInput, OvernightSyncSessionInput, SleepCorrectionLabelInput,
-        StepCounterSampleInput,
-    },
-    timeline::{
-        observability_timeline_from_rows, packet_timeline_between,
-        packet_timeline_from_decoded_frames,
-    },
-    ui_coverage::{UiCoverageAuditInput, run_ui_coverage_audit},
+    perf_budget::DEFAULT_PERF_SCALE,
+    property_tests::{DEFAULT_CASES_PER_GROUP, DEFAULT_PROPERTY_SEED},
+    protocol::DeviceType,
+    store::{CURRENT_SCHEMA_VERSION, GooseStore},
 };
 
 mod activity;
@@ -414,7 +270,8 @@ fn parse_event48_battery(payload: &[u8]) -> GooseResult<u16> {
 ///
 /// The two offsets refer to the same physical byte:
 ///   absolute payload offset 17 == data body offset 5 (because data body starts at offset 12).
-fn parse_event48_battery_from_data(data: &[u8]) -> Option<u16> {
+#[allow(dead_code)]
+pub(crate) fn parse_event48_battery_from_data(data: &[u8]) -> Option<u16> {
     let raw = crate::protocol::read_u16_le(data, 5)?;
     if raw > 1100 {
         return None;
@@ -484,9 +341,8 @@ pub fn core_version_payload() -> serde_json::Value {
     })
 }
 
-/// Payload returned by the `core.list_methods` bridge RPC.
-///
-/// Returns the canonical, alphabetically sorted list of every bridge method
+// Payload returned by the `core.list_methods` bridge RPC.
+// Returns the canonical, alphabetically sorted list of every bridge method
 /// the current build understands, alongside the methods-list schema id and
 /// the count. Intended for client-side discovery: the iOS app, a future
 /// Android port, debug tooling, or anyone wiring a new front end can pull
@@ -821,6 +677,10 @@ pub unsafe extern "C" fn goose_bridge_free_string(value: *mut c_char) {
 
 // --- Shared utility functions ---
 
+// These utility functions are used by bridge domain files (metrics.rs, sleep.rs,
+// capture.rs, activity.rs, debug.rs). The `dead_code` lint fires here because those
+// files are still being filled in during Phase 86.
+#[allow(dead_code)]
 pub(crate) fn open_bridge_store(database_path: &str) -> GooseResult<GooseStore> {
     if database_path.trim().is_empty() {
         return Err(GooseError::message("database_path is required"));
@@ -829,6 +689,7 @@ pub(crate) fn open_bridge_store(database_path: &str) -> GooseResult<GooseStore> 
     GooseStore::open(Path::new(database_path))
 }
 
+#[allow(dead_code)]
 pub(crate) fn open_bridge_store_hot(database_path: &str) -> GooseResult<GooseStore> {
     if database_path.trim().is_empty() {
         return Err(GooseError::message("database_path is required"));
@@ -838,6 +699,7 @@ pub(crate) fn open_bridge_store_hot(database_path: &str) -> GooseResult<GooseSto
     GooseStore::open_existing_current(path).or_else(|_| GooseStore::open(path))
 }
 
+#[allow(dead_code)]
 pub(crate) fn json_object_string(
     field_name: &str,
     value: &serde_json::Value,
@@ -882,7 +744,8 @@ pub(crate) fn metric_result_to_value<T: serde::Serialize>(
         .map_err(|e| GooseError::message(format!("cannot serialize metric result: {e}")))
 }
 
-fn parse_device_type(value: &str) -> GooseResult<DeviceType> {
+#[allow(dead_code)]
+pub(crate) fn parse_device_type(value: &str) -> GooseResult<DeviceType> {
     match value {
         "GEN4" | "GEN_4" | "Gen4" | "gen4" => Ok(DeviceType::Gen4),
         "GOOSE" | "Goose" | "goose" => Ok(DeviceType::Goose),
@@ -893,88 +756,108 @@ fn parse_device_type(value: &str) -> GooseResult<DeviceType> {
     }
 }
 
-fn default_device_type() -> String {
+#[allow(dead_code)]
+pub(crate) fn default_device_type() -> String {
     "GOOSE".to_string()
 }
 
+#[allow(dead_code)]
 pub(crate) fn default_algorithm_scope() -> String {
     "global".to_string()
 }
 
+#[allow(dead_code)]
 pub(crate) fn default_true() -> bool {
     true
 }
 
-fn default_raw_export_app_version() -> String {
+#[allow(dead_code)]
+pub(crate) fn default_raw_export_app_version() -> String {
     "goose-app/bridge".to_string()
 }
 
-fn default_raw_export_core_version() -> String {
+#[allow(dead_code)]
+pub(crate) fn default_raw_export_core_version() -> String {
     format!(
         "goose-core/{}",
         option_env!("CARGO_PKG_VERSION").unwrap_or("unknown")
     )
 }
 
-fn default_parser_version() -> String {
+#[allow(dead_code)]
+pub(crate) fn default_parser_version() -> String {
     format!(
         "goose-core/{}",
         option_env!("CARGO_PKG_VERSION").unwrap_or("unknown")
     )
 }
 
+#[allow(dead_code)]
 pub(crate) fn default_overnight_mode() -> String {
     "overnight_guard".to_string()
 }
 
+#[allow(dead_code)]
 pub(crate) fn default_active_status() -> String {
     "active".to_string()
 }
 
+#[allow(dead_code)]
 pub(crate) fn default_raw_notification_source() -> String {
     "ios.corebluetooth.raw_notification".to_string()
 }
 
-fn default_decode_status() -> String {
+#[allow(dead_code)]
+pub(crate) fn default_decode_status() -> String {
     "not_decoded".to_string()
 }
 
-fn default_capture_sanitize_salt() -> String {
+#[allow(dead_code)]
+pub(crate) fn default_capture_sanitize_salt() -> String {
     "goose-capture-sanitize-v1".to_string()
 }
 
-fn default_ui_coverage_map_path() -> PathBuf {
+#[allow(dead_code)]
+pub(crate) fn default_ui_coverage_map_path() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../apk-ui-inventory/coverage-map.json")
 }
 
-fn default_perf_scale() -> usize {
+#[allow(dead_code)]
+pub(crate) fn default_perf_scale() -> usize {
     DEFAULT_PERF_SCALE
 }
 
-fn default_property_seed() -> u64 {
+#[allow(dead_code)]
+pub(crate) fn default_property_seed() -> u64 {
     DEFAULT_PROPERTY_SEED
 }
 
-fn default_property_cases() -> usize {
+#[allow(dead_code)]
+pub(crate) fn default_property_cases() -> usize {
     DEFAULT_CASES_PER_GROUP
 }
 
+#[allow(dead_code)]
 pub(crate) fn default_manual_source() -> String {
     "manual".to_string()
 }
 
-fn default_correlation_start() -> String {
+#[allow(dead_code)]
+pub(crate) fn default_correlation_start() -> String {
     "0000".to_string()
 }
 
-fn default_correlation_end() -> String {
+#[allow(dead_code)]
+pub(crate) fn default_correlation_end() -> String {
     "9999".to_string()
 }
 
+#[allow(dead_code)]
 pub(crate) fn empty_json_array() -> serde_json::Value {
     json!([])
 }
 
+#[allow(dead_code)]
 pub(crate) fn empty_json_object() -> serde_json::Value {
     json!({})
 }
