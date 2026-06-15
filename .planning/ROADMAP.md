@@ -234,7 +234,22 @@ Plans:
   2. bridge.rs dispatcher entry point is wrapped in `catch_unwind`; panics are caught and returned as an error JSON response rather than crashing the process
   3. All 133 former `.unwrap()` sites in bridge.rs and store.rs return `Result<_, GooseError>` with a specific error variant; `cargo test --locked` passes
 
-**Plans**: TBD
+**Plans**: 6 plans
+
+**Wave 1**
+
+- [ ] 87-01-PLAN.md — Create store/ skeleton: store/mod.rs (Arc<Mutex<Connection>>, immediate_transaction fix), git rm store.rs, update capture_import.rs + bridge call sites, 4 empty domain stubs (Wave 1)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 87-02-PLAN.md — Move 13 sleep methods to store/sleep.rs (Wave 2, parallel)
+- [ ] 87-03-PLAN.md — Move 25 capture methods to store/capture.rs (Wave 2, parallel)
+- [ ] 87-04-PLAN.md — Move ~49 metrics methods to store/metrics.rs (Wave 2, parallel)
+- [ ] 87-05-PLAN.md — Move 49 activity methods to store/activity.rs (Wave 2, parallel)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 87-06-PLAN.md — Gate: cargo test --locked + cargo clippy --lib + human checkpoint (Wave 3)
 
 ---
 
@@ -470,7 +485,22 @@ Plans:
   2. Runtime schema version validation runs on SQLite open and returns an error if the on-disk schema version does not match the expected version
   3. All existing Rust integration tests pass (`cargo test --locked`) with the reorganised store module; no public API regressions visible to Swift
 
-**Plans**: TBD
+**Plans**: 6 plans
+
+**Wave 1**
+
+- [ ] 87-01-PLAN.md — Create store/ skeleton: store/mod.rs (Arc<Mutex<Connection>>, immediate_transaction fix), git rm store.rs, update capture_import.rs + bridge call sites, 4 empty domain stubs (Wave 1)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 87-02-PLAN.md — Move 13 sleep methods to store/sleep.rs (Wave 2, parallel)
+- [ ] 87-03-PLAN.md — Move 25 capture methods to store/capture.rs (Wave 2, parallel)
+- [ ] 87-04-PLAN.md — Move ~49 metrics methods to store/metrics.rs (Wave 2, parallel)
+- [ ] 87-05-PLAN.md — Move 49 activity methods to store/activity.rs (Wave 2, parallel)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 87-06-PLAN.md — Gate: cargo test --locked + cargo clippy --lib + human checkpoint (Wave 3)
 
 ### Phase 88: Swift Ownership — HealthDataStore
 
