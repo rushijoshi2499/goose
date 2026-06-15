@@ -1131,7 +1131,7 @@ struct GravityRowsBetweenArgs {
 fn ewma_baseline_fold_history_bridge(
     args: EwmaBaselineFoldHistoryArgs,
 ) -> GooseResult<serde_json::Value> {
-    use crate::baselines::{EwmaBaseline, EwmaTrustLevel};
+    use crate::baselines::EwmaBaseline;
     let store = open_bridge_store(&args.database_path)?;
     let baseline = EwmaBaseline::fold_history(&store)?;
     Ok(json!({

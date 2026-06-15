@@ -4014,11 +4014,11 @@ fn skin_temp_celsius_from_raw(raw: u16) -> Option<f64> {
 ///   2. Count sign changes (zero-crossings) in the mean-subtracted signal.
 ///   3. rate_bpm = (crossings / 2) / window_seconds × 60
 ///      Each full breath cycle produces 2 crossings (one inhale, one exhale).
-///   sampling rate: 1 Hz (resp_raw field from V24/V18 body, one value per second)
-///   window: minimum 10 samples required for a stable estimate
-///   gate: (0, 60] breaths/min — 0 and negative rejected; above 60 indicates noise or motion artifact
-///   algorithm: standard zero-crossing rate estimator; no patent claims
-///   empirically verified 2026-06-14 via comparison to reference waveform at known breathing rates
+// sampling rate: 1 Hz (resp_raw field from V24/V18 body, one value per second)
+// window: minimum 10 samples required for a stable estimate
+// gate: (0, 60] breaths/min — 0 and negative rejected; above 60 indicates noise or motion artifact
+// algorithm: standard zero-crossing rate estimator; no patent claims
+// empirically verified 2026-06-14 via comparison to reference waveform at known breathing rates
 #[allow(dead_code)] // deferred to Phase 31/33 (zero-crossing rate not yet wired into insert path)
 fn resp_rate_bpm_zero_crossing(window: &[u16]) -> Option<f64> {
     if window.len() < 10 {

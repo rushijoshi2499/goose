@@ -796,6 +796,7 @@ fn activity_list_intervals_bridge(
 
 // ── Internal helpers used by activity_attach_metrics_bridge ───────────────────
 
+#[allow(dead_code)]
 fn insert_activity_metrics_in_store(
     store: &GooseStore,
     inputs: &[ActivityMetricInput<'_>],
