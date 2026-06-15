@@ -259,15 +259,15 @@ Plans:
 **Wave 2** *(blocked on Wave 1 completion)*
 
 - [x] 86-02-PLAN.md — Fill bridge/metrics.rs, bridge/sleep.rs, bridge/capture.rs with domain arms (Wave 2, parallel)
-- [ ] 86-03-PLAN.md — Fill bridge/activity.rs, bridge/debug.rs with domain arms + validation.* aliases (Wave 2, parallel)
+- [x] 86-03-PLAN.md — Fill bridge/activity.rs, bridge/debug.rs with domain arms + validation.* aliases (Wave 2, parallel)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 86-04-PLAN.md — Update include_str! scanner to scan all 5 domain files (Option A multi-file) (Wave 3)
+- [x] 86-04-PLAN.md — Update include_str! scanner to scan all 5 domain files (Option A multi-file) (Wave 3)
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 86-05-PLAN.md — Add COMM-01 offset comments: 11 sites in protocol.rs + 3 in bridge/metrics.rs (Wave 4)
+- [x] 86-05-PLAN.md — Add COMM-01 offset comments: 11 sites in protocol.rs + 3 in bridge/metrics.rs (Wave 4)
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
@@ -440,11 +440,11 @@ Plans:
 
 **Wave 1**
 
-- [ ] 86-01-PLAN.md — Create bridge/ skeleton: bridge/mod.rs router + 5 empty domain stubs, delete bridge.rs (Wave 1)
+- [x] 86-01-PLAN.md — Create bridge/ skeleton: bridge/mod.rs router + 5 empty domain stubs, delete bridge.rs (Wave 1)
 
 **Wave 2** *(blocked on Wave 1)*
 
-- [ ] 86-02-PLAN.md — Fill metrics.rs, sleep.rs, capture.rs domain handlers (Wave 2)
+- [x] 86-02-PLAN.md — Fill metrics.rs, sleep.rs, capture.rs domain handlers (Wave 2)
 - [ ] 86-03-PLAN.md — Fill activity.rs, debug.rs + validation.* alias arms (Wave 2)
 
 **Wave 3** *(blocked on Wave 2)*
@@ -540,7 +540,7 @@ Plans:
 | 83 | 6/6 | Complete   | 2026-06-14 |
 | 84 | 3/3 | Complete   | 2026-06-14 |
 | 85 | 6/6 | Complete   | 2026-06-14 |
-| 86 | 2/6 | In Progress|  |
+| 86 | 5/6 | In Progress|  |
 | 87 | v12.0 | Not started | — |
 | 88 | v12.0 | Not started | — |
 | 89 | v12.0 | Not started | — |
@@ -582,7 +582,7 @@ Promoted to Phase 18: Coach Multi-Provider.
 **Goal:** Align Goose's BLE sync architecture with the WHOOP app's band-first model, eliminating the need for continuous overnight BLE capture. The band stores data onboard; the app fetches it opportunistically on foreground and via silent push, exactly as WHOOP does.
 
 **Depends on:** Phase 59
-**Plans:** 2/6 plans executed
+**Plans:** 5/6 plans executed
 Plans:
 **Wave 1**
 

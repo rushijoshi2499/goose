@@ -31,7 +31,7 @@
 
 ### Code Comments (SEED-005)
 
-- [ ] **COMM-01**: Protocol offset comments added at each WHOOP wire-format decode site in `protocol.rs` and `bridge.rs` — Event-48 battery layout (offsets 17/21/26), cmd 26 response, R22 battery_pct field; includes empirical verification date and source reference
+- [x] **COMM-01**: Protocol offset comments added at each WHOOP wire-format decode site in `protocol.rs` and `bridge.rs` — Event-48 battery layout (offsets 17/21/26), cmd 26 response, R22 battery_pct field; includes empirical verification date and source reference
 - [ ] **COMM-02**: Threading invariant comments added at `GooseRustBridge` usage sites and frame reassembly buffer — explains synchronous FFI, multiple-instance pattern, `@MainActor` dispatch requirement, `NSLock` guards
 - [ ] **COMM-03**: Algorithm coefficient comments added in `metric_features.rs` for Banister eTRIMP (1.92/1.67 gender coefficients), EWMA alpha (0.0483 = 14-night half-life), Cole-Kripke scale (0.001); includes bibliographic references
 
@@ -71,7 +71,7 @@
 | ARCH-04 | Phase 88 | Pending |
 | ARCH-05 | Phase 89 | Pending |
 | ARCH-06 | Phase 90 | Pending |
-| COMM-01 | Phase 86 | Pending |
+| COMM-01 | Phase 86 | Complete |
 | COMM-02 | Phase 91 | Pending |
 | COMM-03 | Phase 91 | Pending |
 
