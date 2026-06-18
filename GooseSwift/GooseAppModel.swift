@@ -3,6 +3,9 @@ import Observation
 import UIKit
 
 
+// THREADING: GooseRustBridge.request() blocks the calling thread — never call it directly from
+// @MainActor. All bridge calls must be dispatched to a background DispatchQueue or Task.detached
+// before updating any @MainActor state.
 @MainActor @Observable
 final class GooseAppModel {
   var rustStatus = "Rust bridge not checked"
@@ -24,6 +27,9 @@ final class GooseAppModel {
   // not observed by SwiftUI, so @ObservationIgnored is required here.
   @ObservationIgnored lazy var rust = GooseRustBridge()
   let notificationFrameParser = NotificationFrameParser()
+  // THREADING: three-stage BLE→SQLite pipeline — raw bytes arrive on notificationIngestQueue
+  // (CoreBluetooth callback), frames are reassembled and parsed on notificationParseQueue via Rust,
+  // completed rows are batched to CaptureFrameWriteQueue. No stage returns to @MainActor until a UI update is needed.
   let notificationIngestQueue = DispatchQueue(label: "com.goose.swift.notification-ingest", qos: .utility)
   let notificationIngestStateLock = NSLock()
   let notificationParseQueue = DispatchQueue(label: "com.goose.swift.notification-parse", qos: .utility)
