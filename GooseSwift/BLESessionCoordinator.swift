@@ -17,7 +17,8 @@ actor BLESessionCoordinator {
 
   // Provides `any BLETransport` view of the underlying transport. GooseAppModel stores this
   // as `let ble: any BLETransport` so that all non-lifecycle call sites go through the protocol.
-  var asTransport: any BLETransport { transport }
+  // nonisolated: transport is a let stored property; reading it does not require actor isolation.
+  nonisolated var asTransport: any BLETransport { transport }
 
   // MARK: - Session lifecycle methods
 

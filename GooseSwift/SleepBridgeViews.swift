@@ -5,7 +5,7 @@ import UIKit
 
 struct SleepDataBridgeSection: View {
   @Environment(HealthDataStore.self) private var healthStore
-  var ble: CoreBluetoothBLETransport
+  var ble: any BLETransport
 
   var body: some View {
     VStack(alignment: .leading, spacing: 12) {
@@ -88,7 +88,7 @@ enum SleepAlarmConfirmation: Identifiable {
 }
 
 struct SleepAlarmBridgeSection: View {
-  var ble: CoreBluetoothBLETransport
+  var ble: any BLETransport
   @State private var alarmTime = defaultWakeTime()
   @State private var pendingConfirmation: SleepAlarmConfirmation?
   private let alarmID = 1
