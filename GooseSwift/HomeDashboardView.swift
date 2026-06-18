@@ -3,7 +3,7 @@ import SwiftUI
 struct HomeDashboardView: View {
   @Environment(GooseAppModel.self) private var model
   @EnvironmentObject private var router: AppRouter
-  var healthStore: HealthDataStore
+  @Environment(HealthDataStore.self) private var healthStore
   @Binding var selectedDate: Date
   let openHealthRoute: (HealthRoute) -> Void
   @State private var showingScoreDatePicker = false
@@ -149,7 +149,7 @@ struct HomeDashboardView: View {
       )
     }
     .sheet(isPresented: $showingCardioLoadSheet) {
-      CardioLoadSheet(store: healthStore)
+      CardioLoadSheet()
     }
     .sheet(item: $selectedHealthMonitorTrend) { snapshot in
       SleepV2BevelTrendSheet(snapshot: snapshot)
@@ -275,7 +275,7 @@ struct HomeDashboardView: View {
 // MARK: - HOME-01: Device Status Card
 
 private struct HomeDeviceStatusCard: View {
-  let ble: GooseBLEClient
+  let ble: CoreBluetoothBLETransport
   let onReconnect: () -> Void
 
   private var isConnected: Bool {

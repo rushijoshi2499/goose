@@ -49,17 +49,9 @@ final class GooseAppModel {
   // BLE-thread code must not touch this property directly.
   var connectedDeviceGeneration: String? = nil
 
-  // Set by AppShellView to run the metric-extract pipeline on HealthDataStore
-  // after a sync completes. Kept as a callback because HealthDataStore is
-  // owned by the view layer, not GooseAppModel.
-  var onHistoricalSyncCompleted: (() -> Void)?
-  // Set by AppShellView alongside onHistoricalSyncCompleted so GooseAppModel
-  // extensions can call HealthDataStore methods (e.g. markBandSleepSyncFailed)
-  // without creating a strong reference cycle. HealthDataStore is owned by the
-  // view layer; this weak reference lets SleepSync coordinate with it.
-  weak var healthStore: HealthDataStore?
+  let healthStore: HealthDataStore
 
-  let ble: GooseBLEClient
+  let ble: CoreBluetoothBLETransport
   let packetMonitor = PacketMonitorModel()
   let activitySession = ActivitySessionModel()
   let activityLocationTracker = ActivityLocationTracker()
@@ -261,7 +253,8 @@ final class GooseAppModel {
   static let deviceSignalPointInterval: TimeInterval = 0.75
 
   init(startBLE: Bool = true) {
-    ble = GooseBLEClient(startCentral: startBLE)
+    healthStore = HealthDataStore()
+    ble = CoreBluetoothBLETransport(startCentral: startBLE)
     whoopDataSignalPipeline = WhoopDataSignalPipeline(
       ble: ble,
       packetUIStateAggregator: packetUIStateAggregator,

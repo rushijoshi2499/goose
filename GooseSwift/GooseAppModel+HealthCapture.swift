@@ -308,7 +308,7 @@ extension GooseAppModel {
 
   func handleHistoricalSyncProgress(_ progress: GooseHistoricalSyncProgress) {
     if progress.isTerminal && !progress.failed {
-      onHistoricalSyncCompleted?()
+      Task { await healthStore.runPacketInputs() }
     }
     guard respiratoryPacketWatchActive else {
       return
