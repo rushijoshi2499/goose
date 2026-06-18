@@ -59,16 +59,15 @@ struct AppShellView: View {
     switch tab {
     case .home:
       HomeDashboardView(
-        healthStore: model.healthStore,
         selectedDate: $homeSelectedDate,
         openHealthRoute: openHomeHealthRoute
       )
     case .health:
-      HealthView(store: model.healthStore)
+      HealthView()
     case .coach:
-      CoachView(healthStore: model.healthStore)
+      CoachView()
     case .more:
-      MoreView(healthStore: model.healthStore)
+      MoreView()
     }
   }
 
