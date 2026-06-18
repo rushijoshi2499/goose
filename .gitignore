@@ -31,3 +31,6 @@ server/**/.venv*/
 server/**/__pycache__/
 server/**/*.pyc
 server/**/*.pyo
+
+# Private reverse-engineering notes
+RE-REFERENCE.md

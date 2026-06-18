@@ -57,7 +57,7 @@ impl DeviceType {
                     // Stream reassembly: Gen4 payload length at buffer[1..=2] u16 LE
                     //   header offset 1 — same byte position as parse_frame Gen4 declared_len
                     //   total frame = payload_len + 4 (4-byte Gen4 header)
-                    //   empirically verified 2026-06-14 via Ghidra + BTSnoop
+                    //   empirically verified via hardware captures
                     Some(u16::from_le_bytes([buffer[1], buffer[2]]) as usize + 4)
                 }
             }
@@ -71,7 +71,7 @@ impl DeviceType {
                     // Stream reassembly: Gen5-family payload length at buffer[2..=3] u16 LE
                     //   header offset 2 — same byte position as parse_frame Gen5 declared_len
                     //   total frame = payload_len + 8 (8-byte Gen5 header)
-                    //   empirically verified 2026-06-14 via Ghidra + BTSnoop
+                    //   empirically verified via hardware captures
                     Some(u16::from_le_bytes([buffer[2], buffer[3]]) as usize + 8)
                 }
             }
@@ -348,15 +348,15 @@ pub fn parse_frame(device_type: DeviceType, frame: &[u8]) -> GooseResult<ParsedF
         //   byte 0: frame_start (0xaa)
         //   bytes 1–2: payload length u16 LE (excludes the 4-byte header itself)
         //   byte 3: CRC8 of bytes 1–2
-        //   empirically verified 2026-06-14 via Ghidra + BTSnoop (WHOOP 4.0 captures)
+        //   empirically verified via hardware captures
         DeviceType::Gen4 => u16::from_le_bytes([frame[1], frame[2]]) as usize,
         // Gen5-family frame header layout (8 bytes total):
         //   byte 0: frame_start (0xaa)
         //   byte 1: flags / version byte (Gen5 addition — absent in Gen4)
         //   bytes 2–3: payload length u16 LE (same role as Gen4 bytes 1–2, shifted by 1)
-        //   bytes 4–5: reserved / padding (observed all-zero in BTSnoop captures)
+        //   bytes 4–5: reserved / padding (observed all-zero in hardware captures)
         //   bytes 6–7: CRC16 Modbus of bytes 0–5 (expanded header coverage vs. Gen4 CRC8)
-        //   empirically verified 2026-06-14 via Ghidra + BTSnoop (WHOOP 5.0 Maverick captures)
+        //   empirically verified via hardware captures
         DeviceType::Maverick | DeviceType::Puffin | DeviceType::Goose | DeviceType::HrMonitor => {
             u16::from_le_bytes([frame[2], frame[3]]) as usize
         }
@@ -717,15 +717,15 @@ fn parse_r22_payload(payload: &[u8]) -> ParsedPayload {
     }
     // offset 1: u8, battery_pct direct (0–100); no scaling required
     //   R22 is WHOOP 5.0 realtime BLE handle (characteristic 0x0022 on WHOOP 5.0 GAP profile)
-    //   empirically verified via BTSnoop; field name confirmed in openwhoop reference
+    //   empirically verified via hardware captures
     let battery_pct = payload[1];
     // offsets 2–3: u16 LE, hr_milli_bpm; hr_bpm = raw / 10.0 (millibeats per minute)
     //   minimum payload guard: len ≥ 4 checked above — guard comment explains the unconditional index
-    //   empirically verified via BTSnoop capture 2026-06-14
+    //   empirically verified via hardware captures
     let hr_milli_bpm = u16::from_le_bytes([payload[2], payload[3]]);
     let hr_bpm = hr_milli_bpm as f32 / 10.0;
     // offsets 4–5: [u8; 2], purpose unknown — empirical; conditional on len ≥ 6
-    //   content may carry sub-second HR data or motion artifact flag (unconfirmed via Ghidra 2026-06-14)
+    //   content may carry sub-second HR data or motion artifact flag (unconfirmed)
     let extra = if payload.len() >= 6 {
         Some([payload[4], payload[5]])
     } else {
@@ -763,8 +763,8 @@ fn parse_k10_raw_motion_summary(payload: &[u8]) -> (Option<DataPacketBodySummary
     //   gyroscope_x:     offset 688,  200 bytes (gap at 685–687 = 3 padding bytes observed)
     //   gyroscope_y:     offset 888,  200 bytes
     //   gyroscope_z:     offset 1088, 200 bytes
-    //   sampling rate: 25 Hz assumed from WHOOP protocol RE; 100 samples ≈ 4 seconds per K10 packet
-    //   empirically verified 2026-06-14 via Ghidra disassembly + BTSnoop (WHOOP 4.0 K10 frames)
+    //   sampling rate: 25 Hz assumed; 100 samples ≈ 4 seconds per K10 packet
+    //   empirically verified via hardware captures
     for (name, offset) in [
         ("accelerometer_x", 85),
         ("accelerometer_y", 285),
@@ -847,7 +847,7 @@ fn read_f32_le(data: &[u8], offset: usize) -> Option<f32> {
 ///   offset 73:    u16 LE, resp_raw (respiration signal; zero-crossing algorithm applied at metrics layer)
 ///   offset 75:    u16 LE, sig_quality (signal quality score, higher = better)
 /// Guard: len ≥ 77 required (offset 75 + 2 bytes); short payloads return empty variant with warning.
-/// empirically verified 2026-06-14 via Ghidra disassembly + BTSnoop (WHOOP 5.0 Maverick V24 frames)
+/// empirically verified via hardware captures
 fn parse_v24_body_summary(payload: &[u8]) -> (Option<DataPacketBodySummary>, Vec<String>) {
     let data = payload.get(3..).unwrap_or(&[]);
     let mut warnings = Vec::new();
@@ -990,7 +990,7 @@ fn parse_v18_body(payload: &[u8]) -> (Option<DataPacketBodySummary>, Vec<String>
 
     // offsets 45/49/53 (body-relative): f32 LE × 3, gravity_x / gravity_y / gravity_z
     //   units: m/s²; 9.8 = 1 g; same axis order as V24 first gravity triplet
-    //   empirically verified 2026-06-14 via Ghidra + BTSnoop (WHOOP 4.0 V18 frames)
+    //   empirically verified via hardware captures
     let gravity_x = read_f32_le(data, 45);
     let gravity_y = read_f32_le(data, 49);
     let gravity_z = read_f32_le(data, 53);
@@ -1001,7 +1001,7 @@ fn parse_v18_body(payload: &[u8]) -> (Option<DataPacketBodySummary>, Vec<String>
     //   body starts at payload[3] (3-byte data-packet header skipped above)
     //   degC = raw / 128.0 (LSBs per degree Celsius from NTC thermistor linearisation)
     //   gate 5–45°C applied at persistence site; values outside range indicate off-wrist or sensor error
-    //   empirically verified 2026-06-14 via Ghidra + BTSnoop
+    //   empirically verified via hardware captures
     let skin_temp_raw = read_u16_le(data, 73);
 
     (

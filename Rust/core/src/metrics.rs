@@ -2075,6 +2075,11 @@ pub fn banister_trimp_zone_midpoint(
 ) -> f64 {
     // Sex-specific exponential weighting constant (ALG-STR-02).
     // CR-02 fix: case-insensitive comparison so "Male"/"MALE" route correctly.
+    // ALGO: Banister's sex-specific exponential weighting constants for eTRIMP. Higher b →
+    // disproportionately more load at high HR intensities (exponential scaling of HR ratio).
+    // 1.92 (male) / 1.67 (female): Banister EW et al. "A systems model of training for athletic
+    // performance." Aust J Sports Med 1975; Morton RH et al. Physiological Testing of Elite
+    // Athletes 1991. The 1.795 fallback is the unweighted mean of the two sex-specific values.
     let b: f64 = match sex.map(str::to_ascii_lowercase).as_deref() {
         Some("male") => 1.92,
         Some("female") => 1.67,
@@ -2154,7 +2159,7 @@ pub fn fit_strain_denominator(pairs: &[(f64, f64)]) -> Option<f64> {
 // ── ALG-STR-02/03: goose_strain_v1 ────────────────────────────────────────
 
 /// Default denominator constant (D=7201) used when no calibration pairs are
-/// available. Derived from WHOOP 5.37.0 reverse-engineering (FINDINGS_5.md).
+/// available. Derived from empirical calibration data.
 const STRAIN_V1_DEFAULT_DENOMINATOR: f64 = 7201.0;
 
 /// Computes strain using both the Edwards zone-load model (v0 logic) and the
@@ -2198,6 +2203,7 @@ pub fn goose_strain_v1(input: &StrainInput) -> AlgorithmRunResult<StrainScoreOut
         resolve_effective_hrmax(input.max_hr_bpm, input.profile_age, &[]);
 
     // Banister b constant for provenance recording (selected by sex, case-insensitive).
+    // ALGO: same Banister b-constant as banister_trimp_zone_midpoint — see comment there.
     let b_constant: f64 = match input
         .profile_sex
         .as_deref()

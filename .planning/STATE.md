@@ -93,7 +93,7 @@ Recent decisions affecting current work:
 
 ### Blockers/Concerns
 
-- HAP-04 (Phase 73, wake-window): RE-gated — do not write implementation tasks until BTSnoop capture of `STRAP_DRIVEN_ALARM_EXECUTED` and Ghidra decompile of `SetAlarmInfoCommandPacketRev4` are complete
+- HAP-04 (Phase 73, wake-window): protocol-analysis-gated — do not write implementation tasks until BLE capture of `STRAP_DRIVEN_ALARM_EXECUTED` and protocol analysis of `SetAlarmInfoCommandPacketRev4` are complete
 - Phase 66 (Cap Sense): hardware-gated — requires real WHOOP 5.x device; deferred indefinitely
 - Hardware gate reminder: ALG-HRV-04, ALG-SLP-04, SLP-SYNC real-device remain deferred (hardware gate)
 

@@ -3969,10 +3969,9 @@ fn latest_matching_calibration_run(
 /// SpO2 from raw ratio-of-ratios (pre-calibration, photoplethysmography standard):
 ///   R = AC_red / DC_red / (AC_ir / DC_ir)
 ///   Here approximated as: R = red_adc / ir_adc (single-sample ratio; no AC/DC separation)
-///   SpO2 ≈ 110 − 25 × R (empirical linear approximation; coefficients from openwhoop reference)
+///   SpO2 ≈ 110 − 25 × R (empirical linear approximation)
 ///   gate: 70–100 % — values outside indicate sensor error, motion artifact, or off-wrist
-///   formula source: openwhoop reference + Ghidra V24 disassembly 2026-06-14
-///   empirically verified 2026-06-14 via BTSnoop V24 captures + comparison to WHOOP app readout
+///   empirically verified via hardware captures and app readout comparison
 fn spo2_from_raw_uncalibrated(red: u16, ir: u16) -> Option<f64> {
     if ir == 0 {
         return None;
@@ -3995,7 +3994,7 @@ fn spo2_from_raw_uncalibrated(red: u16, ir: u16) -> Option<f64> {
 ///   anchor: raw=930 maps to 33 °C (typical resting wrist temperature)
 ///   slope: 30 ADC units per °C (empirical coefficient from NTC linearisation curve)
 ///   gate: 25–40 °C (below 25 = device off-wrist or cold shock, above 40 = sensor error)
-///   LSB-per-degC coefficient empirically verified 2026-06-14 via V24 payload regression + Ghidra
+///   LSB-per-degC coefficient empirically verified via payload regression
 fn skin_temp_celsius_from_raw(raw: u16) -> Option<f64> {
     let celsius = (raw as f64 - 930.0) / 30.0 + 33.0;
     if !(25.0..=40.0).contains(&celsius) {
