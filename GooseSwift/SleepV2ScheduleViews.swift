@@ -82,7 +82,7 @@ struct SleepV2SleepWindowCard: View {
 }
 
 struct SleepV2BandSyncCard: View {
-  var store: HealthDataStore
+  @Environment(HealthDataStore.self) private var healthStore
   var ble: GooseBLEClient
   let palette: SleepV2Palette
   let onSync: () -> Void
@@ -127,7 +127,7 @@ struct SleepV2BandSyncCard: View {
         SleepV2BandSyncRow(
           palette: palette,
           title: "Sleep score",
-          value: store.bandSleepImportStatus,
+          value: healthStore.bandSleepImportStatus,
           systemImage: "bed.double.fill"
         )
       }
@@ -141,7 +141,7 @@ struct SleepV2BandSyncCard: View {
         .disabled(!ble.canSyncHistorical)
 
         Button {
-          Task { await store.refreshSleepAfterBandSync(packetCount: ble.historicalPacketCount) }
+          Task { await healthStore.refreshSleepAfterBandSync(packetCount: ble.historicalPacketCount) }
         } label: {
           Label("Refresh score", systemImage: "chart.xyaxis.line")
             .frame(maxWidth: .infinity)

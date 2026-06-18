@@ -36,7 +36,7 @@ struct AppShellView: View {
       NavigationStack(path: $homeHealthPath) {
         tabContent(for: tab)
           .navigationDestination(for: HealthRoute.self) { route in
-            HealthRouteDestinationView(route: route, store: model.healthStore, selectedDate: $homeSelectedDate)
+            HealthRouteDestinationView(route: route, selectedDate: $homeSelectedDate)
           }
       }
     } else if tab == .health {
@@ -59,16 +59,15 @@ struct AppShellView: View {
     switch tab {
     case .home:
       HomeDashboardView(
-        healthStore: model.healthStore,
         selectedDate: $homeSelectedDate,
         openHealthRoute: openHomeHealthRoute
       )
     case .health:
-      HealthView(store: model.healthStore)
+      HealthView()
     case .coach:
-      CoachView(healthStore: model.healthStore)
+      CoachView()
     case .more:
-      MoreView(healthStore: model.healthStore)
+      MoreView()
     }
   }
 

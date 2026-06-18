@@ -3,7 +3,7 @@ import SwiftUI
 struct HomeDashboardView: View {
   @Environment(GooseAppModel.self) private var model
   @EnvironmentObject private var router: AppRouter
-  var healthStore: HealthDataStore
+  @Environment(HealthDataStore.self) private var healthStore
   @Binding var selectedDate: Date
   let openHealthRoute: (HealthRoute) -> Void
   @State private var showingScoreDatePicker = false
@@ -149,7 +149,7 @@ struct HomeDashboardView: View {
       )
     }
     .sheet(isPresented: $showingCardioLoadSheet) {
-      CardioLoadSheet(store: healthStore)
+      CardioLoadSheet()
     }
     .sheet(item: $selectedHealthMonitorTrend) { snapshot in
       SleepV2BevelTrendSheet(snapshot: snapshot)
