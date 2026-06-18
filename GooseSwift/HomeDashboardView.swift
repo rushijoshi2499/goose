@@ -149,7 +149,7 @@ struct HomeDashboardView: View {
       )
     }
     .sheet(isPresented: $showingCardioLoadSheet) {
-      CardioLoadSheet(store: healthStore)
+      CardioLoadSheet()
     }
     .sheet(item: $selectedHealthMonitorTrend) { snapshot in
       SleepV2BevelTrendSheet(snapshot: snapshot)

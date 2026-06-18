@@ -9,10 +9,13 @@ struct HealthPreviewRouteHost: View {
   let state: HealthPreviewState
 
   var body: some View {
-    NavigationStack {
-      HealthRouteDetailView(route: route, previewState: state)
+    let previewStore = HealthDataStore()
+    previewStore.applyPreviewState(state)
+    return NavigationStack {
+      HealthRouteDetailView(route: route)
     }
     .environment(GooseAppModel(startBLE: false))
+    .environment(previewStore)
     .environmentObject(AppRouter())
   }
 }

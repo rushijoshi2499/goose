@@ -36,7 +36,7 @@ struct AppShellView: View {
       NavigationStack(path: $homeHealthPath) {
         tabContent(for: tab)
           .navigationDestination(for: HealthRoute.self) { route in
-            HealthRouteDestinationView(route: route, store: model.healthStore, selectedDate: $homeSelectedDate)
+            HealthRouteDestinationView(route: route, selectedDate: $homeSelectedDate)
           }
       }
     } else if tab == .health {
