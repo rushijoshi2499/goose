@@ -83,7 +83,7 @@ struct SleepV2SleepWindowCard: View {
 
 struct SleepV2BandSyncCard: View {
   var store: HealthDataStore
-  var ble: GooseBLEClient
+  var ble: any BLETransport
   let palette: SleepV2Palette
   let onSync: () -> Void
 

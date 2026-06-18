@@ -275,7 +275,7 @@ struct HomeDashboardView: View {
 // MARK: - HOME-01: Device Status Card
 
 private struct HomeDeviceStatusCard: View {
-  let ble: GooseBLEClient
+  let ble: any BLETransport
   let onReconnect: () -> Void
 
   private var isConnected: Bool {
