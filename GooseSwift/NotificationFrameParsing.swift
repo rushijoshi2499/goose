@@ -164,7 +164,7 @@ struct NotificationParseContext: @unchecked Sendable {
   let healthCaptureActive: Bool
   let respiratoryPacketWatchActive: Bool
   let fallbackHeartRate: Int?
-  let ble: CoreBluetoothBLETransport
+  let ble: any BLETransport
   let packetUIStateAggregator: PacketUIStateAggregator
   let whoopDataSignalPipeline: WhoopDataSignalPipeline
 }

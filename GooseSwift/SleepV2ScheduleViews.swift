@@ -83,7 +83,7 @@ struct SleepV2SleepWindowCard: View {
 
 struct SleepV2BandSyncCard: View {
   @Environment(HealthDataStore.self) private var healthStore
-  var ble: CoreBluetoothBLETransport
+  var ble: any BLETransport
   let palette: SleepV2Palette
   let onSync: () -> Void
 

@@ -82,8 +82,19 @@ protocol BLETransport: AnyObject {
   var historicalSyncBurstsCompleted: Int { get }
   var historicalSyncPagesTotal: Int? { get }
   var alarmDisplaySummary: String { get }
+  var alarmWriteSupportSummary: String { get }
   var batterySettingsSummary: String { get }
+  var batteryChargeDisplayStatus: String { get }
   var rememberedDeviceDescription: String { get }
+  var canScan: Bool { get }
+  var canConnect: Bool { get }
+  var canSendHello: Bool { get }
+  var canReconnectRemembered: Bool { get }
+  var hasRememberedDevice: Bool { get }
+  var isReconnecting: Bool { get }
+  var reconnectFailed: Bool { get }
+  var hrIsReconnecting: Bool { get }
+  var hrReconnectFailed: Bool { get }
 
   // MARK: - Callback properties
 
@@ -117,12 +128,24 @@ protocol BLETransport: AnyObject {
   func stopScan(reason: String)
   func reconnectRemembered()
   func updateConnectionState(_ value: String)
+  func select(_ device: GooseDiscoveredDevice)
+  func connectSelected()
+  func forgetRememberedDevice()
+  func sendClientHello()
+  func readStrapClock(syncIfNeeded: Bool)
+  func refreshBatteryLevel()
+  func refreshDeviceInformation()
+  func stopReconnect()
+  func retryReconnect()
+  func stopHRReconnect()
+  func retryHRReconnect()
   // Primary record method; convenience overloads are provided via protocol extension.
   func record(level: GooseLogLevel, source: String, title: String, body: String)
   func recordLiveHeartRate(_ bpm: Int, source: String, at date: Date)
   // syncHistoricalPackets with explicit rangeFirst; no-arg convenience is in the protocol extension.
   func syncHistoricalPackets(rangeFirst: Bool)
   func setWhoopAlarm(at localWakeTime: Date, alarmID: Int)
+  func runWhoopAlarmNow(alarmID: Int)
   func disableWhoopAlarms()
   func buzz(loops: Int)
   func applyBatteryLevel(_ rawLevel: Int, capturedAt: Date, sourceTitle: String)
@@ -156,11 +179,27 @@ extension BLETransport {
     record(level: .info, source: source, title: title, body: body)
   }
 
+  func record(level: GooseLogLevel, source: String, title: String) {
+    record(level: level, source: source, title: title, body: "")
+  }
+
   @discardableResult func sendDebugResearchCommand(id: String) -> Bool {
     sendDebugResearchCommand(id: id, payloadHex: nil, source: "ui.debug")
   }
 
   func enterHighFrequencyHistorySync() {
     enterHighFrequencyHistorySync(intervalSeconds: 180, durationSeconds: 7_200)
+  }
+
+  func setWhoopAlarm(at localWakeTime: Date) {
+    setWhoopAlarm(at: localWakeTime, alarmID: 1)
+  }
+
+  func runWhoopAlarmNow() {
+    runWhoopAlarmNow(alarmID: 1)
+  }
+
+  func readStrapClock() {
+    readStrapClock(syncIfNeeded: true)
   }
 }

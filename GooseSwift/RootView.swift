@@ -18,7 +18,7 @@ struct RootView: View {
           }
         }
       }
-      SyncToastHost(ble: model.ble)
+      SyncToastHost(ble: model.bleCoordinator.transport)
     }
     .gooseScreenBackground()
     .onAppear {
