@@ -230,8 +230,8 @@ extension GooseAppModel {
     if var capture = activeHealthPacketCapture {
       capture.importedFrameCount += snapshot.acceptedFrameCount
       activeHealthPacketCapture = capture
-      if healthPacketCaptureFrameCount == 0 {
-        healthPacketCaptureFrameCount = capture.importedFrameCount
+      if healthState.healthPacketCaptureFrameCount == 0 {
+        healthState.healthPacketCaptureFrameCount = capture.importedFrameCount
       }
       healthPacketCaptureStreamRetryWorkItem?.cancel()
       scheduleHealthPacketCaptureUIUpdate()
@@ -271,7 +271,7 @@ extension GooseAppModel {
       )
     }
     if let errorDescription = result.errorDescription {
-      packetImportStatus = "Packet import failed"
+      healthState.packetImportStatus = "Packet import failed"
       ble.record(
         level: .error,
         source: "rust",
@@ -351,10 +351,10 @@ extension GooseAppModel {
     packetImportRevisionWorkItem = nil
     lastPacketImportRevisionPublishedAt = now
     if let pendingPacketImportStatus {
-      packetImportStatus = pendingPacketImportStatus
+      healthState.packetImportStatus = pendingPacketImportStatus
       self.pendingPacketImportStatus = nil
     }
-    packetImportRevision += 1
+    healthState.packetImportRevision += 1
   }
 
   func parseNotificationFrames(_ frames: [NotificationFrame], event: GooseNotificationEvent) {
@@ -523,7 +523,7 @@ extension GooseAppModel {
     NotificationParseContext(
       deviceType: event.wireProtocol.bridgeString,
       healthCaptureActive: activeHealthPacketCapture != nil,
-      respiratoryPacketWatchActive: respiratoryPacketWatchActive,
+      respiratoryPacketWatchActive: healthState.respiratoryPacketWatchActive,
       fallbackHeartRate: recentLiveHeartRate(around: event.capturedAt),
       ble: ble,
       packetUIStateAggregator: packetUIStateAggregator,

@@ -6,9 +6,9 @@ extension GooseAppModel {
   // When connectivity returns and there is a deferred upload, clears the pending flag
   // and the visible error state before triggering the upload.
   func handleReachabilityChange(_ reachable: Bool) {
-    guard reachable, hasPendingUploadAfterReconnect else { return }
-    hasPendingUploadAfterReconnect = false
-    uploadErrorState = nil
+    guard reachable, syncState.hasPendingUploadAfterReconnect else { return }
+    syncState.hasPendingUploadAfterReconnect = false
+    syncState.uploadErrorState = nil
     triggerManualUpload()
   }
 
@@ -41,7 +41,7 @@ extension GooseAppModel {
   }
 
   func completeOnboarding() {
-    onboardingComplete = true
+    bleState.onboardingComplete = true
     ble.record(source: "ui", title: "onboarding.complete")
   }
 
@@ -96,11 +96,11 @@ extension GooseAppModel {
   func applyHeartRateTimelineSnapshot(_ snapshot: HeartRateTimelineSnapshot) {
     // Equality guard: the pipeline fires every 1 s; avoid a spurious objectWillChange
     // (and full-view re-render of all GooseAppModel observers) when the data is unchanged.
-    if snapshot.ranges != heartRateHourlyRanges {
-      heartRateHourlyRanges = snapshot.ranges
+    if snapshot.ranges != bleState.heartRateHourlyRanges {
+      bleState.heartRateHourlyRanges = snapshot.ranges
     }
-    if snapshot.status != heartRateStorageStatus {
-      heartRateStorageStatus = snapshot.status
+    if snapshot.status != bleState.heartRateStorageStatus {
+      bleState.heartRateStorageStatus = snapshot.status
     }
   }
 
@@ -119,7 +119,7 @@ extension GooseAppModel {
 
   func handleBLEConnectionStateChange(_ state: String) {
     if state == "ready" {
-      connectedDeviceGeneration = ble.discoveredDevices
+      bleState.connectedDeviceGeneration = ble.discoveredDevices
         .first(where: { $0.id == ble.activeDeviceIdentifier })?.generation
       captureFrameWriteQueue.activeDeviceID = ble.activeDeviceIdentifier?.uuidString
       if let uuid = ble.connectedPeripheralUUID {
@@ -135,10 +135,10 @@ extension GooseAppModel {
     } else {
       // Clear on all non-ready states (connecting, discovering, connect timeout, disconnected, etc.)
       // to prevent a stale generation label from the previous connection showing during reconnection.
-      connectedDeviceGeneration = nil
+      bleState.connectedDeviceGeneration = nil
       captureFrameWriteQueue.activeDeviceID = nil
       captureFrameWriteQueue.currentDeviceUUID = nil
-      alarmIsArmed = false  // HAP-03: armed alarm is unreliable if strap disconnects
+      bleState.alarmIsArmed = false  // HAP-03: armed alarm is unreliable if strap disconnects
     }
 
     guard state == "ready" else {
@@ -188,16 +188,16 @@ extension GooseAppModel {
   func startMovementPacketValidationTest(timeout: TimeInterval = 45) {
     ble.record(source: "ui.debug", title: "movement_packet_test.start")
     guard ble.connectionState == "ready" else {
-      movementPacketValidationStatus = "Connect WHOOP first. Current state: \(ble.connectionState)"
-      movementPacketValidationIsRunning = false
+      healthState.movementPacketValidationStatus = "Connect WHOOP first. Current state: \(ble.connectionState)"
+      healthState.movementPacketValidationIsRunning = false
       ble.record(level: .warn, source: "activity.detect", title: "movement_packet_test.blocked", body: ble.connectionState)
       return
     }
 
     movementPacketValidationTimeoutWorkItem?.cancel()
     movementPacketValidation = MovementPacketValidation(startedAt: Date(), timeout: timeout)
-    movementPacketValidationIsRunning = true
-    movementPacketValidationStatus = "Listening for real WHOOP movement packets"
+    healthState.movementPacketValidationIsRunning = true
+    healthState.movementPacketValidationStatus = "Listening for real WHOOP movement packets"
     ble.record(source: "activity.detect", title: "movement_packet_test.listening", body: "timeout=\(Int(timeout.rounded()))s")
 
     let workItem = DispatchWorkItem { [weak self] in
