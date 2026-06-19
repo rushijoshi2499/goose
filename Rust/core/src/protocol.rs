@@ -317,6 +317,11 @@ pub enum DataPacketBodySummary {
         step_motion_counter: Option<u16>,
         warnings: Vec<String>,
     },
+    /// Catch-all for packet_k values with no dedicated parse arm.
+    /// Serialises as { "kind": "unknown", "packet_k": N }.
+    Unknown {
+        packet_k: u8,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -733,7 +738,10 @@ fn parse_data_packet_body_summary(
         10 => parse_k10_raw_motion_summary(payload),
         21 => parse_k21_raw_motion_summary(payload),
         24 => parse_v24_body_summary(payload),
-        _ => (None, Vec::new()),
+        _ => (
+            Some(DataPacketBodySummary::Unknown { packet_k }),
+            vec![format!("unhandled_packet_k_{packet_k}")],
+        ),
     }
 }
 

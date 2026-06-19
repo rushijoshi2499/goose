@@ -1682,6 +1682,9 @@ fn upload_get_recent_decoded_streams_bridge(
                                 step.push((ts, count as i64));
                             }
                         }
+                        DataPacketBodySummary::Unknown { .. } => {
+                            // Unknown packet_k — no upload stream; skip gracefully.
+                        }
                     }
                 }
 
