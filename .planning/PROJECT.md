@@ -12,6 +12,7 @@ v6.0 shipped (2026-06-09): All v5.0 Rust algorithms wired to SwiftUI dashboards 
 v7.0 shipped (2026-06-10): Sync correctness + async migration — upload route pair complete (POST /v1/ingest-frames + GET export), device_uuid end-to-end (CoreBluetooth → SQLite → server), upload sync race fix (pre-capture rowIDs), HealthDataStore full async/await migration (60+ calls, GCD removed), morning band sleep sync (gravity K18/K24 extraction → Cole-Kripke → external_sleep_sessions). Algorithm defaults promoted to v1. Phase 51 (real-device validation) deferred — hardware gate.
 v10.0 shipped (2026-06-13): Protocol parity + haptics + feature completeness — WHOOP 5.0 BLE manager refactor (GooseBLEHistoricalManager + GooseBLEDataValidator), haptic buzz primitive (cmd 0x13), BreatheView, Coach VOW nudges, Interval Timer, iOS notifications (sleep/workout/battery), HR decimation, Stress/ANS + Trends + Manual Workout screens, service layer protocols + mocks, smart alarm UI (HAP-03), wake-window RE-gated stub. Schema v20 (4 new SQLite tables). Code review fixes across 3 phases.
 v11.0 shipped (2026-06-14): PR integration + code health + app polish — 7 fork PRs integrated (units, localisation, UUID hiding, ChatGPT auth, firmware recovery, warm-up progress, sync donut), 4 upstream PRs merged (main-thread offload, async FFI, scroll jitter fix), full codebase audit (7 documents + CRITICAL findings resolved), schema v21 indexes, lazy init, BLE auth retry (SEED-001), Debug 3-tab split, Logs & Export, Breathe haptics, live strain tile, resting HR floor (30 bpm), R22 battery display, HealthKit SQLite persistence.
+v12.0 shipped (2026-06-19): Code Health & Protocol Foundation — DeviceKind/DeviceCapabilities/WireProtocol enum replacing 17 string comparisons, Gen4 battery via Event-48 + cmd 26, Rust crash safety (catch_unwind + unwrap→Result + deny lint), bridge.rs BridgeRouter per-domain handlers, store.rs domain stores (SleepStore/CaptureStore/MetricsStore), HealthDataStore ownership to GooseAppModel, BLETransport actor + DeviceCatalog, domain @Observable ViewModels, threading + protocol offset + algorithm coefficient comments. Phases 83–91.
 
 ## Core Value
 
@@ -144,22 +145,57 @@ Known deferred (v10.0): BLE5-01/02 (hardware-gated — real WHOOP 5.0), HAP-02/D
 
 Known deferred: Ph74/75 BLE device-gate tests; CAPSENSE-01, HAP-04, BLE5-01/02 hardware gates
 
-### Active (v12.0 — Code Health & Protocol Foundation)
+### Validated (v12.0 — Code Health & Protocol Foundation)
 
-- [ ] **BAT-01**: Gen4 WHOOP real battery % via Event-48 payload (offset 17, u16 LE / 10)
-- [ ] **BAT-02**: Gen4 GET_BATTERY_LEVEL command (cmd 26) response parsing as fallback path
-- [ ] **PROTO-01**: `WireProtocol { Gen4, Gen5 }` Rust enum replacing 17 string comparisons in Swift
-- [ ] **PROTO-02**: `DeviceKind { Whoop4, Whoop5, HrMonitor }` + `DeviceCapabilities` struct via bridge method
-- [ ] **PROTO-03**: DB migration normalising MAVERICK/PUFFIN → GOOSE; Swift `WhoopGeneration` → `connectedCapabilities`
-- [ ] **ARCH-01**: bridge.rs 509-arm dispatcher → `BridgeRouter` trait + per-domain handlers (metrics, sleep, capture, activity)
-- [ ] **ARCH-02**: store.rs 140 métodos → domain stores (SleepStore, CaptureStore, MetricsStore) + schema validation on open
-- [ ] **ARCH-03**: 133 `.unwrap()` → `Result<_, GooseError>` in bridge.rs + store.rs; `#[deny(clippy::unwrap_used)]`
-- [ ] **ARCH-04**: HealthDataStore owned by GooseAppModel (not AppShellView @StateObject); weak ref eliminated
-- [ ] **ARCH-05**: GooseBLEClient → `BLETransport` protocol + `BLESessionCoordinator` actor + `DeviceCatalog`
-- [ ] **ARCH-06**: GooseAppModel → domain `@Observable` objects (BLEState, SyncState, HealthState)
-- [ ] **COMM-01**: Protocol offset comments (WHOOP Event-48, cmd 26 layout) in Rust source
-- [ ] **COMM-02**: Threading invariant comments at bridge FFI boundary and GooseRustBridge usage sites
-- [ ] **COMM-03**: Algorithm coefficient comments (Banister eTRIMP, EWMA alpha, Cole-Kripke) in Rust source
+- ✓ **BAT-01**: Gen4 WHOOP real battery % via Event-48 payload (offset 17, u16 LE / 10) — v12.0 (Phase 84)
+- ✓ **BAT-02**: Gen4 GET_BATTERY_LEVEL command (cmd 26) response parsing as fallback path — v12.0 (Phase 84)
+- ✓ **PROTO-01**: `WireProtocol { Gen4, Gen5 }` Rust enum replacing 17 string comparisons in Swift — v12.0 (Phase 83)
+- ✓ **PROTO-02**: `DeviceKind { Whoop4, Whoop5, HrMonitor }` + `DeviceCapabilities` struct via bridge method — v12.0 (Phase 83)
+- ✓ **PROTO-03**: DB migration normalising MAVERICK/PUFFIN → GOOSE; Swift `WhoopGeneration` → `connectedCapabilities` — v12.0 (Phase 83)
+- ✓ **ARCH-01**: bridge.rs 509-arm dispatcher → `BridgeRouter` trait + per-domain handlers (metrics, sleep, capture, activity) — v12.0 (Phase 86)
+- ✓ **ARCH-02**: store.rs 140 métodos → domain stores (SleepStore, CaptureStore, MetricsStore) + schema validation on open — v12.0 (Phase 87)
+- ✓ **ARCH-03**: 133 `.unwrap()` → `Result<_, GooseError>` in bridge.rs + store.rs; `#[deny(clippy::unwrap_used)]` — v12.0 (Phase 85)
+- ✓ **ARCH-04**: HealthDataStore owned by GooseAppModel (not AppShellView @StateObject); weak ref eliminated — v12.0 (Phase 88)
+- ✓ **ARCH-05**: GooseBLEClient → `BLETransport` protocol + `BLESessionCoordinator` actor + `DeviceCatalog` — v12.0 (Phase 89)
+- ✓ **ARCH-06**: GooseAppModel → domain `@Observable` objects (BLEState, SyncState, HealthState) — v12.0 (Phase 90)
+- ✓ **COMM-01**: Protocol offset comments (WHOOP Event-48, cmd 26 layout) in Rust source — v12.0 (Phase 86)
+- ✓ **COMM-02**: Threading invariant comments at bridge FFI boundary and GooseRustBridge usage sites — v12.0 (Phase 91)
+- ✓ **COMM-03**: Algorithm coefficient comments (Banister eTRIMP, EWMA alpha, Cole-Kripke) in Rust source — v12.0 (Phase 91)
+
+### Active (v13.0 — Bug Fixes, Protocol Reliability, Device Coverage & HealthKit Export)
+
+**Bug Fixes**
+- [ ] **BUG-AUTH-01**: WHOOP 5.0 auth stuck state recovery — detect stuck auth after retry exhaustion; surface clear user action; eliminate infinite retry loop (#154)
+- [ ] **BUG-EXP-01**: Export OOM — post-export validation pipeline passes manifest by reference/ID, not serialised object; fix primary crash on DBs > 100 MB (#155)
+- [ ] **BUG-EXP-02**: `runFullRawExport()` must not override safe export defaults (`includeRawBytes = false`) silently (#155 Bug 1)
+- [ ] **BUG-EXP-03**: `validate()` called twice in `createBundle()` — remove redundant bridge call (#155 Bug 2)
+- [ ] **BUG-EXP-04**: "Include Database" button disabled when SQLite file exceeds OOM threshold (> 20 MB) (#155 Bug 3)
+- [ ] **BUG-HR-01**: Investigate + fix no HR data on WHOOP 5.0 firmware 50.38.1.0 (#156)
+
+**Protocol Layer**
+- [ ] **PROTO-08**: `PACKET_TYPE_*` constants → Rust enum with exhaustion check (`#[non_exhaustive]` or match guard) (#157)
+- [ ] **PROTO-09**: Silent `_ => (None, vec![])` in `parse_data_packet_body_summary` → explicit arms with warning strings for unhandled packet_k values (#157)
+- [ ] **PROTO-10**: Sync `data_packet_domain()` and `parse_data_packet_body_summary()` — every domain-annotated packet type gets a parse arm (#157)
+- [ ] **PROTO-11**: Bridge routing → central dispatch registry; `CommandDefinition` array kept in sync with bridge (#157)
+
+**Gen4 Protocol Completeness**
+- [ ] **GEN4-06**: Parse Gen4 recovery metrics from packet bytes — `respiratory_rate`, `skin_temp_delta_c` populated in `MetricFeatures` (currently always `None`) (#21)
+- [ ] **SYNC-07**: Gen4 historical packet47 page_sequence reassembly fix — no body dropped on service UUID `61080005` (#20)
+
+**WHOOP MG Support**
+- [ ] **MG-01**: `WhoopMg` variant added to `DeviceKind` + `DeviceCapabilities` with MG-specific protocol flags (SEED-006, #22)
+- [ ] **MG-02**: Swift advertisement parsing identifies WHOOP MG separately from WHOOP 4/5; `connectedCapabilities` updated
+
+**Best Practices**
+- [ ] **BP-01**: 9 silent `try?` calls on bridge in Swift fixed → `do/catch` + `ble.record(level: .error, ...)` on critical data paths (SEED-007)
+- [ ] **BP-02**: Rust SQLite connection pool — eliminate per-request connection open overhead (SEED-007)
+
+**HealthKit Export — Bevel Integration**
+- [ ] **HK-01**: Write WHOOP HR samples to HealthKit (`HKQuantityTypeIdentifierHeartRate`) (#109)
+- [ ] **HK-02**: Write HRV to HealthKit (`HKQuantityTypeIdentifierHeartRateVariabilitySDNN`)
+- [ ] **HK-03**: Write SpO2 to HealthKit (`HKQuantityTypeIdentifierOxygenSaturation`)
+- [ ] **HK-04**: Write sleep samples to HealthKit (`HKCategoryTypeIdentifierSleepAnalysis`)
+- [ ] **HK-05**: HealthKit write toggle in More settings (opt-in, default off)
 
 ### Deferred (hardware gate — sem device físico)
 
@@ -207,18 +243,19 @@ Known deferred: Ph74/75 BLE device-gate tests; CAPSENSE-01, HAP-04, BLE5-01/02 h
 | Google OAuth via WKWebView (no SDK) | Zero external dependency; user-supplied client_id; PKCE mandatory | ✓ Good — v4.0 |
 | Inline L10N gap closure (9 strings, no new phase) | Faster than planning a new phase for 9-string fix | ✓ Good — v4.0 |
 
-## Current Milestone: v12.0 — Code Health & Protocol Foundation
+## Current Milestone: v13.0 — Bug Fixes, Protocol Reliability, Device Coverage & HealthKit Export
 
-**Goal:** Eliminar dívida técnica estrutural — protocolo Gen4/Gen5 limpo, bridge/store partidos em domínios, ownership Swift correcta, crash safety via Result, e bateria real Gen4.
+**Goal:** Fechar os bugs reportados no fork (export OOM, auth stuck, HR data), limpar a protocol layer (enum, silent drops), adicionar WHOOP MG como DeviceKind, corrigir métricas Gen4 em falta, e exportar dados WHOOP para HealthKit (Bevel integration).
 
 **Target features:**
-- Battery Gen4 real % via Event-48 e cmd 26 (SEED-002)
-- WireProtocol + DeviceKind + DeviceCapabilities — elimina 17 string comparisons (SEED-003, fase 83 com context completo)
-- bridge.rs BridgeRouter, store.rs domain stores, unwrap→Result, HealthDataStore ownership, BLEClient actor (SEED-004)
-- Targeted WHY comments: offsets WHOOP, threading, FFI safety, coeficientes empíricos (SEED-005)
+- Bug fixes: export OOM crash (#155), WHOOP 5.0 auth stuck loop (#154), no HR data (#156), protocol scale risks (#157)
+- Gen4 completeness: respiratory_rate + skin_temp parsing (#21), packet47 historical reassembly (#20)
+- WHOOP MG: WhoopMg DeviceKind + advertisement parsing (SEED-006, #22)
+- Best practices: 9 silent try? → error logging, Rust connection pool (SEED-007)
+- HealthKit Export: HR, HRV, SpO2, sleep → HealthKit for Bevel integration (#109)
 
 ---
-*Last updated: 2026-06-13 after v10.0 milestone*
+*Last updated: 2026-06-19 after v12.0 milestone*
 
 ## Evolution
 

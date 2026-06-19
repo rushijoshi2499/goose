@@ -14,6 +14,7 @@
 - ✅ **v10.0 Protocol Parity, Haptics & Feature Completeness** — Phases 67-73 (shipped 2026-06-13)
 - ✅ **v11.0 PR Integration, Code Health & App Polish** — Phases 74-82 (shipped 2026-06-14)
 - ✅ **v12.0 Code Health & Protocol Foundation** — Phases 83-91 (shipped 2026-06-19)
+- 🚀 **v13.0 Bug Fixes, Protocol Reliability, Device Coverage & HealthKit Export** — Phases 92-97 (active)
 
 ## Phases
 
@@ -585,6 +586,128 @@ Plans:
 - [ ] 91-01-PLAN.md — Swift threading invariant comments (COMM-02): GooseRustBridge, CaptureFrameWriteQueue, OvernightSQLiteMirrorQueue, GooseAppModel
 - [ ] 91-02-PLAN.md — Rust algorithm coefficient comments (COMM-03): Banister eTRIMP, EWMA alpha, Cole-Kripke scale
 
+</details>
+
+## v13.0 Bug Fixes, Protocol Reliability, Device Coverage & HealthKit Export (Phases 92–97)
+
+### Phase Details
+
+#### Phase 92: Export & Auth Bug Fixes
+
+**Goal**: Export pipeline no longer OOMs on large databases; WHOOP 5.0 auth stuck state surfaces a clear recovery path
+**Depends on**: Phase 91
+**Requirements**: BUG-AUTH-01, BUG-EXP-01, BUG-EXP-02, BUG-EXP-03, BUG-EXP-04
+**Success Criteria** (what must be TRUE):
+
+  1. Export on a > 100 MB database completes without crash — validation pipeline passes manifest by reference, not serialised object
+  2. `runFullRawExport()` does not override `includeRawBytes = false`
+  3. `validate()` is called once inside `createBundle()` — redundant call removed
+  4. "Include Database" button is disabled when SQLite file exceeds 20 MB
+  5. WHOOP 5.0 that exhausts 12 auth retries surfaces a "Reconnect WHOOP" prompt and stops retrying
+  6. iOS build compiles without new warnings
+
+**Plans**:
+- [ ] 92-01-PLAN.md — Fix export OOM: manifest by-reference in validation pipeline; validate() dedup (BUG-EXP-01, BUG-EXP-03)
+- [ ] 92-02-PLAN.md — Fix export defaults + disable OOM-risk button (BUG-EXP-02, BUG-EXP-04)
+- [ ] 92-03-PLAN.md — Fix WHOOP 5.0 auth stuck state recovery (BUG-AUTH-01)
+
+---
+
+#### Phase 93: HR Data Investigation & Protocol Cleanup
+
+**Goal**: Root cause of no HR data on WHOOP 5.0 fw 50.38.1.0 identified and fixed; protocol.rs PACKET_TYPE constants replaced with enum; silent parse drops eliminated
+**Depends on**: Phase 91
+**Requirements**: BUG-HR-01, PROTO-08, PROTO-09, PROTO-10, PROTO-11
+**Success Criteria** (what must be TRUE):
+
+  1. WHOOP 5.0 firmware 50.38.1.0 successfully streams HR data in the app
+  2. `PACKET_TYPE_*` u16 constants replaced with a Rust enum; all match sites are exhaustive
+  3. `parse_data_packet_body_summary` has no silent wildcard arm — unhandled packet_k values produce a warning string
+  4. Every packet type in `data_packet_domain()` has a corresponding parse arm in `parse_data_packet_body_summary()`
+  5. Bridge routing uses a central dispatch registry; `CommandDefinition` array is in sync
+  6. `cargo test --locked` passes clean
+
+**Plans**:
+- [ ] 93-01-PLAN.md — Investigate #156: trace HR data path for fw 50.38.1.0; identify and fix root cause (BUG-HR-01)
+- [ ] 93-02-PLAN.md — PACKET_TYPE enum + exhaustive match sites (PROTO-08)
+- [ ] 93-03-PLAN.md — Silent drop elimination + domain/parse sync + bridge registry (PROTO-09, PROTO-10, PROTO-11)
+
+---
+
+#### Phase 94: Gen4 Protocol Completeness
+
+**Goal**: WHOOP 4.0 users see respiratory rate and skin temperature in Recovery; Gen4 historical sync completes without dropping packet47 bodies
+**Depends on**: Phase 93
+**Requirements**: GEN4-06, SYNC-07
+**Success Criteria** (what must be TRUE):
+
+  1. `MetricFeatures.respiratory_rate_rpm` and `skin_temp_delta_c` are populated from Gen4 packet bytes — not `None`
+  2. Gen4 historical sync on service UUID `61080005` produces packet47 body rows in SQLite — no bodies dropped
+  3. `cargo test --locked` passes clean; Rust test fixtures updated for new parse paths
+
+**Plans**:
+- [ ] 94-01-PLAN.md — Gen4 recovery metric parsing: respiratory_rate + skin_temp byte offsets in Rust (GEN4-06)
+- [ ] 94-02-PLAN.md — Gen4 packet47 page_sequence reassembly fix (SYNC-07)
+
+---
+
+#### Phase 95: WHOOP MG DeviceKind
+
+**Goal**: WHOOP MG devices are identified as a separate DeviceKind; sync no longer fails with generic Whoop5 capabilities
+**Depends on**: Phase 83 (DeviceKind infrastructure)
+**Requirements**: MG-01, MG-02
+**Success Criteria** (what must be TRUE):
+
+  1. `DeviceKind::WhoopMg` exists in Rust capabilities.rs with `DeviceCapabilities` reflecting MG-specific flags
+  2. `DeviceType::MG` (or equivalent) maps to `DeviceKind::WhoopMg` in `protocol.rs`
+  3. iOS app parses WHOOP MG BLE advertisement and sets `connectedCapabilities` to WhoopMg
+  4. Device view shows "WHOOP MG" label for MG devices; no regression on Whoop4/Whoop5 identification
+  5. `cargo test --locked` passes clean
+
+**Plans**:
+- [ ] 95-01-PLAN.md — Research WHOOP MG BLE advertisement + add WhoopMg DeviceKind to Rust core (MG-01)
+- [ ] 95-02-PLAN.md — Swift advertisement parsing for WHOOP MG + connectedCapabilities update (MG-02)
+
+---
+
+#### Phase 96: Best Practices Gaps
+
+**Goal**: Critical data paths no longer silently swallow bridge errors; Rust core uses a connection pool
+**Depends on**: Phase 91
+**Requirements**: BP-01, BP-02
+**Success Criteria** (what must be TRUE):
+
+  1. All 9 silent `try?` bridge calls in Swift replaced with `do/catch` + `ble.record(level: .error, ...)` — failures are logged
+  2. Rust core opens SQLite via a connection pool — per-request `Connection::open()` calls eliminated in bridge handlers
+  3. iOS build compiles without new warnings; `cargo test --locked` passes clean
+
+**Plans**:
+- [ ] 96-01-PLAN.md — Fix 9 silent try? bridge calls in Swift (BP-01)
+- [ ] 96-02-PLAN.md — Rust SQLite connection pool (BP-02)
+
+---
+
+#### Phase 97: HealthKit Export — Bevel Integration
+
+**Goal**: WHOOP metrics written to HealthKit automatically; Bevel and other apps can read WHOOP data via HealthKit
+**Depends on**: Phase 96 (bridge error handling in place before new HK write paths)
+**Requirements**: HK-01, HK-02, HK-03, HK-04, HK-05
+**Success Criteria** (what must be TRUE):
+
+  1. HR samples captured from WHOOP appear in Health app under Heart Rate source "Goose"
+  2. HRV (RMSSD or SDNN), SpO2, and sleep session data appear in Health app under respective categories
+  3. HealthKit write is controlled by a toggle in More settings (default off); no data written without user opt-in
+  4. Write errors are logged — HK permission denied is handled gracefully without crash
+  5. iOS build compiles without new warnings; existing HealthKit read functionality unaffected
+
+**Plans**:
+- [ ] 97-01-PLAN.md — HealthKit write infrastructure: HKHealthStore setup, permission request, write helper (HK-01..HK-05 foundation)
+- [ ] 97-02-PLAN.md — Write HR + HRV samples to HealthKit from capture pipeline (HK-01, HK-02)
+- [ ] 97-03-PLAN.md — Write SpO2 + sleep sessions to HealthKit (HK-03, HK-04)
+- [ ] 97-04-PLAN.md — More settings toggle + write gating + error handling (HK-05)
+
+---
+
 ## Progress
 
 | Phase | Milestone | Status | Completed |
@@ -604,6 +727,12 @@ Plans:
 | 89 | 3/3 | Complete   | 2026-06-18 |
 | 90 | 4/4 | Complete   | 2026-06-18 |
 | 91 | 2/2 | Complete   | 2026-06-18 |
+| 92 | v13.0 | Pending | — |
+| 93 | v13.0 | Pending | — |
+| 94 | v13.0 | Pending | — |
+| 95 | v13.0 | Pending | — |
+| 96 | v13.0 | Pending | — |
+| 97 | v13.0 | Pending | — |
 
 ## Backlog
 
