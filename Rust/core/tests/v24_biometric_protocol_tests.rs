@@ -55,8 +55,8 @@ fn make_v24_decoded_frame_row(payload: &[u8], resp_raw_override: Option<u16>) ->
         body_summary,
         warnings: vec![],
     };
-    let parsed_payload_json = serde_json::to_string(&parsed_payload)
-        .expect("ParsedPayload serialisation must succeed");
+    let parsed_payload_json =
+        serde_json::to_string(&parsed_payload).expect("ParsedPayload serialisation must succeed");
 
     DecodedFrameRow {
         frame_id: "test-frame-v24".to_string(),
@@ -425,7 +425,10 @@ fn respiratory_rate_plan_returns_some_for_v24() {
         input.raw_absolute_offset, 76,
         "raw_absolute_offset must be 76 (3-byte header + body offset 73)"
     );
-    assert_eq!(input.packet_k, 24, "packet_k must be 24 for Gen4 V24History frames");
+    assert_eq!(
+        input.packet_k, 24,
+        "packet_k must be 24 for Gen4 V24History frames"
+    );
 }
 
 // Test B: resp_raw bytes at absolute payload offset 76..78 decode to the seeded value.
@@ -451,7 +454,10 @@ fn resp_raw_offset_reads_correct_bytes() {
         p
     };
     let raw_custom = u16::from_le_bytes([payload_custom[76], payload_custom[77]]);
-    assert_eq!(raw_custom, 180, "Override to 180 at pkt[76..78] must read back as 180");
+    assert_eq!(
+        raw_custom, 180,
+        "Override to 180 at pkt[76..78] must read back as 180"
+    );
 }
 
 // Test C: two V24 pk=24 rows both produce respiratory_rate_inputs (multi-frame regression guard).
@@ -487,7 +493,10 @@ fn pk18_regression_still_returns_some() {
 fn pk99_v24_returns_none() {
     let payload = make_82_byte_payload();
     let (body_summary, _) = parse_v24_body_for_test(&payload);
-    let payload_hex = payload.iter().map(|b| format!("{b:02x}")).collect::<String>();
+    let payload_hex = payload
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect::<String>();
 
     // Build a ParsedPayload with packet_k=99 and V24History body_summary.
     let parsed_payload = ParsedPayload::DataPacket {
@@ -564,7 +573,10 @@ fn v24_resp_raw_feature_extraction_from_decoded_row() {
         .map(|i| u8::from_str_radix(&payload.payload_hex[i..i + 2], 16).unwrap())
         .collect();
     let raw_u16 = u16::from_le_bytes([payload_bytes[76], payload_bytes[77]]);
-    assert_eq!(raw_u16, 240, "payload_hex[76..78] must decode to resp_raw=240");
+    assert_eq!(
+        raw_u16, 240,
+        "payload_hex[76..78] must decode to resp_raw=240"
+    );
 
     // Step 3: Call run_vital_event_feature_report and assert:
     //   - respiratory_rate_plan returns Some for pk=24 V24History
