@@ -292,22 +292,16 @@ fn respiratory_rate_plan_from_payload(
 | A3 | SYNC-07 root cause is NOT body_hex suppression but rather a timing/routing issue | Common Pitfalls | If suppression IS the cause, the fix is to un-suppress pk=24 body_hex for historical frames |
 | A4 | resp_raw encoding for V24 is raw u16 LE with no firmware-side scale factor | Open Questions | If scale is e.g. 1/10 (like pk=18 u16_le_x10), the extracted values will be 10x too high |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **What is the correct scale/encoding for V24 resp_raw (body offset 73)?**
-   - What we know: pk=18 uses `u16_le_x10` (divide by 10 to get RPM). V24 `resp_raw` is documented as "respiration signal; zero-crossing algorithm applied at metrics layer" — suggesting it is a raw ADC count, not a scaled RPM.
-   - What's unclear: Whether the firmware pre-scales to tenths of RPM (like pk=18) or leaves it as raw signal counts.
-   - Recommendation: Tag as `provisional_capture_schema_candidate` with quality flag `v24_resp_raw_encoding_unverified`. Use `u16_le_raw` encoding with scale=1 and let the plausibility range gate (6–30 rpm) flag implausible values. A hardware capture with a known respiratory rate can validate.
+   - RESOLVED: Use `u16_le_raw` with scale=1.0, tagged as `provisional_capture_schema_candidate` with quality flag `v24_resp_raw_encoding_unverified`. Plausibility range gate (6–30 rpm) catches implausible values. A hardware capture can validate later.
 
 2. **What is the true SYNC-07 root cause?**
-   - What we know: `packet47_count` in `store/mod.rs` is incremented in the sleep session upsert. This counter is exposed via `bridge/sleep.rs`. The `shouldDispatchNotificationSideEffectsToMain` guard routes `historicalData` (0x2F) packets to main only when `isHistoricalSyncing`.
-   - What's unclear: Whether Gen4's data characteristic UUID (61080005) is in `notificationCharacteristicIDs`, and whether `isHistoricalSyncing` is true when Gen4 data notifications arrive.
-   - Recommendation: Add a targeted integration test: construct a Gen4-framed historical data packet (type 0x2F, pk=24, device_type Gen4) and call `import_captured_frame_timed` directly. Assert the returned result has `imported_frame: true`. This test will confirm or deny whether the Rust import path is the bug site, or whether the bug is in the Swift routing.
+   - RESOLVED: TDD probe at runtime — executor adds integration test calling `import_captured_frame_timed` with a synthetic Gen4 historical frame (type 0x2F, pk=24). If test fails, the Rust import path is the bug; if passes, the bug is in Swift routing. Plan 94-02 documents whichever root cause is found.
 
 3. **Does skin_temp_delta_c actually work end-to-end for Gen4?**
-   - What we know: `skin_temperature_plan_from_payload` has a `pk=24` arm at body offset 3 (raw_absolute_offset 16), encoding `u16_le_x1000`. This is a candidate field, not the NTC `skin_temp_raw` at body offset 65. The NTC field at body offset 65 is parsed into `V24History.skin_temp_raw` but is NOT extracted by `skin_temperature_plan_from_payload`.
-   - What's unclear: Whether the field at body offset 3 is actually skin temperature data, or if the NTC field at offset 65 should be the primary source. The `skin_temp_delta_c` in `MetricFeatures` is populated from `provided_vitals`, which comes from `RecoveryFeatureScoreOptions`. The `skin_temperature_plan` extraction populates `SkinTemperatureFeature` entries in `VitalEventFeatureReport`, not `MetricFeatures.skin_temp_delta_c` directly.
-   - Recommendation: Verify the full chain: `skin_temperature_plan_from_payload` → `skin_temperature_feature_from_plan` → `VitalEventFeatureReport.skin_temperature_inputs` → how this feeds `MetricFeatures.skin_temp_delta_c`. If there is no connection, the requirement SC1 ("skin_temp_delta_c populated") may require a different fix path.
+   - RESOLVED: Executor traces the full chain READ-ONLY: `skin_temperature_plan_from_payload` → `skin_temperature_feature_from_plan` → `VitalEventFeatureReport.skin_temperature_inputs` → `MetricFeatures.skin_temp_delta_c`. If the chain is broken, the executor escalates (does not silently file a follow-up); GEN4-06 may require splitting into GEN4-06a (respiratory rate) and GEN4-06b (skin temp) for the next phase.
 
 ## Environment Availability
 
