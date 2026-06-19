@@ -1170,7 +1170,12 @@ pub fn run_heart_rate_feature_report(
 ) -> GooseResult<HeartRateFeatureReport> {
     let trusted_frames = trusted_frames_for_summary_kinds(
         correlation,
-        &["normal_history", "v18_history", "raw_motion_k10"],
+        &[
+            "normal_history",
+            "v18_history",
+            "raw_motion_k10",
+            "r22_whoop5_hr",
+        ],
     );
     let mut issues = Vec::new();
     if options.require_trusted_evidence && !correlation.pass {
@@ -4158,6 +4163,18 @@ fn heart_rate_plan_from_row(row: &DecodedFrameRow) -> GooseResult<Option<HeartRa
             quality_flag: "preliminary_raw_motion_k10_heart_rate",
             marker_offset: 0,
             marker_value: heart_rate,
+            device_timestamp_seconds: timestamp_seconds,
+            device_timestamp_subseconds: timestamp_subseconds,
+        }),
+        DataPacketBodySummary::R22Whoop5Hr {
+            hr_bpm: Some(hr_bpm),
+            ..
+        } => Some(HeartRatePlan {
+            body_summary_kind: "r22_whoop5_hr",
+            source_signal: "r22_whoop5_hr_milli_bpm",
+            quality_flag: "preliminary_r22_whoop5_hr",
+            marker_offset: 2,
+            marker_value: hr_bpm.round() as u8,
             device_timestamp_seconds: timestamp_seconds,
             device_timestamp_subseconds: timestamp_subseconds,
         }),
