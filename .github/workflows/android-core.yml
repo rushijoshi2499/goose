@@ -77,6 +77,19 @@ jobs:
           echo "archive=$ARCHIVE" >> "$GITHUB_OUTPUT"
           echo "size=$(du -sh "$ARCHIVE" | cut -f1)" >> "$GITHUB_OUTPUT"
 
+      # When android/ project exists (v14.0), enable this step to build and attach the APK:
+      # - name: Build release APK
+      #   working-directory: android
+      #   run: ./gradlew assembleRelease
+      # - name: Attach APK to release
+      #   env:
+      #     GH_TOKEN: ${{ github.token }}
+      #     TAG: ${{ steps.resolve-tag.outputs.tag }}
+      #   run: |
+      #     gh release upload "$TAG" \
+      #       android/app/build/outputs/apk/release/app-release-unsigned.apk \
+      #       --clobber --repo "$GITHUB_REPOSITORY"
+
       - name: Attach to GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
