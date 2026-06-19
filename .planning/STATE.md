@@ -5,15 +5,15 @@ milestone_name: Bug Fixes, Protocol Reliability, Device Coverage & HealthKit Exp
 current_phase: 0
 status: Awaiting first phase
 stopped_at: Phase 95 context gathered
-last_updated: "2026-06-19T18:33:19.111Z"
+last_updated: "2026-06-19T19:16:17.159Z"
 last_activity: 2026-06-19
 last_activity_desc: Milestone v13.0 initialized
 progress:
   total_phases: 6
-  completed_phases: 3
-  total_plans: 8
-  completed_plans: 8
-  percent: 50
+  completed_phases: 4
+  total_plans: 10
+  completed_plans: 10
+  percent: 67
 ---
 
 # Project State
@@ -61,6 +61,8 @@ Recent decisions affecting current work:
 - v13.0 roadmap: Phase 96 is best practices (SEED-007) — Swift silent try? + Rust connection pool; orthogonal to protocol work
 - v13.0 roadmap: Phase 97 is HealthKit Export (#109) — depends on Phase 96 (bridge reliability); new HKHealthStore writes need error handling done right
 - [Phase ?]: authExhausted added to BLETransport protocol (get set) for existential binding
+- [Phase ?]: Used peripheral.name?.lowercased().contains(' mg') for MG detection (candidate_MG_advertisement_byte_unverified per D-03)
+- [Phase ?]: Added onCapabilitiesUpdated callback to BLETransport protocol to propagate MG generation label from transport to GooseAppModel.bleState
 
 ### Roadmap Evolution
 
@@ -99,6 +101,7 @@ Items deferred from previous milestones:
 | debug_session | export_tests-sensor_sample_rows-18_vs_19 | investigating | Phase 85 gate |
 | Phase 92 P03 | 6m | 2 tasks | 5 files |
 | Phase 92-export-auth-bug-fixes P02 | 5 min | 2 tasks | 3 files |
+| Phase 95 P02 | 20 min | 2 tasks | 8 files |
 
 ## Quick Tasks Completed
 
@@ -109,7 +112,7 @@ Items deferred from previous milestones:
 
 ## Session Continuity
 
-Last session: 2026-06-19T18:33:19.101Z
+Last session: 2026-06-19T19:16:05.869Z
 Stopped at: Phase 95 context gathered
 Resume file: .planning/phases/95-whoop-mg-devicekind/95-CONTEXT.md
 Next action: /gsd-discuss-phase 92 or /gsd-plan-phase 92

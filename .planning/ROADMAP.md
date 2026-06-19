@@ -642,6 +642,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
+
 - [x] 93-01-PLAN.md — Fix BUG-HR-01: add R22Whoop5Hr arm to heart_rate_plan_from_row + r22_whoop5_hr to trusted_frames (Wave 1)
 - [x] 93-02-PLAN.md — Introduce PacketType enum, delete 17 PACKET_TYPE_* constants, migrate 5 match sites (Wave 1)
 - [x] 93-03-PLAN.md — Unknown variant in DataPacketBodySummary, replace wildcard, COMMAND_DEFINITIONS registry test (Wave 2)
@@ -679,11 +680,12 @@ Plans:
   4. Device view shows "WHOOP MG" label for MG devices; no regression on Whoop4/Whoop5 identification
   5. `cargo test --locked` passes clean
 
-**Plans**: 2 plans
+**Plans**: 2/2 plans complete
 
 Plans:
-- [ ] 95-01-PLAN.md — Add DeviceKind::WhoopMg to Rust capabilities.rs + remap Maverick in protocol.rs (MG-01)
-- [ ] 95-02-PLAN.md — Swift: 3-way MG BLE detection + deviceKind bridge field + connectedDeviceGeneration label (MG-02)
+
+- [x] 95-01-PLAN.md — Add DeviceKind::WhoopMg to Rust capabilities.rs + remap Maverick in protocol.rs (MG-01)
+- [x] 95-02-PLAN.md — Swift: 3-way MG BLE detection + deviceKind bridge field + connectedDeviceGeneration label (MG-02)
 
 ---
 
@@ -749,7 +751,7 @@ Plans:
 | 92 | 1/3 | In Progress|  |
 | 93 | v13.0 | Pending | — |
 | 94 | v13.0 | Pending | — |
-| 95 | v13.0 | Pending | — |
+| 95 | 2/2 | Complete   | 2026-06-19 |
 | 96 | v13.0 | Pending | — |
 | 97 | v13.0 | Pending | — |
 

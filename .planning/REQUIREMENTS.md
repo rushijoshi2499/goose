@@ -30,7 +30,7 @@
 ## WHOOP MG Support
 
 - [ ] **MG-01**: `DeviceKind::WhoopMg` variant added to Rust core with `DeviceCapabilities` reflecting MG-specific protocol flags — MG devices no longer misidentified as Whoop5 (closes #22, SEED-006)
-- [ ] **MG-02**: iOS app identifies WHOOP MG from BLE advertisement and sets `connectedCapabilities` to `WhoopMg` — device view shows correct generation label
+- [x] **MG-02**: iOS app identifies WHOOP MG from BLE advertisement and sets `connectedCapabilities` to `WhoopMg` — device view shows correct generation label
 
 ## Best Practices
 
