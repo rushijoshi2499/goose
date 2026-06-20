@@ -471,17 +471,13 @@ fn hr_samples_between_bridge(args: HrSamplesBetweenArgs) -> GooseResult<serde_js
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **SpO2 bridge strategy: per-sample FFI roundtrip vs. inline Rust computation**
-   - What we know: `spo2_samples` has raw red/ir; `biometrics.spo2_from_raw` converts one sample; there's no batch bridge.
-   - What's unclear: Whether N FFI calls for a night's SpO2 data (could be thousands of samples) is acceptable latency-wise.
-   - Recommendation: Add inline SpO2 computation to the new `store.spo2_samples_between` Rust bridge method to return `[{ts, spo2_percent}]` directly. Avoids N FFI round-trips.
+   - RESOLVED: Inline Rust computation in `store.spo2_samples_between` — returns `[{ts, spo2_percent}]` directly. Avoids N FFI round-trips. Plan 97-01 implements this.
 
 2. **HRV: write one sample per day or one per overnight window?**
-   - What we know: `daily_recovery_metrics` has one row per date; overnight window is yesterday 20:00–today 12:00.
-   - What's unclear: Whether HK HRV should use `date_key` midnight as start/end, or the actual overnight window.
-   - Recommendation: Use the sleep session start/end times as the sample interval for HRV, same as the nightly recovery metric context.
+   - RESOLVED: Use sleep session start/end times as the HRV sample interval. Plan 97-02 uses sleep session timestamps for HRV HKQuantitySample date range.
 
 ---
 
