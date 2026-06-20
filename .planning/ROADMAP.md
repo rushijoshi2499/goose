@@ -704,7 +704,7 @@ Plans:
 
 1/2 plans executed
 
-- [ ] 96-02-PLAN.md — Rust SQLite connection pool (BP-02)
+- [x] 96-02-PLAN.md — Rust SQLite connection pool (BP-02)
 
 ---
 
