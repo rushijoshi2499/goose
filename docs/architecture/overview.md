@@ -437,7 +437,7 @@ When `POST /v1/ingest-decoded` is received, the server calls `daily.compute_day`
 
 | Abstraction | File | Description |
 |---|---|---|
-| `GooseAppModel` | `GooseSwift/GooseAppModel.swift` + `GooseAppModel+*.swift` | Central `@MainActor @Observable` coordinator; owns `HealthDataStore`, BLE transport reference, Rust bridge, all notification queues, upload service. Split across extension files by concern. |
+| `GooseAppModel` | `GooseSwift/GooseAppModel.swift` + `GooseAppModel+*.swift` | Central `@MainActor @Observable` coordinator; owns `HealthDataStore`, BLE transport reference, Rust bridge, all notification queues, upload service. Split across 10 extension files by concern. |
 | `BLETransport` | `GooseSwift/BLETransport.swift` | Protocol abstracting all BLE state and commands. `GooseAppModel` holds `let ble: any BLETransport`. |
 | `CoreBluetoothBLETransport` | `GooseSwift/CoreBluetoothBLETransport.swift` + `CoreBluetoothBLETransport+*.swift` | `@Observable` concrete implementation of `BLETransport`; CoreBluetooth central manager; WHOOP GATT connection and proprietary frame framing; command writes. Split across 12 extension files. |
 | `BLESessionCoordinator` | `GooseSwift/BLESessionCoordinator.swift` | Actor wrapping `CoreBluetoothBLETransport` for session lifecycle (connect/disconnect/state). |
@@ -451,7 +451,7 @@ When `POST /v1/ingest-decoded` is received, the server calls `daily.compute_day`
 | `CaptureFrameWriteQueue` | `GooseSwift/CaptureFrameWriteQueue.swift` | Batches parsed BLE frames and writes them to SQLite via Rust bridge `capture.import_frame_batch`. |
 | `NotificationFrameParser` | `GooseSwift/NotificationFrameParsing.swift` | Delegates raw BLE bytes to Rust for frame reassembly and compact summary extraction. |
 | `OvernightSQLiteMirrorQueue` | `GooseSwift/OvernightSQLiteMirrorQueue.swift` | During overnight guard mode, queues raw notification rows for Rust bridge SQLite insert (flush every 2 s, batch limit 256, max 4096 queued rows). |
-| Rust core (`libgoose_core.a`) | `Rust/core/src/bridge/` | 165 dispatched methods across domain handler modules: protocol parsing, SQLite persistence, metric algorithms, BLE frame import, exercise detection, upload sync, export. Entry point: `bridge/mod.rs`. |
+| Rust core (`libgoose_core.a`) | `Rust/core/src/bridge/` | 157 dispatched methods across domain handler modules: protocol parsing, SQLite persistence, metric algorithms, BLE frame import, exercise detection, upload sync, export. Entry point: `bridge/mod.rs`. |
 | FastAPI ingest service | `server/ingest/app/main.py` | Bearer-gated REST API: `POST /v1/ingest-decoded`, read endpoints, daily compute. No OpenAPI schema exposed publicly (`docs_url=None`). |
 
 ---
@@ -462,7 +462,7 @@ The Rust library (`Rust/core/src/`) is compiled to `libgoose_core.a` and linked 
 
 | Module | File | Responsibility |
 |---|---|---|
-| `bridge` | `bridge/mod.rs` | FFI dispatch table; routes JSON `method` strings to domain handler modules; 165 methods |
+| `bridge` | `bridge/mod.rs` | FFI dispatch table; routes JSON `method` strings to domain handler modules; 157 methods |
 | `bridge/metrics` | `bridge/metrics.rs` | Bridge handlers for `metrics.*` and `baselines.*` methods |
 | `bridge/sleep` | `bridge/sleep.rs` | Bridge handlers for `sleep.*` and `metrics.sleep_staging` methods |
 | `bridge/capture` | `bridge/capture.rs` | Bridge handlers for `capture.*` and `sync.*` methods |
@@ -531,9 +531,9 @@ The `synced` column (default `0`) is used by the upload pipeline: `upload.get_re
 ```
 goose/
 ├── GooseSwift/                 iOS app source (Swift/SwiftUI, iOS 26.0)
-│   ├── GooseAppModel*.swift    Central coordinator + extension files
+│   ├── GooseAppModel*.swift    Central coordinator + 10 extension files
 │   ├── BLETransport.swift      BLE protocol abstraction
-│   ├── CoreBluetoothBLETransport*.swift  Concrete BLE actor (18 extension files)
+│   ├── CoreBluetoothBLETransport*.swift  Concrete BLE implementation (12 extension files)
 │   ├── BLESessionCoordinator.swift  Actor for session lifecycle
 │   ├── DeviceCatalog.swift     Centralised device capability branching
 │   ├── BLEState.swift          @Observable domain object: BLE/vitals UI state
@@ -547,8 +547,8 @@ goose/
 ├── GooseWorkoutLiveActivityExtension/
 │   └── GooseWorkoutLiveActivityWidget.swift  ActivityKit / Dynamic Island
 ├── Rust/core/src/              Rust library (libgoose_core)
-│   ├── bridge/                 FFI dispatch (165 methods, split by domain)
-│   │   ├── mod.rs              Entry point, schema constants, method list
+│   ├── bridge/                 FFI dispatch (157 methods, split by domain)
+│   │   ├── mod.rs              Entry point, BRIDGE_METHODS constant, schema constants
 │   │   ├── metrics.rs          metrics.* and baselines.* handlers
 │   │   ├── sleep.rs            sleep.* handlers
 │   │   ├── capture.rs          capture.* and sync.* handlers
@@ -578,7 +578,7 @@ goose/
 │   │   ├── read.py             Read queries
 │   │   └── analysis/           Daily pipeline (sleep/recovery/strain/exercise)
 │   ├── db/init.sql             TimescaleDB schema (hypertables)
-│   └── docker-compose.yml      goose-db + goose-ingest services
+│   └── dockge-stack.yml        goose-db + goose-ingest services
 ├── Scripts/build_ios_rust.sh   Cross-compile Rust → iOS static libs
 └── GooseSwift.xcodeproj        Xcode project (iOS 26.0 deployment target)
 ```
@@ -619,8 +619,8 @@ goose/
 | Overnight guard spool | `ApplicationSupport/GooseSwift/overnight-guard/<sessionID>/` | `OvernightRawNotificationSpool` | JSONL files: raw notifications, command writes, range telemetry, event log, status snapshots |
 | `UserDefaults` | iOS system | Swift | Onboarding state, device identity, HR estimates, server URL (`goose.remote.serverURL`), upload enabled flag (`goose.remote.uploadEnabled`), last band sleep sync date |
 | iOS Keychain | iOS system | `RemoteServerKeychain` | Server API token (service: `goose.remote`, account: `apiKey`) |
-| TimescaleDB | Docker volume `goose-db-data` | Server | Hypertables for HR, RR, events, battery, SpO2, skin temp, respiration, gravity; derived tables for sleep/exercise/daily metrics |
-| Raw frame archive | Docker volume `goose-raw-data` (`/data/raw`) | Server | Archived raw BLE frame batches (hex, by device/date) |
+| TimescaleDB | Docker volume `goose-db-data` | Server (`goose-db` container) | Hypertables for HR, RR, events, battery, SpO2, skin temp, respiration, gravity; derived tables for sleep/exercise/daily metrics |
+| Raw frame archive | Docker volume (`/data/raw`) | Server | Archived raw BLE frame batches (hex, by device/date) |
 
 ---
 

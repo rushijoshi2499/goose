@@ -66,8 +66,8 @@
 
 | Antes | Depois |
 |-------|--------|
-| `whoop-db` (service + container) | `goose-db` |
-| `whoop-ingest` (service + container) | `goose-ingest` |
+| `goose-db` (service + container) | `goose-db` |
+| `goose-ingest` (service + container) | `goose-ingest` |
 | `pg_isready -U ${WHOOP_DB_USER}` | `pg_isready -U ${GOOSE_DB_USER}` |
 
 ### 2.3 Strings de logging Python
@@ -97,7 +97,7 @@
 **Serviços:**
 ```yaml
 services:
-  goose-db:           # era whoop-db
+  goose-db:           # era goose-db
     container_name: goose-db
     environment:
       - POSTGRES_DB=${GOOSE_DB_NAME:-goose}
@@ -108,7 +108,7 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${GOOSE_DB_USER:-goose} -d ${GOOSE_DB_NAME:-goose}"]
 
-  goose-ingest:       # era whoop-ingest
+  goose-ingest:       # era goose-ingest
     container_name: goose-ingest
     depends_on:
       goose-db:
@@ -322,9 +322,9 @@ Após a cópia, fazer rename com `find` + `sed`:
 ```bash
 cd /Users/francisco/Documents/goose/server
 grep -rl "WHOOP_" . | xargs sed -i '' 's/WHOOP_/GOOSE_/g'
-grep -rl "whoop-db\|whoop-ingest\|whoop.ingest\|Whoop Ingest\|Whoop stack" . | xargs sed -i '' \
-  -e 's/whoop-db/goose-db/g' \
-  -e 's/whoop-ingest/goose-ingest/g' \
+grep -rl "goose-db\|goose-ingest\|whoop.ingest\|Whoop Ingest\|Whoop stack" . | xargs sed -i '' \
+  -e 's/goose-db/goose-db/g' \
+  -e 's/goose-ingest/goose-ingest/g' \
   -e 's/whoop\.ingest/goose.ingest/g' \
   -e 's/Whoop Ingest/Goose Ingest/g' \
   -e 's/Whoop stack/Goose stack/g'
@@ -332,7 +332,7 @@ grep -rl "whoop-db\|whoop-ingest\|whoop.ingest\|Whoop Ingest\|Whoop stack" . | x
 
 **Verificação pós-rename:**
 ```bash
-grep -r "WHOOP_\|whoop-db\|whoop-ingest" server/ --include="*.yml" --include="*.py" --include="*.env*"
+grep -r "WHOOP_\|goose-db\|goose-ingest" server/ --include="*.yml" --include="*.py" --include="*.env*"
 ```
 
 ### 8.3 Ficheiros que NÃO precisam de rename

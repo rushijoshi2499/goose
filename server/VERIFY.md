@@ -23,7 +23,7 @@ python client/uploader.py ~/Developer/whoop/capture.jsonl \
   --url http://localhost:8770 --token localtest --device whoop4-dev
 
 # confirm decoded rows + raw archive
-docker exec whoop-db psql -U whoop -d whoop -c \
+docker exec goose-db psql -U whoop -d whoop -c \
   "SELECT (SELECT count(*) FROM hr_samples) hr, (SELECT count(*) FROM events) events,
           (SELECT count(*) FROM battery) battery, (SELECT count(*) FROM raw_batches) batches;"
 find /tmp/whoop-e2e/whoop/raw -name '*.zst'

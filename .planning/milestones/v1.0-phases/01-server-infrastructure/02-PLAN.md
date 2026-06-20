@@ -24,7 +24,7 @@ Adaptar o `docker-compose.yml` para usar named volumes (sem `DATA_ROOT`), renome
 
 ```yaml
 truths:
-  - "server/docker-compose.yml tem serviços 'goose-db' e 'goose-ingest' (sem 'whoop-db' nem 'whoop-ingest')"
+  - "server/docker-compose.yml tem serviços 'goose-db' e 'goose-ingest' (sem 'goose-db' nem 'goose-ingest')"
   - "server/docker-compose.yml tem volumes nomeados 'goose-db-data' e 'goose-raw-data' na secção 'volumes:' de topo"
   - "server/docker-compose.yml não referencia DATA_ROOT em nenhuma linha"
   - "server/docker-compose.yml mantém 'depends_on: goose-db: condition: service_healthy'"
@@ -68,8 +68,8 @@ threats:
     Reescrever server/docker-compose.yml com as seguintes mudanças (ler o ficheiro actual primeiro para preservar qualquer campo não listado aqui):
     
     1. Serviço DB:
-       - Renomear serviço de "whoop-db" para "goose-db"
-       - container_name: "goose-db" (era "whoop-db")
+       - Renomear serviço de "goose-db" para "goose-db"
+       - container_name: "goose-db" (era "goose-db")
        - POSTGRES_DB: ${GOOSE_DB_NAME:-goose}
        - POSTGRES_USER: ${GOOSE_DB_USER:-goose}
        - POSTGRES_PASSWORD: ${GOOSE_DB_PASSWORD}
@@ -77,9 +77,9 @@ threats:
        - Healthcheck: pg_isready -U ${GOOSE_DB_USER:-goose} -d ${GOOSE_DB_NAME:-goose}
     
     2. Serviço ingest:
-       - Renomear serviço de "whoop-ingest" para "goose-ingest"
-       - container_name: "goose-ingest" (era "whoop-ingest")
-       - depends_on: goose-db: condition: service_healthy (era whoop-db)
+       - Renomear serviço de "goose-ingest" para "goose-ingest"
+       - container_name: "goose-ingest" (era "goose-ingest")
+       - depends_on: goose-db: condition: service_healthy (era goose-db)
        - GOOSE_API_KEY: ${GOOSE_API_KEY}
        - GOOSE_DB_DSN: postgresql://${GOOSE_DB_USER:-goose}:${GOOSE_DB_PASSWORD}@goose-db:5432/${GOOSE_DB_NAME:-goose}
        - GOOSE_RAW_ROOT: /data/raw
@@ -104,7 +104,7 @@ threats:
     - server/docker-compose.yml contém "goose-raw-data:/data/raw"
     - server/docker-compose.yml contém secção "volumes:" de topo com "goose-db-data:" e "goose-raw-data:"
     - grep "DATA_ROOT" server/docker-compose.yml retorna vazio
-    - grep "WHOOP_\|whoop-db\|whoop-ingest" server/docker-compose.yml retorna vazio
+    - grep "WHOOP_\|goose-db\|goose-ingest" server/docker-compose.yml retorna vazio
     - grep "service_healthy" server/docker-compose.yml retorna match (healthcheck mantido)
     - docker compose -f server/docker-compose.yml config retorna exit 0 (YAML válido)
   </acceptance_criteria>
@@ -210,6 +210,6 @@ verification:
     - "docker compose -f server/docker-compose.yml config --quiet"
     - "docker compose -f server/docker-compose.yml config --services"
     - "grep -q 'goose-db-data' server/docker-compose.yml && grep -q 'goose-raw-data' server/docker-compose.yml"
-    - "grep 'DATA_ROOT\\|WHOOP_\\|whoop-db\\|whoop-ingest' server/docker-compose.yml | wc -l | grep -q '^0$'"
+    - "grep 'DATA_ROOT\\|WHOOP_\\|goose-db\\|goose-ingest' server/docker-compose.yml | wc -l | grep -q '^0$'"
   manual: []
 ```

@@ -10,10 +10,10 @@ Supports both **WHOOP 5.0** and WHOOP 4.0 streams via the `device_generation` fi
 iOS app (CoreBluetooth)
     │  POST /v1/ingest-decoded  (Bearer token)
     ▼
-whoop-ingest  (FastAPI, port 8770)
+goose-ingest  (FastAPI, port 8770)
     │  writes decoded rows
     ▼
-whoop-db  (TimescaleDB)
+goose-db  (TimescaleDB)
     └── hr_samples, rr_samples, events, battery_samples,
         spo2_samples, skin_temp_samples, resp_samples, gravity_samples
         (all with device_generation column — '5.0' or '4.0')
@@ -34,8 +34,8 @@ docker compose up -d --build
 ```
 
 This starts:
-- `whoop-db` — TimescaleDB, data at `${DATA_ROOT}/whoop/db`
-- `whoop-ingest` — FastAPI at port 8770
+- `goose-db` — TimescaleDB, data at `${DATA_ROOT}/whoop/db`
+- `goose-ingest` — FastAPI at port 8770
 
 Check it started: `curl -s localhost:8770/healthz` → `{"status":"ok"}`
 
@@ -124,6 +124,6 @@ curl -s -X POST localhost:8770/v1/ingest-decoded \
 
 ## Dashboard
 
-`whoop-ingest` serves a static datastore dashboard at `/` (e.g. `http://<host>:8770`):
+`goose-ingest` serves a static datastore dashboard at `/` (e.g. `http://<host>:8770`):
 device + time-range picker, HR/battery charts, events list, batch browser, and a hex inspector
 that re-parses any archived 4.0 frame (category-coloured byte grid + field readout).
