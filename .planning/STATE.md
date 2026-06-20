@@ -23,7 +23,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-20)
 
 **Core value:** The user captures WHOOP data on iPhone and it is automatically persisted on their personal server — without depending on external infrastructure. Metrics align with WHOOP from the same raw data.
-**Current focus:** v14.0 — Phase 98 (Gen5 Historical Sync Routing Fix + HPS Ring Buffer)
+**Current focus:** v14.0 — Phase 98 discussed; ready for planning
 
 ## Current Position
 
@@ -108,8 +108,8 @@ Items deferred from previous milestones:
 
 Last session: 2026-06-20
 Stopped at: Milestone v14.0 initialized
-Resume file: .planning/ROADMAP.md
-Next action: /gsd-discuss-phase 98 or /gsd-plan-phase 98
+Resume file: .planning/phases/98-gen5-historical-sync-routing-hps-ring-buffer/98-CONTEXT.md
+Next action: /gsd-plan-phase 98
 
 ## Operator Next Steps
 
