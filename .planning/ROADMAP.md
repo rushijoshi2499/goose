@@ -752,10 +752,10 @@ Plans:
   2. `ring_capacity`, `current_page`, `read_pointer` parsed from `GET_DATA_RANGE` response; wrap-around correctly detected
   3. `#24` and `#160` closed; `cargo test --locked` + iOS build pass clean
 
-**Plans**:
+**Plans**: 2 plans
 
-- [ ] 98-01-PLAN.md — Gen5 historical routing fix in `GooseBLEClient+PeripheralDelegate.swift` (SYNC-08)
-- [ ] 98-02-PLAN.md — HPS ring buffer parsing in Rust `historical_sync.rs` + GET_DATA_RANGE response decode (SYNC-10)
+- [ ] 98-01-PLAN.md — SYNC-08: verify dispatch guard + SAFETY comment + close #24
+- [ ] 98-02-PLAN.md — SYNC-10: ring buffer parse + wrap detection + log in Swift Parsing.swift + close #160
 
 ---
 
