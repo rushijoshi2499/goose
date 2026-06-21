@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v14.0
 milestone_name: Android Port, BLE Reliability & Protocol Depth
-current_phase: 0
+current_phase: 100
 status: audit_pending
-stopped_at: "chore(99-02): restore SYNC-11 Swift changes reverted by linter"
-last_updated: "2026-06-21T13:20:24.405Z"
-last_activity: 2026-06-20
-last_activity_desc: Milestone v14.0 planned and initialized
+stopped_at: "docs(100-02): complete off-wrist detection plan summary"
+last_updated: "2026-06-21T13:45:00.000Z"
+last_activity: 2026-06-21
+last_activity_desc: Phase 100 complete — MTU logging (BLE-01) + cmd 0x54 off-wrist detection (BLE-02)
 progress:
   total_phases: 14
-  completed_phases: 2
-  total_plans: 6
-  completed_plans: 5
-  percent: 14
+  completed_phases: 4
+  total_plans: 10
+  completed_plans: 10
+  percent: 28
 ---
 
 # Project State
