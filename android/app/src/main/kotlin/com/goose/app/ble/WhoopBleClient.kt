@@ -37,6 +37,12 @@ import java.util.UUID
  * Frame routing:
  *   Gen4 notifications → FrameReassembler (multi-notification reassembly) → importFrame()
  *   Gen5 notifications → importFrame() directly (single-notification frames)
+ *
+ * Historical sync (Phase 105):
+ *   On BLE connect, auto-triggers startHistoricalSync() which sends:
+ *     GET_DATA_RANGE (cmd 34) → confirmed → SEND_HISTORICAL_DATA (cmd 22)
+ *   Type-47 body frames received during sync are routed to capture.import_frame_batch
+ *   with source="historical_sync". SYNC-08 routing fix in Rust core handles internal routing.
  */
 class WhoopBleClient(private val context: Context) {
 
@@ -61,6 +67,17 @@ class WhoopBleClient(private val context: Context) {
       0x23.toByte(), 0x01.toByte(), 0x91.toByte(), 0x01.toByte(),
       0x36.toByte(), 0x3e.toByte(), 0x5c.toByte(), 0x8d.toByte(),
     )
+
+    // Historical sync command bytes (mirrors iOS HistoricalCommandKind)
+    // GET_DATA_RANGE = cmd 34 (0x22), SEND_HISTORICAL_DATA = cmd 22 (0x16)
+    // HISTORICAL_DATA_RESULT ack = cmd 23 (0x17)
+    private const val CMD_GET_DATA_RANGE: Byte = 34        // 0x22
+    private const val CMD_SEND_HISTORICAL_DATA: Byte = 22  // 0x16
+    private const val CMD_HISTORICAL_DATA_RESULT: Byte = 23 // 0x17
+    private const val PACKET_TYPE_COMMAND: Byte = 0x01
+
+    // Idle timeout after SEND_HISTORICAL_DATA write — completes sync if no more frames arrive
+    private const val SYNC_IDLE_TIMEOUT_MS = 30_000L
   }
 
   private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -94,6 +111,19 @@ class WhoopBleClient(private val context: Context) {
   private var reconnectJob: Job? = null
 
   // ──────────────────────────────────────────────────────────────────────────
+  // Historical sync state (Phase 105)
+  // ──────────────────────────────────────────────────────────────────────────
+
+  // Prevents concurrent syncs — checked before writing any historical command
+  @Volatile private var syncInProgress: Boolean = false
+
+  // Sequence counter — starts at 57 to mirror iOS nextHistoricalCommandSequence initial value
+  @Volatile private var syncSequence: Byte = 57
+
+  // Tracks which command we are waiting for an ack on (0 = none pending)
+  @Volatile private var pendingSyncCommand: Byte = 0
+
+  // ──────────────────────────────────────────────────────────────────────────
   // Public API
   // ──────────────────────────────────────────────────────────────────────────
 
@@ -123,6 +153,29 @@ class WhoopBleClient(private val context: Context) {
 
   /** True when BLE connection is in the Connected state. */
   fun isConnected(): Boolean = connectionState.value.isConnected
+
+  /**
+   * Start a historical sync session. Sends GET_DATA_RANGE → SEND_HISTORICAL_DATA
+   * command sequence to the WHOOP device. Auto-triggered on BLE connect (D-02).
+   *
+   * Safe to call from any thread — GATT writes dispatch to the BLE callback thread.
+   * Guards against concurrent invocations via syncInProgress flag.
+   */
+  fun startHistoricalSync() {
+    if (syncInProgress) {
+      Log.d(TAG, "Historical sync already in progress — skipping")
+      return
+    }
+    syncInProgress = true
+    Log.d(TAG, "Historical sync: starting — sending GET_DATA_RANGE")
+    // Gen5: empty payload (standard); Gen4: [0x00] (usesPageSequenceSync path)
+    val payload = when (activeGeneration) {
+      WhoopGeneration.GEN4 -> byteArrayOf(0x00)
+      else -> byteArrayOf()
+    }
+    writeHistoricalCommand(CMD_GET_DATA_RANGE, payload)
+    pendingSyncCommand = CMD_GET_DATA_RANGE
+  }
 
   // ──────────────────────────────────────────────────────────────────────────
   // BluetoothGattCallback
@@ -232,12 +285,32 @@ class WhoopBleClient(private val context: Context) {
     ) {
       if (status != BluetoothGatt.GATT_SUCCESS) {
         authRetryCount++
-        Log.w(TAG, "Auth write failed: status=$status retryCount=$authRetryCount")
+        Log.w(TAG, "Char write failed: status=$status retryCount=$authRetryCount")
         if (authRetryCount >= AUTH_RETRY_LIMIT) {
           authExhausted = true
           Log.e(TAG, "Auth exhausted after $AUTH_RETRY_LIMIT attempts — disconnecting without reconnect")
           userDisconnected = true // suppress reconnect
           gatt.disconnect()
+        }
+        return
+      }
+
+      // Historical sync state machine: after GET_DATA_RANGE write confirmed, send SEND_HISTORICAL_DATA
+      if (syncInProgress && pendingSyncCommand == CMD_GET_DATA_RANGE) {
+        Log.d(TAG, "GET_DATA_RANGE write confirmed — sending SEND_HISTORICAL_DATA")
+        val payload = when (activeGeneration) {
+          WhoopGeneration.GEN4 -> byteArrayOf(0x00)
+          else -> byteArrayOf()
+        }
+        pendingSyncCommand = CMD_SEND_HISTORICAL_DATA
+        writeHistoricalCommand(CMD_SEND_HISTORICAL_DATA, payload)
+      }
+
+      // After SEND_HISTORICAL_DATA write confirmed, start idle timeout
+      if (syncInProgress && pendingSyncCommand == CMD_SEND_HISTORICAL_DATA) {
+        scope.launch {
+          delay(SYNC_IDLE_TIMEOUT_MS)
+          completeSyncIfActive("idle_timeout")
         }
       }
     }
@@ -300,28 +373,118 @@ class WhoopBleClient(private val context: Context) {
     val generation = activeGeneration ?: return
     val address = gatt?.device?.address ?: ""
 
+    // Capture sync flag before any async dispatch to avoid race with completeSyncIfActive()
+    val isSync = syncInProgress
+
     // First notification after auth send = auth succeeded — transition to Connected
+    // D-02: auto-trigger historical sync immediately after connecting
     if (_connectionState.value is BleConnectionState.Authenticating) {
       Log.d(TAG, "First notification received — auth succeeded, transitioning to Connected")
       _connectionState.value = BleConnectionState.Connected(address, generation)
+      // Launch sync on scope (not on BLE callback thread) — syncInProgress guard prevents duplicates
+      scope.launch { startHistoricalSync() }
     }
+
+    val frameSource = if (isSync) "historical_sync" else "android_ble"
 
     when (generation) {
       WhoopGeneration.GEN4 -> {
         // Multi-notification reassembly (SYNC-09 prepend-buffer algorithm)
         val frames = gen4Reassembler.feed(value)
         for (frame in frames) {
-          importFrame(frame)
+          importFrame(frame, frameSource)
         }
       }
       WhoopGeneration.GEN5, WhoopGeneration.MG -> {
         // Single-notification frames — pass directly to bridge
-        importFrame(value)
+        importFrame(value, frameSource)
       }
     }
   }
 
-  private fun importFrame(frameBytes: ByteArray) {
+  /**
+   * Build a WHOOP BLE command frame.
+   *
+   * Wire format (mirrors iOS buildCommandFrame):
+   *   [PACKET_TYPE_COMMAND(0x01), bodyLenLow, bodyLenHigh, outerSeq, innerSeq, commandByte, ...data]
+   *
+   * body = [sequence, command] + data
+   * frame = [0x01, bodyLen&0xFF, (bodyLen>>8)&0xFF, sequence] + body
+   */
+  private fun buildCommandFrame(sequence: Byte, command: Byte, data: ByteArray): ByteArray {
+    val body = byteArrayOf(sequence, command) + data
+    val bodyLen = body.size
+    return byteArrayOf(
+      PACKET_TYPE_COMMAND,
+      (bodyLen and 0xFF).toByte(),
+      ((bodyLen ushr 8) and 0xFF).toByte(),
+      sequence,
+    ) + body
+  }
+
+  /**
+   * Write a historical sync command to the WHOOP command characteristic.
+   *
+   * Guards: returns early if sync is not in progress or GATT is not available.
+   * Increments syncSequence (wrapping byte) before each write.
+   * Must only be called when syncInProgress == true.
+   */
+  private fun writeHistoricalCommand(command: Byte, data: ByteArray) {
+    if (!syncInProgress) {
+      Log.d(TAG, "writeHistoricalCommand: sync not in progress — skipping cmd=0x${command.toString(16)}")
+      return
+    }
+    val currentGatt = gatt ?: run {
+      Log.w(TAG, "writeHistoricalCommand: gatt is null — cannot write cmd=0x${command.toString(16)}")
+      return
+    }
+    val serviceUuid = activeServiceUuid ?: run {
+      Log.w(TAG, "writeHistoricalCommand: no active service — cannot write cmd=0x${command.toString(16)}")
+      return
+    }
+    val service = currentGatt.getService(serviceUuid) ?: run {
+      Log.w(TAG, "writeHistoricalCommand: service not found for $serviceUuid")
+      return
+    }
+    val commandChar = service.getCharacteristic(WhoopUuids.commandCharFor(serviceUuid)) ?: run {
+      Log.w(TAG, "writeHistoricalCommand: command characteristic not found")
+      return
+    }
+
+    val writeType = when {
+      commandChar.properties and BluetoothGattCharacteristic.PROPERTY_WRITE != 0 ->
+        BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+      commandChar.properties and BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE != 0 ->
+        BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
+      else -> {
+        Log.w(TAG, "writeHistoricalCommand: characteristic not writable")
+        return
+      }
+    }
+
+    syncSequence = (syncSequence + 1).toByte()
+    val frame = buildCommandFrame(syncSequence, command, data)
+
+    @Suppress("DEPRECATION")
+    commandChar.value = frame
+    commandChar.writeType = writeType
+    @Suppress("DEPRECATION")
+    val success = currentGatt.writeCharacteristic(commandChar)
+    Log.d(TAG, "hist cmd=0x${command.toString(16)} seq=$syncSequence len=${frame.size} success=$success")
+  }
+
+  /**
+   * Complete the historical sync session if one is active.
+   * Safe to call from any thread.
+   */
+  private fun completeSyncIfActive(reason: String) {
+    if (!syncInProgress) return
+    syncInProgress = false
+    pendingSyncCommand = 0
+    Log.d(TAG, "Historical sync complete: reason=$reason")
+  }
+
+  private fun importFrame(frameBytes: ByteArray, source: String = "android_ble") {
     if (frameBytes.isEmpty()) return
     scope.launch(Dispatchers.IO) {
       val frameHex = frameBytes.joinToString("") { "%02x".format(it) }
@@ -334,7 +497,7 @@ class WhoopBleClient(private val context: Context) {
         WhoopGeneration.MG -> "whoop_mg"
         null -> "unknown"
       }
-      val request = buildImportRequest(dbPath, evidenceId, capturedAt, deviceModel, frameHex)
+      val request = buildImportRequest(dbPath, evidenceId, capturedAt, deviceModel, frameHex, source)
       GooseBridge.safeHandle(request)
     }
   }
@@ -345,11 +508,12 @@ class WhoopBleClient(private val context: Context) {
     capturedAt: String,
     deviceModel: String,
     frameHex: String,
+    source: String,
   ): String {
     // Build JSON manually using org.json.JSONObject (Android SDK built-in, no extra deps)
     val frame = org.json.JSONObject().apply {
       put("evidence_id", evidenceId)
-      put("source", "android_ble")
+      put("source", source)
       put("captured_at", capturedAt)
       put("device_model", deviceModel)
       put("frame_hex", frameHex)
@@ -368,6 +532,9 @@ class WhoopBleClient(private val context: Context) {
   }
 
   private fun onGattDisconnected(address: String, reason: String) {
+    // Reset historical sync state on disconnect to prevent orphaned syncInProgress
+    syncInProgress = false
+    pendingSyncCommand = 0
     gen4Reassembler.reset()
     clientHelloSentForCurrentConnection = false
     gatt?.close()
