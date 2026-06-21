@@ -1,19 +1,19 @@
 ---
 gsd_state_version: 1.0
-milestone: v14.0
-milestone_name: Android Port, BLE Reliability & Protocol Depth
-current_phase: 111
-status: shipped
+milestone: v15.0
+milestone_name: Protocol Depth, Algorithms & UX
+current_phase: 0
+status: planning
 last_updated: "2026-06-21"
 last_activity: 2026-06-21
-last_activity_desc: v14.0 milestone archived
+last_activity_desc: v15.0 started — defining requirements
 progress:
-  total_phases: 14
-  completed_phases: 14
-  total_plans: 22
-  completed_plans: 22
-  percent: 100
-current_phase_name: protocol-offset-ffi-safety-comments
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
+current_phase_name: ""
 ---
 
 # Project State
@@ -23,14 +23,14 @@ current_phase_name: protocol-offset-ffi-safety-comments
 See: .planning/PROJECT.md (updated 2026-06-21)
 
 **Core value:** The user captures WHOOP data on iPhone and it is automatically persisted on their personal server — without depending on external infrastructure. Metrics align with WHOOP from the same raw data.
-**Current focus:** v14.0 shipped — start v15.0 with `/gsd-new-milestone`
+**Current focus:** v15.0 — Protocol Depth, Algorithms & UX
 
 ## Current Position
 
-Phase: 111 (v14.0 complete)
-Plan: All complete
-Status: Milestone archived 2026-06-21
-Last activity: 2026-06-21 — v14.0 archived
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-06-21 — Milestone v15.0 started
 
 ## Performance Metrics
 
@@ -128,4 +128,5 @@ Next action: /gsd-plan-phase 98
 
 ## Operator Next Steps
 
-- Run `/gsd-new-milestone` to start v15.0 (requirements → roadmap → phases)
+- Research in progress → requirements → roadmap
+- Next: `/gsd-discuss-phase 112` after roadmap approved
