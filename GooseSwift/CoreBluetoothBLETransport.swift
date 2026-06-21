@@ -516,9 +516,10 @@ import OSLog
       guard let capacity = ringCapacity,
             let current = ringCurrentPage,
             let readPtr = ringReadPointer else { return nil }
-      let corrected: UInt32 = ringWrapped
-        ? (capacity - readPtr) + current
-        : current - readPtr
+      let corrected: Int64 = ringWrapped
+        ? Int64(capacity) - Int64(readPtr) + Int64(current)
+        : Int64(current) - Int64(readPtr)
+      guard corrected >= 0 else { return nil }
       return Int(corrected)
     }
 

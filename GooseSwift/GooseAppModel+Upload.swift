@@ -197,6 +197,7 @@ extension GooseAppModel {
           // so repeated imports produce the same IDs (idempotent).
           let bridgeFrames: [[String: Any]] = rawFrames.compactMap { f in
             guard let capturedAtUnix = f["captured_at_unix"] as? Double,
+                  capturedAtUnix.isFinite, capturedAtUnix > 0,
                   let frameHex = f["frame_hex"] as? String else { return nil }
             let source = f["source"] as? String ?? "ios.corebluetooth.notification"
             let deviceModel = f["device_model"] as? String ?? "WHOOP 5.0 Goose"
