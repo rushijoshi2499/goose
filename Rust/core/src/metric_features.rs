@@ -4240,30 +4240,29 @@ fn skin_temperature_plan_from_payload(
     };
 
     match (*packet_k, body_summary) {
-        (18, DataPacketBodySummary::NormalHistory { .. } | DataPacketBodySummary::V18History { .. }) => {
-            Some(SkinTemperaturePlan {
-                packet_k: *packet_k,
-                timestamp_seconds: *timestamp_seconds,
-                timestamp_subseconds: *timestamp_subseconds,
-                schema_field: "normal_history_k18_body_24_skin_temperature_c",
-                raw_body_offset: 24,
-                raw_absolute_offset: 37,
-                encoding: "i16_le_x100",
-                scale: 100.0,
-            })
-        }
-        (24, DataPacketBodySummary::NormalHistory { .. }) => {
-            Some(SkinTemperaturePlan {
-                packet_k: *packet_k,
-                timestamp_seconds: *timestamp_seconds,
-                timestamp_subseconds: *timestamp_subseconds,
-                schema_field: "normal_history_k24_body_3_skin_temperature_c",
-                raw_body_offset: 3,
-                raw_absolute_offset: 16,
-                encoding: "u16_le_x1000",
-                scale: 1000.0,
-            })
-        }
+        (
+            18,
+            DataPacketBodySummary::NormalHistory { .. } | DataPacketBodySummary::V18History { .. },
+        ) => Some(SkinTemperaturePlan {
+            packet_k: *packet_k,
+            timestamp_seconds: *timestamp_seconds,
+            timestamp_subseconds: *timestamp_subseconds,
+            schema_field: "normal_history_k18_body_24_skin_temperature_c",
+            raw_body_offset: 24,
+            raw_absolute_offset: 37,
+            encoding: "i16_le_x100",
+            scale: 100.0,
+        }),
+        (24, DataPacketBodySummary::NormalHistory { .. }) => Some(SkinTemperaturePlan {
+            packet_k: *packet_k,
+            timestamp_seconds: *timestamp_seconds,
+            timestamp_subseconds: *timestamp_subseconds,
+            schema_field: "normal_history_k24_body_3_skin_temperature_c",
+            raw_body_offset: 3,
+            raw_absolute_offset: 16,
+            encoding: "u16_le_x1000",
+            scale: 1000.0,
+        }),
         // GEN4-07: Gen4 V24History body layout has skin_temp_raw (u16 LE) at body offset 65.
         // Absolute payload offset: 3-byte data-packet header + 65 = 68.
         // NTC linearisation formula: delta_c = (raw_u16 − 930) / 30.0

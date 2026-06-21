@@ -26,7 +26,7 @@ fn cmd26_payload_hex(len: usize, raw_battery: u16) -> String {
     let mut p = vec![0u8; len.max(7)];
     p[0] = 36; // COMMAND_RESPONSE
     p[2] = 26; // GET_BATTERY_LEVEL
-    p[4] = 1;  // SUCCESS
+    p[4] = 1; // SUCCESS
     p[5] = (raw_battery & 0xFF) as u8;
     p[6] = (raw_battery >> 8) as u8;
     p.truncate(len);

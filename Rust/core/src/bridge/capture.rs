@@ -126,12 +126,10 @@ pub(crate) fn dispatch_capture(request: &BridgeRequest) -> BridgeResponse {
             .and_then(sync_backfill_streams_bridge)
             .map(|value| bridge_ok(&request.request_id, value))
             .unwrap_or_else(|error| bridge_error(&request.request_id, "method_error", error)),
-        "sync.record_hps_telemetry" => {
-            request_args::<SyncRecordHpsTelemetryArgs>(request)
-                .and_then(sync_record_hps_telemetry_bridge)
-                .map(|value| bridge_ok(&request.request_id, value))
-                .unwrap_or_else(|error| bridge_error(&request.request_id, "method_error", error))
-        }
+        "sync.record_hps_telemetry" => request_args::<SyncRecordHpsTelemetryArgs>(request)
+            .and_then(sync_record_hps_telemetry_bridge)
+            .map(|value| bridge_ok(&request.request_id, value))
+            .unwrap_or_else(|error| bridge_error(&request.request_id, "method_error", error)),
         _ => unreachable!(
             "dispatch_capture called with non-capture method: {}",
             request.method

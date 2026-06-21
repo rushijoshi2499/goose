@@ -31,5 +31,8 @@ fn sync_telemetry_round_trip() {
         })
         .expect("immediate_transaction failed");
 
-    assert_eq!(count, 1, "expected 1 sync_telemetry row for sess-abc, got {count}");
+    assert_eq!(
+        count, 1,
+        "expected 1 sync_telemetry row for sess-abc, got {count}"
+    );
 }

@@ -627,7 +627,10 @@ fn test_v24_skin_temperature_feature_extracted() {
     let payload = make_82_byte_payload();
     // Confirm skin_temp_raw=930 is present at absolute offset 68..70 (data[65..67]).
     let raw_u16 = u16::from_le_bytes([payload[68], payload[69]]);
-    assert_eq!(raw_u16, 930, "fixture must have skin_temp_raw=930 at payload[68..70]");
+    assert_eq!(
+        raw_u16, 930,
+        "fixture must have skin_temp_raw=930 at payload[68..70]"
+    );
 
     let row = make_v24_decoded_frame_row(&payload, None);
     let correlation = passing_correlation();
@@ -657,7 +660,9 @@ fn test_v24_skin_temperature_feature_extracted() {
         "schema_field must identify this as the V24 NTC skin temp delta at body offset 65"
     );
     // NTC formula: (930 − 930) / 30.0 = 0.0 delta_c
-    let delta = input.skin_temperature_c.expect("skin_temperature_c must be Some");
+    let delta = input
+        .skin_temperature_c
+        .expect("skin_temperature_c must be Some");
     assert!(
         (delta - 0.0_f64).abs() < 1e-9,
         "delta_c must be 0.0 for raw=930 (anchor point); got {delta}"
@@ -688,7 +693,12 @@ fn test_v24_respiratory_rate_plan_already_wired() {
         report.respiratory_rate_input_count
     );
     let input = &report.respiratory_rate_inputs[0];
-    assert_eq!(input.raw_absolute_offset, 76,
-        "resp_raw raw_absolute_offset must be 76 (header + body offset 73)");
-    assert_eq!(input.schema_field, "v24_history_k24_body_73_resp_raw_candidate");
+    assert_eq!(
+        input.raw_absolute_offset, 76,
+        "resp_raw raw_absolute_offset must be 76 (header + body offset 73)"
+    );
+    assert_eq!(
+        input.schema_field,
+        "v24_history_k24_body_73_resp_raw_candidate"
+    );
 }

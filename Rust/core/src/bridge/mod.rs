@@ -737,8 +737,7 @@ fn init_bridge_pool(database_path: &str) -> GooseResult<BridgePool> {
     GooseStore::open(Path::new(database_path))?;
     let manager = SqliteConnectionManager::file(database_path)
         .with_flags(
-            rusqlite::OpenFlags::SQLITE_OPEN_READ_WRITE
-                | rusqlite::OpenFlags::SQLITE_OPEN_CREATE,
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_WRITE | rusqlite::OpenFlags::SQLITE_OPEN_CREATE,
         )
         .with_init(|conn| {
             conn.execute_batch("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;")?;

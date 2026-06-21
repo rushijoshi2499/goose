@@ -24,6 +24,8 @@ pub mod activity_candidates;
 pub mod activity_identity;
 pub mod activity_sessions;
 pub mod algorithm_compare;
+#[cfg(target_os = "android")]
+mod android_jni;
 pub mod baselines;
 pub mod bridge;
 pub mod calibration;
@@ -33,8 +35,6 @@ pub mod capture_import;
 pub mod capture_sanitize;
 pub mod commands;
 pub mod debug_ws;
-#[cfg(target_os = "android")]
-mod android_jni;
 #[cfg(not(target_os = "android"))]
 pub mod debug_ws_server;
 pub mod energy_rollup;
