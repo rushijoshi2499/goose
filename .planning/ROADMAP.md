@@ -809,9 +809,9 @@ Plans:
 
 **Plans**:
 
-- [ ] 101-01-PLAN.md — HPS sync quality telemetry (throughput, burst, gaps) in Rust historical sync + Swift Debug view (SYNC-12)
-- [ ] 101-02-PLAN.md — Coach crash root cause fix (BUG-COACH-01)
-- [ ] 101-03-PLAN.md — Protocol enum + silent arm + registry cleanup in Rust (PROTO-08/09/10/11)
+- [ ] 101-01-PLAN.md — HPS sync quality telemetry: schema v23 sync_telemetry table + Swift burst instrumentation + ble.record (SYNC-12)
+- [ ] 101-02-PLAN.md — Coach freeze fix: signInTask cancellation in CoachChatModel (BUG-COACH-01)
+- [ ] 101-03-PLAN.md — PROTO-10: fix data_packet_domain() mismatch for packet_k=24 → v24_biometric_stream (PROTO-10)
 
 ---
 
