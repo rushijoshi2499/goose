@@ -59,6 +59,19 @@ At most one polling loop is active at any time. The prior task receives cooperat
 - Code review: `signInTask?.cancel()` precedes `signInTask = Task { ... }` in `startOAuthSignIn()`
 - Pattern consistent with existing `sendTask` cancellation in `startNewConversation()`, `signOut()`, and `cancelStreaming()`
 
+### Simulator Verification (2026-06-21, autonomous)
+
+Driven via XcodeBuildMCP UI automation on iPhone 17 Pro (iOS 26.5, UDID 95142C9B-50CA-421B-A74D-DD622C4ACF66):
+
+1. App built (BUILD SUCCEEDED) and launched on booted simulator
+2. Navigated to Coach tab (Treinador) — UI visible and responsive
+3. Tapped "Iniciar sessão" → opened "Definições do Treinador" settings screen
+4. Tapped "Iniciar sessão com ChatGPT" **4 times in rapid succession** (0.15s intervals)
+5. UI remained fully responsive at 1s and 4s after the rapid taps — no freeze, no "Waiting for approval" hung state
+6. Navigated back to Coach main screen — UI still fully responsive, all coach routes visible
+
+**Result: PASS** — Rapid sign-in taps no longer cause UI freeze. The cancel-before-create pattern (`signInTask?.cancel()`) ensures at most one OAuth polling loop is active at any time.
+
 ## Deviations from Plan
 
 None — plan executed exactly as written.
