@@ -2,17 +2,17 @@
 gsd_state_version: 1.0
 milestone: v14.0
 milestone_name: Android Port, BLE Reliability & Protocol Depth
-current_phase: 0
+current_phase: 101
 status: audit_pending
-stopped_at: "docs(100-02): complete off-wrist detection plan summary"
-last_updated: "2026-06-21T14:41:07.502Z"
-last_activity: 2026-06-20
-last_activity_desc: Milestone v14.0 planned and initialized
+stopped_at: "docs(101-01): complete HPS telemetry plan summary"
+last_updated: "2026-06-21T00:00:00.000Z"
+last_activity: 2026-06-21
+last_activity_desc: Phase 101 complete — HPS telemetry (SYNC-12), coach freeze fix (BUG-COACH-01), PROTO-10 domain mismatch
 progress:
   total_phases: 14
   completed_phases: 4
-  total_plans: 9
-  completed_plans: 9
+  total_plans: 12
+  completed_plans: 12
   percent: 29
 ---
 
