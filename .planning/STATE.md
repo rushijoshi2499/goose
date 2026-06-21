@@ -5,13 +5,13 @@ milestone_name: Android Port, BLE Reliability & Protocol Depth
 current_phase: 0
 status: audit_pending
 stopped_at: "docs(101-01): complete HPS telemetry plan summary"
-last_updated: "2026-06-21T16:56:44.943Z"
+last_updated: "2026-06-21T17:06:32.618Z"
 last_activity: 2026-06-20
 last_activity_desc: Milestone v14.0 planned and initialized
 progress:
   total_phases: 14
   completed_phases: 7
-  total_plans: 12
+  total_plans: 13
   completed_plans: 12
   percent: 50
 ---
