@@ -1,6 +1,134 @@
-# Project Research Summary
+# Project Research Summary — v15.0
 
-**Project:** Goose v10.0 — Protocol Parity, Haptics & Feature Completeness
+**Project:** Goose — Multi-Device Biometric Platform
+**Milestone:** v15.0 — Protocol Depth, Algorithms & UX
+**Researched:** 2026-06-21/22
+**Sources:** STACK.md · FEATURES.md · ARCHITECTURE.md · PITFALLS.md
+
+---
+
+## Key Findings
+
+1. **Zero new dependencies.** No new Rust crates, no new iOS frameworks, no new Android libraries, no new Python packages. v20/v21/v26 decode, Harvard model, GET_FF_VALUE, body composition, stealth mode, PIP pipeline — all expressible in the existing stack.
+2. **Schema v23 → v24 is the structural gate.** Three new tables land in a single migration block: `optical_channel_samples` (#172/#173), `realtime_frames` (#168), `body_composition_history` (#166). The `BRIDGE_CONN_POOL` OnceLock means all DDL must live inside `migrate()`.
+3. **`BRIDGE_METHODS` is a compile-time contract.** `bridge_methods_constant_matches_dispatcher` test enforces that every new bridge method must be in both the constant array and the dispatch arm. Rust must pass `cargo test` before any Swift consumer work.
+4. **Protocol decode (#172/#173) is highest-impact lowest-risk.** Every WHOOP 5.0 sync produces v20/v21/v26 frames that currently fall to `Unknown` and are silently discarded. Byte layouts are hardware-verified. Pure Rust changes, no Swift needed.
+5. **Stealth mode must filter the Coach LLM context, not just the view layer.** `CoachLocalToolContext.build()` serialises all scores into the LLM prompt unconditionally. Fix: `StealthMask` value type passed into `build()`, hidden values replaced with `"hidden_by_user"` sentinel.
+6. **PIP pipeline needs a parallel queue.** `RealtimePIPQueue` parallel to `CaptureFrameWriteQueue` — sharing the existing queue corrupts backpressure accounting and mixes storage tables.
+7. **ALG-HRV-04/SLP-04 need ≥7 real overnight captures** (not 5) to buffer against outlier rejection. Cole-Kripke 30s epochs (Rust) vs 1-min epochs (WHOOP app) is a real-data mismatch risk synthetic fixtures cannot surface.
+8. **HAP-04 is hard-gated.** Do not schedule until `SetAlarmInfoCommandPacketRev4.md` exists in `.planning/research/whoop-re/`. Stub already in place with explicit gate comment.
+
+---
+
+## Stack Additions
+
+| Layer | Addition | Why |
+|-------|----------|-----|
+| Rust | `sleep_need.rs` + extend `store/metrics.rs` | Harvard model + optical channel store |
+| Rust | Schema v24: 4 new SQLite tables | optical_channel_samples, realtime_frames, body_composition_history, device_feature_flags |
+| Swift | 4 new files | RealtimePIPQueue, GooseStealthMode, BodyCompositionEntrySheet, HealthDataStore+OpticalChannels |
+| Server | `POST /v1/ingest-realtime` + `realtime_frames` hypertable | PIP pipeline upload |
+
+**Zero new external dependencies at any layer.**
+
+---
+
+## Feature Complexity Table
+
+| Feature | Complexity | Risk | Build Order |
+|---------|-----------|------|-------------|
+| #172 v20/v21 multi-channel decode | High | Medium | 1 |
+| #173 v26 PPG waveform decode | Medium | Low | 2 |
+| ALG-HRV-04 / ALG-SLP-04 validation | Medium | Medium | 3 |
+| #164 Harvard sleep need model | Medium | Low | 4 |
+| #165 GET_FF_VALUE flag read | Low | Low | 5 |
+| #166 Body composition history | Medium | Low | 6 |
+| #167 Stealth mode | Low | Low | 7 |
+| #168 PIP realtime pipeline | Medium | Medium | 8 |
+| CAPSENSE-01 cap sense UUID | High | High | 9 (hardware gate) |
+| HAP-04 wake-window engine | High | High | 10 (RE gate — defer if prerequisites missing) |
+
+---
+
+## Architecture Changes
+
+**New Rust:** `sleep_need.rs`, bridge arms in `bridge/sleep.rs` + `bridge/metrics.rs` for v20/v21/v26 + body_composition + feature_flags, schema v24 migration, `optical_channel_samples` insert/query in `store/metrics.rs`, `feature_flags: HashMap<u8, u8>` on `DeviceCapabilities`.
+
+**Modified Rust:** `protocol.rs` (2 new variants + 2 parse arms), `store/mod.rs` (migration v24), `capabilities.rs`.
+
+**New Swift:** `RealtimePIPQueue.swift`, `GooseStealthMode.swift`, `BodyCompositionEntrySheet.swift`, `HealthDataStore+OpticalChannels.swift`.
+
+**Build constraint:** `cargo test --locked` must pass after Wave 1 before any Swift consumer work begins. Schema v24 migration must land before any table insert.
+
+---
+
+## Critical Pitfalls
+
+1. **`BRIDGE_CONN_POOL` OnceLock** — DDL outside `migrate()` is invisible to pool connections at runtime. All new table DDL must be inside the versioned migration block. `CURRENT_SCHEMA_VERSION = 24`.
+2. **Stealth leaks through Coach context** — `CoachLocalToolContext.build()` serialises scores unconditionally. `StealthMask` must be passed in and hidden values replaced with `"hidden_by_user"` sentinel.
+3. **v20/v21/v26 `Unknown` fallthrough** — emits `unhandled_packet_k_N` warnings which `GooseBLEDataValidator` surfaces as capture errors. Parse arms must exist before enabling optical capture.
+4. **Harvard EWMA cold start** — seed defaults to 480 min regardless of age. `age_years: Option<u8>` + `age_baseline_minutes(age)` must seed the EWMA on night 0.
+5. **GET_FF_VALUE no timeout** — device may not respond; app blocks indefinitely. 3-second timeout with fallback to `DeviceKind` defaults required.
+6. **PIP queue sharing** — `CaptureFrameWriteQueue` must not be shared with realtime frames. Parallel `RealtimePIPQueue` required.
+
+---
+
+## Recommended Build Order
+
+**Wave 1 — Rust protocol + schema**
+1. `protocol.rs`: v26 variant + parse arm (#173)
+2. `protocol.rs`: v20/v21 variants + parse arms (#172)
+3. `store/mod.rs`: schema v24 (3 tables)
+4. `store/metrics.rs`: optical channel methods; bridge registration
+5. Gate: `cargo test --locked` green
+
+**Wave 2 — Algorithms + capabilities (Rust)**
+6. `sleep_need.rs` + bridge (#164)
+7. GET_FF_VALUE response + DeviceCapabilities.feature_flags (#165)
+8. Body composition Rust store + bridge (#166)
+
+**Wave 3 — Swift plumbing**
+9. `RealtimePIPQueue.swift` (#168)
+10. `GooseStealthMode.swift` + `CoachLocalToolContext` filter (#167)
+11. `HealthDataStore+OpticalChannels.swift` (#172/#173)
+12. GET_FF_VALUE Swift: post-handshake + 3s timeout (#165)
+
+**Wave 4 — SwiftUI + real-device validation**
+13. Body composition UI + HealthKit weight import (#166)
+14. Stealth UI: Settings → Metrics toggles (#167)
+15. ALG-HRV-04: ≥7 real overnight captures vs Python reference
+16. ALG-SLP-04: ≥7 real overnight captures, ≥70% concordance
+
+**Wave 5 — Server + hardware gates**
+17. `POST /v1/ingest-realtime` + TimescaleDB hypertable (#168)
+18. CAPSENSE-01: BLE scan UUID discovery
+19. HAP-04: only if `SetAlarmInfoCommandPacketRev4.md` exists
+
+---
+
+## Implications for Roadmap
+
+1. Schema batching mandatory — v24 migration in one phase before any table consumer.
+2. `cargo test` gate between Wave 1 and Wave 2 — `bridge_methods_constant_matches_dispatcher` must pass.
+3. Stealth phase must include Coach context wiring, not just SwiftUI toggles.
+4. Rust before Swift for all bridge-crossing features.
+5. ALG validation phases need calendar time — place later in milestone for ≥7 nights.
+6. Android parity: v20/v21/v26 Rust decode is shared via JNI; update Android routing in same phase.
+7. PIP server endpoint before Swift pipeline uploads to it.
+8. HAP-04 is a DEFER candidate — include only if RE prerequisite file exists.
+
+---
+
+## Sources
+
+- `.planning/research/STACK.md`
+- `.planning/research/FEATURES.md`
+- `.planning/research/ARCHITECTURE.md`
+- `.planning/research/PITFALLS.md`
+
+---
+*Previous content below (v10.0 — archived):*
+
 **Domain:** WHOOP-style BLE biometric companion app (iOS + Rust core)
 **Researched:** 2026-06-12
 **Confidence:** HIGH (FEATURES.md fully verified against live codebase; STACK/ARCHITECTURE/PITFALLS reflect v5.0 but remain structurally valid)
