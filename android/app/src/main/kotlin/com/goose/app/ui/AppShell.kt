@@ -17,9 +17,10 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import com.goose.app.ble.BleConnectionState
 
 @Composable
-fun AppShell() {
+fun AppShell(connectionState: BleConnectionState = BleConnectionState.Idle) {
     var selectedTab by remember { mutableIntStateOf(0) }
 
     Scaffold(
@@ -53,7 +54,7 @@ fun AppShell() {
         }
     ) { padding ->
         when (selectedTab) {
-            0 -> HomeScreen(Modifier.padding(padding))
+            0 -> HomeScreen(Modifier.padding(padding), connectionState = connectionState)
             1 -> HealthScreen(Modifier.padding(padding))
             2 -> CoachScreen(Modifier.padding(padding))
             else -> MoreScreen(Modifier.padding(padding))

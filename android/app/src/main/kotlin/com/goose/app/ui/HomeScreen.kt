@@ -1,15 +1,38 @@
 package com.goose.app.ui
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import com.goose.app.ble.BleConnectionState
 
 @Composable
-fun HomeScreen(modifier: Modifier = Modifier) {
+fun HomeScreen(
+    modifier: Modifier = Modifier,
+    connectionState: BleConnectionState = BleConnectionState.Idle,
+) {
     Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text("Home — coming soon")
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text("Home")
+            Text("BLE: ${connectionState.statusLabel()}")
+        }
     }
+}
+
+private fun BleConnectionState.statusLabel(): String = when (this) {
+    is BleConnectionState.Idle -> "idle"
+    is BleConnectionState.Scanning -> "scanning"
+    is BleConnectionState.Connecting -> "connecting"
+    is BleConnectionState.DiscoveringServices -> "discovering services"
+    is BleConnectionState.Authenticating -> "authenticating"
+    is BleConnectionState.Connected -> "connected (${generation.name.lowercase()})"
+    is BleConnectionState.Disconnected -> "disconnected: $reason"
 }
