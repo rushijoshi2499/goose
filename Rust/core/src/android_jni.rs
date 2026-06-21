@@ -16,8 +16,8 @@ use jni::objects::{JClass, JString};
 use jni::sys::jstring;
 
 // Re-use the existing C-exported bridge functions from bridge/mod.rs.
-use crate::bridge::goose_bridge_handle_json;
 use crate::bridge::goose_bridge_free_string;
+use crate::bridge::goose_bridge_handle_json;
 
 /// JNI entry point called by GooseBridge.kt `external fun handle(request: String): String`.
 ///
