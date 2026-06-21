@@ -63,8 +63,6 @@ jobs:
 
       - name: Build Rust core for Android targets
         working-directory: Rust/core
-        env:
-          ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_ROOT }}
         run: |
           cargo ndk \
             -t arm64-v8a \
