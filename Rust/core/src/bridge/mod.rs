@@ -7,6 +7,8 @@ use std::{
     time::Instant,
 };
 
+use r2d2_sqlite::SqliteConnectionManager;
+
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
@@ -702,6 +704,69 @@ pub(crate) fn open_bridge_store_hot(database_path: &str) -> GooseResult<GooseSto
     validate_no_traversal("database_path", database_path)?;
     let path = Path::new(database_path);
     GooseStore::open_existing_current(path).or_else(|_| GooseStore::open(path))
+}
+
+/// Type aliases for the r2d2 SQLite connection pool used by bridge handlers.
+#[allow(dead_code)]
+type BridgePool = r2d2::Pool<SqliteConnectionManager>;
+/// A checked-out pooled connection. Derefs to `rusqlite::Connection`.
+pub(crate) type BridgePoolConn = r2d2::PooledConnection<SqliteConnectionManager>;
+
+/// Process-lifetime r2d2 connection pool for bridge handlers.
+/// Initialised on first call to `checkout_bridge_conn`; subsequent calls
+/// return a connection from the pool without re-opening the database.
+/// Uses Mutex<Option<BridgePool>> because OnceLock::get_or_try_init is
+/// not yet stable on Rust 1.96.
+#[allow(dead_code)]
+static BRIDGE_CONN_POOL: OnceLock<Mutex<Option<BridgePool>>> = OnceLock::new();
+
+/// Initialise the r2d2 pool for `database_path`.
+/// Runs schema migration once via `GooseStore::open`, then builds the pool.
+#[allow(dead_code)]
+fn init_bridge_pool(database_path: &str) -> GooseResult<BridgePool> {
+    validate_no_traversal("database_path", database_path)?;
+    // Run migration exactly once before handing the path to the pool manager.
+    GooseStore::open(Path::new(database_path))?;
+    let manager = SqliteConnectionManager::file(database_path)
+        .with_flags(
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_WRITE
+                | rusqlite::OpenFlags::SQLITE_OPEN_CREATE,
+        )
+        .with_init(|conn| {
+            conn.execute_batch("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;")?;
+            Ok(())
+        });
+    r2d2::Pool::builder()
+        .max_size(4)
+        .build(manager)
+        .map_err(|e| GooseError::message(format!("r2d2 pool init: {e}")))
+}
+
+/// Acquire a pooled SQLite connection for `database_path`.
+///
+/// On first call for a given process lifetime, initialises the pool and runs
+/// schema migration. Subsequent calls return a checked-out connection from the
+/// pool without re-opening the database.
+///
+/// This replaces `acquire_bridge_conn` and `open_bridge_store_hot` at bridge
+/// handler call sites that use raw rusqlite operations.
+#[allow(dead_code)]
+pub(crate) fn checkout_bridge_conn(database_path: &str) -> GooseResult<BridgePoolConn> {
+    if database_path.trim().is_empty() {
+        return Err(GooseError::message("database_path is required"));
+    }
+    let cell = BRIDGE_CONN_POOL.get_or_init(|| Mutex::new(None));
+    let mut guard = cell
+        .lock()
+        .map_err(|_| GooseError::message("bridge pool mutex poisoned"))?;
+    if guard.is_none() {
+        *guard = Some(init_bridge_pool(database_path)?);
+    }
+    guard
+        .as_ref()
+        .expect("invariant: pool was just initialised above")
+        .get()
+        .map_err(|e| GooseError::message(format!("pool checkout: {e}")))
 }
 
 /// Set of database paths that have been opened and migrated at least once in this
