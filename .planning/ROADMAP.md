@@ -863,7 +863,7 @@ Plans:
 
 **Plans**:
 
-- [ ] 104-01-PLAN.md — Android BLE GATT client + packet framing + Rust bridge integration (AND-02)
+1/1 plans complete
 
 ---
 
@@ -1021,7 +1021,7 @@ Plans:
 | 101 | 3/3 | Complete   | 2026-06-21 |
 | 102 | 1/1 | Complete   | 2026-06-21 |
 | 103 | 1/1 | Complete   | 2026-06-21 |
-| 104 | v14.0 | Pending | — |
+| 104 | 1/1 | Complete   | 2026-06-21 |
 | 105 | v14.0 | Pending | — |
 | 106 | v14.0 | Pending | — |
 | 107 | v14.0 | Pending | — |
@@ -1079,6 +1079,8 @@ Promoted to Phase 18: Coach Multi-Provider.
 **Depends on:** Phase 59
 **Plans:** 5/6 plans executed
 Plans:
+
+- [x] 104-01-PLAN.md
 
 - [x] 103-01-PLAN.md
 
