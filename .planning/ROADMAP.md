@@ -966,9 +966,10 @@ Plans:
 
 **Plans**:
 
-- [ ] 110-01-PLAN.md — Replace 38 naked `.unwrap()` with `?` / `expect` in production Rust (ARCH-11)
-- [ ] 110-02-PLAN.md — SQLite connection pool setup + bridge handler migration (BP-03)
-- [ ] 110-03-PLAN.md — Bot audit #59 findings verify + fix (AUDIT-01)
+3/3 plans complete
+
+- [x] 110-02-PLAN.md — SQLite connection pool setup + bridge handler migration (BP-03)
+- [x] 110-03-PLAN.md — Bot audit #59 findings verify + fix (AUDIT-01)
 
 ---
 
@@ -1027,7 +1028,7 @@ Plans:
 | 107 | 1/1 | Complete    | 2026-06-21 |
 | 108 | 1/1 | Complete   | 2026-06-21 |
 | 109 | 1/1 | Complete   | 2026-06-21 |
-| 110 | v14.0 | Pending | — |
+| 110 | 3/3 | Complete   | 2026-06-21 |
 | 111 | v14.0 | Pending | — |
 
 ## Backlog
@@ -1079,6 +1080,8 @@ Promoted to Phase 18: Coach Multi-Provider.
 **Depends on:** Phase 59
 **Plans:** 1/1 plans complete
 Plans:
+
+- [x] 110-01-PLAN.md
 
 - [x] 108-01-PLAN.md
 
