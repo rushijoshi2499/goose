@@ -412,4 +412,5 @@ extension CoreBluetoothBLETransport: CBPeripheralDelegate {
       record(source: "ble", title: "notify.state", body: "\(characteristic.uuid.uuidString) \(state)")
     }
   }
+
 }

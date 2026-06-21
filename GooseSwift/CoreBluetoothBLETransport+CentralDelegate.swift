@@ -218,6 +218,9 @@ extension CoreBluetoothBLETransport: CBCentralManagerDelegate {
     updateReconnectState("connected")
     connectedPeripheralUUID = peripheral.identifier.uuidString
     record(source: "ble", title: "connect.succeeded", body: "\(peripheral.name ?? fallbackName ?? "WHOOP") \(peripheral.identifier.uuidString) evidence=\(evidence)")
+    // BLE-01: log pre-exchange MTU baseline (may be 20 before ATT exchange completes)
+    let mtu = peripheral.maximumWriteValueLength(for: .withoutResponse)
+    record(source: "ble", title: "connect.mtu", body: "mtu=\(mtu) peripheral=\(peripheral.identifier.uuidString)")
     peripheral.discoverServices(serviceDiscoveryIDs)
     processCachedServicesIfAvailable(peripheral, reason: "connect.\(reason)")
   }
