@@ -1,0 +1,89 @@
+//! Android JNI bridge shim.
+//!
+//! Exports `Java_com_goose_app_bridge_GooseBridge_handle`, which is called
+//! by `GooseBridge.kt` via JNI when `external fun handle(request: String)` is
+//! invoked. Delegates immediately to `goose_bridge_handle_json` so all dispatch
+//! logic lives in `bridge/mod.rs`, not here.
+//!
+//! Gated on `cfg(target_os = "android")` — this file is not compiled for iOS
+//! or macOS builds. The `jni` crate dependency is similarly target-gated in
+//! `Cargo.toml` under `[target.'cfg(target_os = "android")'.dependencies]`.
+
+use jni::JNIEnv;
+use jni::objects::{JClass, JString};
+use jni::sys::jstring;
+use std::ffi::CString;
+
+// Re-use the existing C-exported bridge functions from bridge/mod.rs.
+// These are already #[no_mangle] pub extern "C" so they are accessible here.
+use crate::goose_bridge_handle_json;
+use crate::goose_bridge_free_string;
+
+/// JNI entry point called by `GooseBridge.kt` `external fun handle(request: String): String`.
+///
+/// Converts the Java String to a C string, delegates to `goose_bridge_handle_json`,
+/// converts the result back to a Java String, and frees the Rust-allocated buffer.
+///
+/// # Safety
+/// JNI contract: `env` and `_class` are valid for the duration of the call.
+/// The raw pointer returned by `goose_bridge_handle_json` is freed before return.
+#[no_mangle]
+pub unsafe extern "C" fn Java_com_goose_app_bridge_GooseBridge_handle(
+    mut env: JNIEnv,
+    _class: JClass,
+    request: JString,
+) -> jstring {
+    // Convert Java String → Rust String
+    let request_str: String = match env.get_string(&request) {
+        Ok(s) => s.into(),
+        Err(e) => {
+            let error_json = format!(
+                r#"{{"ok":false,"result":null,"error":{{"message":"JNI get_string failed: {e}"}},"timing":null}}"#
+            );
+            return match env.new_string(error_json) {
+                Ok(s) => s.into_raw(),
+                Err(_) => std::ptr::null_mut(),
+            };
+        }
+    };
+
+    // Convert Rust String → CString for goose_bridge_handle_json
+    let c_request = match CString::new(request_str) {
+        Ok(s) => s,
+        Err(e) => {
+            let error_json = format!(
+                r#"{{"ok":false,"result":null,"error":{{"message":"CString conversion failed: {e}"}},"timing":null}}"#
+            );
+            return match env.new_string(error_json) {
+                Ok(s) => s.into_raw(),
+                Err(_) => std::ptr::null_mut(),
+            };
+        }
+    };
+
+    // Call the existing C-exported bridge function
+    let response_ptr = goose_bridge_handle_json(c_request.as_ptr());
+
+    if response_ptr.is_null() {
+        let error_json =
+            r#"{"ok":false,"result":null,"error":{"message":"goose_bridge_handle_json returned null"},"timing":null}"#;
+        return match env.new_string(error_json) {
+            Ok(s) => s.into_raw(),
+            Err(_) => std::ptr::null_mut(),
+        };
+    }
+
+    // Convert C string response → Rust String
+    let response_str = std::ffi::CStr::from_ptr(response_ptr)
+        .to_string_lossy()
+        .into_owned();
+
+    // Free the Rust-allocated buffer before returning to Java
+    goose_bridge_free_string(response_ptr);
+
+    // Convert Rust String → Java String
+    match env.new_string(response_str) {
+        Ok(s) => s.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
+}
