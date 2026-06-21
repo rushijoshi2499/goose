@@ -914,7 +914,7 @@ Plans:
 
 **Plans**:
 
-- [ ] 107-01-PLAN.md — Enable APK CI step in android-core.yml (AND-05)
+1/1 plans complete
 
 ---
 
@@ -1024,7 +1024,7 @@ Plans:
 | 104 | 1/1 | Complete   | 2026-06-21 |
 | 105 | 1/1 | Complete   | 2026-06-21 |
 | 106 | 1/1 | Complete   | 2026-06-21 |
-| 107 | v14.0 | Pending | — |
+| 107 | 1/1 | Complete   | 2026-06-21 |
 | 108 | v14.0 | Pending | — |
 | 109 | v14.0 | Pending | — |
 | 110 | v14.0 | Pending | — |
@@ -1079,6 +1079,8 @@ Promoted to Phase 18: Coach Multi-Provider.
 **Depends on:** Phase 59
 **Plans:** 5/6 plans executed
 Plans:
+
+- [x] 107-01-PLAN.md
 
 - [x] 106-01-PLAN.md
 
