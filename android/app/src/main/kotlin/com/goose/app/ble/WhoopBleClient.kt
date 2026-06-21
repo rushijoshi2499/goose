@@ -85,6 +85,13 @@ class WhoopBleClient(private val context: Context) {
   private val _connectionState = MutableStateFlow<BleConnectionState>(BleConnectionState.Idle)
   val connectionState: StateFlow<BleConnectionState> = _connectionState.asStateFlow()
 
+  // Live heart rate in BPM — null until first R22 notification received
+  private val _liveHeartRateBPM = MutableStateFlow<Int?>(null)
+  val liveHeartRateBPM: StateFlow<Int?> = _liveHeartRateBPM.asStateFlow()
+
+  // Called after each historical sync completes — used by AppViewModel to trigger upload + metrics refresh
+  var onSyncComplete: (() -> Unit)? = null
+
   private var gatt: BluetoothGatt? = null
   private var activeServiceUuid: UUID? = null
   private var activeGeneration: WhoopGeneration? = null
@@ -400,6 +407,13 @@ class WhoopBleClient(private val context: Context) {
         importFrame(value, frameSource)
       }
     }
+
+    // R22 live HR extraction — packet type 0x10: byte[0]=type, bytes[2-3]=milli-bpm little-endian
+    if (value.size >= 4 && value[0] == 0x10.toByte()) {
+      val milliBeats = (value[2].toInt() and 0xFF) or ((value[3].toInt() and 0xFF) shl 8)
+      val bpm = milliBeats / 10
+      if (bpm > 0) _liveHeartRateBPM.value = bpm
+    }
   }
 
   /**
@@ -482,6 +496,7 @@ class WhoopBleClient(private val context: Context) {
     syncInProgress = false
     pendingSyncCommand = 0
     Log.d(TAG, "Historical sync complete: reason=$reason")
+    onSyncComplete?.invoke()
   }
 
   private fun importFrame(frameBytes: ByteArray, source: String = "android_ble") {
