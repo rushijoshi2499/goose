@@ -1,6 +1,7 @@
 package com.goose.app.viewmodel
 
 import android.app.Application
+import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.goose.app.data.SERVER_URL_KEY
@@ -30,8 +31,9 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
 
   /** Persist a new server URL. Empty string disables upload. */
   fun setServerUrl(url: String) {
+    val application: Application = getApplication()
     viewModelScope.launch(Dispatchers.IO) {
-      app.gooseDataStore.edit { prefs ->
+      application.gooseDataStore.edit { prefs ->
         prefs[SERVER_URL_KEY] = url
       }
     }
