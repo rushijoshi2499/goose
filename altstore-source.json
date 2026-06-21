@@ -13,7 +13,7 @@
         {
           "version": "14.0",
           "date": "2026-06-21",
-          "localizedDescription": "- fix(ci): remove ANDROID_NDK_HOME override — cargo-ndk reads ANDROID_NDK_ROOT from shell env\n- fix(ci): repair v14.0 release failures — BLETransport #if DEBUG + NDK path\n- style: cargo fmt Rust/core",
+          "localizedDescription": "- fix(rust): wrap unsafe FFI calls in explicit unsafe{} blocks in android_jni.rs\n- fix(ci): android-core.yml — lowercase 'android' directory (case-sensitive Linux)\n- fix(ci): resolve 3 Zizmor security alerts",
           "downloadURL": "https://github.com/tigercraft4/goose/releases/download/v14.0/GooseSwift-v14.0-unsigned.ipa",
           "size": 12512172
         },
