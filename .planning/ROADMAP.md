@@ -809,8 +809,9 @@ Plans:
 
 **Plans**:
 
-- [ ] 101-01-PLAN.md — HPS sync quality telemetry: schema v23 sync_telemetry table + Swift burst instrumentation + ble.record (SYNC-12)
-- [ ] 101-02-PLAN.md — Coach freeze fix: signInTask cancellation in CoachChatModel (BUG-COACH-01)
+1/3 plans executed
+
+- [x] 101-02-PLAN.md — Coach freeze fix: signInTask cancellation in CoachChatModel (BUG-COACH-01)
 - [ ] 101-03-PLAN.md — PROTO-10: fix data_packet_domain() mismatch for packet_k=24 → v24_biometric_stream (PROTO-10)
 
 ---
@@ -1017,7 +1018,7 @@ Plans:
 | 98 | 2/2 | Complete | 2026-06-21 |
 | 99 | 2/2 | Complete | 2026-06-21 |
 | 100 | 2/2 | Complete | 2026-06-21 |
-| 101 | v14.0 | Pending | — |
+| 101 | 1/3 | In Progress|  |
 | 102 | v14.0 | Pending | — |
 | 103 | v14.0 | Pending | — |
 | 104 | v14.0 | Pending | — |
@@ -1078,6 +1079,8 @@ Promoted to Phase 18: Coach Multi-Provider.
 **Depends on:** Phase 59
 **Plans:** 5/6 plans executed
 Plans:
+
+- [ ] 101-01-PLAN.md
 
 - [x] 96-01-PLAN.md
 
