@@ -1,420 +1,653 @@
-# Architecture Research
+# Architecture: v15.0 Integration Analysis
 
-**Domain:** iOS biometric app — WHOOP BLE + Rust core + SwiftUI
-**Researched:** 2026-06-12
-**Confidence:** HIGH
-
-## Standard Architecture
-
-### System Overview
-
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                           SwiftUI View Layer                             │
-│  ┌───────────┐ ┌──────────┐ ┌──────────────┐ ┌────────────────────────┐ │
-│  │ HomeView  │ │HealthView│ │  CoachView   │ │MoreView / SleepCoach  │ │
-│  │ Dashboard │ │Stress/   │ │  VOW Card    │ │AlarmUI / BreatheView  │ │
-│  │           │ │Trends    │ │  ChatRoutes  │ │IntervalTimer          │ │
-│  └─────┬─────┘ └────┬─────┘ └──────┬───────┘ └──────────┬────────────┘ │
-└────────┼────────────┼──────────────┼────────────────────┼──────────────┘
-         │            │              │                    │
-┌────────▼────────────▼──────────────▼────────────────────▼──────────────┐
-│                     @MainActor Coordinator Layer                         │
-│  ┌──────────────────────────────────────────────────────────────────┐   │
-│  │  GooseAppModel (@MainActor @Observable)                          │   │
-│  │  + NotificationPipeline  + ActivityRecording  + BandFirstSync    │   │
-│  │  + Upload  + SleepSync   + HealthCapture     + Lifecycle         │   │
-│  └──────────────────────────────────────────────────────────────────┘   │
-│  ┌───────────────────────────────────────────────────────────────────┐  │
-│  │  HealthDataStore (@MainActor @Observable, async/await)            │  │
-│  │  + Snapshots + Sleep + Cardio + Trends + Stress + PacketInputs   │  │
-│  └───────────────────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────────────┘
-         │                          │
-┌────────▼──────────┐   ┌───────────▼──────────────────────────────────┐
-│  BLE Layer        │   │   Service Layer (v10.0 new)                  │
-│  GooseBLEClient   │   │  GooseHapticService     (HAP-01/02/03)       │
-│  + CentralDelegate│   │  GooseBLEHistoricalManager  (BLE5-03)        │
-│  + Commands       │   │  GooseStrainAccumulator     (DATA-02)        │
-│  + HistoricalCmds │   │  GooseWakeWindowManager     (HAP-04)         │
-│  + Parsing        │   │  GooseNotificationService   (FEAT-03)        │
-│  + UserActions    │   │  GooseHRDecimator           (DATA-04)        │
-│  GooseBLEDataVal. │   │  GooseCoachVOWService       (FEAT-01)        │
-│  (BLE5-04 new)    │   └──────────────────────────────────────────────┘
-│  GooseBLEBonding  │
-│  GooseHRSanitizer │
-└────────┬──────────┘
-         │  coreBluetoothQueue (dedicated DispatchQueue)
-┌────────▼─────────────────────────────────────────────────────────────┐
-│  Background Queue Layer                                               │
-│  notificationIngestQueue  notificationParseQueue  captureFrameRowBuild│
-│  rustStartupQueue         heart-rate-series       com.goose.swift.*  │
-└────────┬──────────────────────────────────────────────────────────────┘
-         │
-┌────────▼──────────────────────────────────────────────────────────────┐
-│  Rust Core (libgoose_core — stateless, synchronous FFI)                │
-│  bridge.rs (58+ methods) → protocol.rs / store.rs / historical_sync.rs│
-│  + R22 parser (BLE5-01 new)   + v18 decoder (BLE5-02 new)             │
-│  + journal/workout/appleDaily/metricSeries tables (DATA-01 new)        │
-│  + coach.vow_message() (FEAT-01 new)                                   │
-└────────┬──────────────────────────────────────────────────────────────┘
-         │
-┌────────▼──────────────────────────────────────────────────────────────┐
-│  Persistence Layer                                                     │
-│  goose.sqlite (rusqlite bundled)  HeartRateSeriesStore (JSON on disk) │
-│  UserDefaults (config/watermarks) Keychain (Bearer token)             │
-└───────────────────────────────────────────────────────────────────────┘
-```
-
-### Component Responsibilities — Existing (v9.0 baseline)
-
-| Component | Responsibility | File(s) |
-|-----------|----------------|---------|
-| `GooseAppModel` | @MainActor coordinator; owns BLE client, queues, pipelines, upload | `GooseAppModel.swift` + 9 extension files |
-| `HealthDataStore` | @MainActor metric query layer; async/await bridge calls per metric family | `HealthDataStore.swift` + extension files |
-| `GooseBLEClient` | CoreBluetooth central; WHOOP GATT; BLE command writes; historical sync orchestration | `GooseBLEClient.swift` + 10 extension files |
-| `GooseRustBridge` | Synchronous JSON-over-FFI; never call from @MainActor | `GooseRustBridge.swift` |
-| `CaptureFrameWriteQueue` | Batched SQLite inserts of BLE frames via Rust bridge | `CaptureFrameWriteQueue.swift` |
-| `HeartRateSeriesStore` | In-memory + persisted HR series; singleton; NSLock-protected | `HeartRateSeriesStores.swift` |
-| `WhoopDataSignalPipeline` | Routes WhoopDataSignalSample to HR pipeline + passive detector | `WhoopDataSignalPipeline.swift` |
-| `PassiveActivityDetectionPipeline` | Heuristic motion/HR workout detection | `PassiveActivityDetector.swift` |
-| `GooseBLEBondingManager` | 5-state bonding state machine (v9.0) | `GooseBLEBondingManager.swift` |
-| `GooseNetworkMonitor` | NWPathMonitor; publishes `isReachable` to GooseAppModel (v9.0) | `GooseNetworkMonitor.swift` |
-| `GooseHRSanitizer` | HR spike filter 25-220 BPM; spike counter (v9.0) | `GooseHRSanitizer.swift` |
-| `StateMachine<State, Event>` | Generic state machine type (v9.0) | `GooseStateMachine.swift` |
+**Project:** Goose — Multi-Device Biometric Platform
+**Milestone:** v15.0 — Protocol Depth, Algorithms & UX
+**Analyzed:** 2026-06-21
+**Schema baseline:** v23 (CURRENT_SCHEMA_VERSION in store/mod.rs)
 
 ---
 
-## New Components for v10.0 — Classification
+## Summary
 
-### Strictly New Files
-
-| Component | ID | Purpose | Integration Point |
-|-----------|----|---------|-------------------|
-| `GooseBLEHistoricalManager` | BLE5-03 | Dedicated historical sync lifecycle; decouples from `GooseBLEClient` | `GooseAppModel+BandFirstSync.swift` replaces direct `ble.syncHistoricalPackets()` calls |
-| `GooseBLEDataValidator` | BLE5-04 | Swift-side frame validation before Rust/SQLite ingestion | Inserted into `CaptureFrameWriteQueue` and/or `NotificationFrameParsing.swift` |
-| `GooseHapticService` | HAP-01/02 | Orchestrates `buzz(loops:)` calls and Breathe session pacing | Owned by `GooseAppModel`; calls `ble.buzz()` on the BLE client |
-| `GooseWakeWindowManager` | HAP-04 | Wake-window alarm orchestration; sleep-stage polling fallback | Owned by `GooseAppModel`; calls `ble.setWindowedAlarm()` |
-| `GooseNotificationService` | FEAT-03 | UNUserNotificationCenter wrapper; sleep summary + workout + battery | Actor; called from `GooseAppModel` lifecycle triggers |
-| `GooseStrainAccumulator` | DATA-02 | Real-time Swift-side strain accumulator during live workouts | Subscribes to `WhoopDataSignalPipeline`; owned by `GooseAppModel` |
-| `GooseHRDecimator` | DATA-04 | LTTB decimation of HR samples before chart rendering | Applied in `HeartRateSeriesStore` before publishing to views |
-| `GooseCoachVOWView` | FEAT-01 | SwiftUI banner/card showing bridge-computed VOW coaching nudge | Inserted into `CoachViews.swift` top section |
-| `GooseBLEManaging` (protocol) | ARCH-01 | Protocol extracted from `GooseBLEClient` | New file; conformance added to `GooseBLEClient` |
-| `GooseRustBridging` (protocol) | ARCH-01 | Protocol extracted from `GooseRustBridge` | New file; conformance added to `GooseRustBridge` |
-| `GooseAppServicing` (protocol) | ARCH-01 | Top-level service protocol wrapping BLE + bridge + health store | New file |
-| `GooseBLEClientMock` | ARCH-01 | Test double for `GooseBLEManaging` | Test target only (`#if DEBUG`) |
-| `GooseRustBridgeMock` | ARCH-01 | Test double for `GooseRustBridging` (fixture JSON) | Test target only (`#if DEBUG`) |
-
-### Modifications to Existing Files
-
-| File | Change | ID |
-|------|--------|----|
-| `Rust/core/src/protocol.rs` | Add R22 (0x10) packet type variant + `parse_r22_body()`; split v18 arm from `7|9|12|18` to `parse_v18_body()` | BLE5-01, BLE5-02 |
-| `Rust/core/src/historical_sync.rs` | Add stale-clock dedup (86400s threshold + 300s grid snap); EVENT type-48 timestamp bypass | BLE5-02 |
-| `Rust/core/src/store.rs` | Add `run_migrations()` for 4 new tables: `journal`, `workout`, `appleDaily`, `metricSeries` + helpers | DATA-01 |
-| `Rust/core/src/bridge.rs` | New dispatch arms: `journal.*`, `workout.*`, `apple_daily.*`, `metric_series.*`, `coach.vow_message` | DATA-01, FEAT-01 |
-| `GooseSwift/GooseBLEClient+Commands.swift` | Add `buzz(loops: UInt8)` — cmd 0x13 puffin frame (~15 lines) | HAP-01 |
-| `GooseSwift/GooseBLEClient+HistoricalCommands.swift` | Reduce to pure BLE command writes; move orchestration to `GooseBLEHistoricalManager` | BLE5-03 |
-| `GooseSwift/GooseBLEClient+HistoricalHandlers.swift` | Move sync lifecycle callbacks to `GooseBLEHistoricalManager` | BLE5-03 |
-| `GooseSwift/GooseAppModel+BandFirstSync.swift` | Replace `ble.syncHistoricalPackets()` calls with `historicalManager.beginSync()` | BLE5-03 |
-| `GooseSwift/CaptureFrameWriteQueue.swift` | Insert `GooseBLEDataValidator` validation step before Rust bridge call | BLE5-04 |
-| `GooseSwift/NotificationFrameParsing.swift` | Optional early validation hook for frame type + length before reassembly | BLE5-04 |
-| `GooseSwift/WhoopDataSignalPipeline.swift` | Feed samples to `GooseStrainAccumulator` on sample arrival | DATA-02 |
-| `GooseSwift/GooseAppModel+ActivityRecording.swift` | Wire `GooseStrainAccumulator` reset on session start/stop | DATA-02 |
-| `GooseSwift/HeartRateSeriesStores.swift` | Apply `GooseHRDecimator` before publishing to chart views | DATA-04 |
-| `GooseSwift/GooseBLEClient.swift` | Add conformance to `GooseBLEManaging` protocol | ARCH-01 |
-| `GooseSwift/GooseRustBridge.swift` | Add conformance to `GooseRustBridging` protocol | ARCH-01 |
-| `GooseSwift/HealthKitFullImporter.swift` | Write to `appleDaily` bridge method instead of mixed daily tables | DATA-01 |
-| `GooseSwift/CoachViews.swift` | Insert `GooseCoachVOWView` at top of Coach tab | FEAT-01 |
-
-### New SwiftUI Screens (DATA-03, FEAT-02)
-
-| File | Screen | Prerequisite |
-|------|--------|--------------|
-| `GooseSwift/FitnessManualWorkoutSheet.swift` | Manual workout entry/edit sheet | `workout` table (DATA-01) |
-| `GooseSwift/HealthTrendsDashboardView.swift` | Long-range trends dashboard | `metricSeries` table (DATA-01) |
-| `GooseSwift/HealthStressViews.swift` | Stress/ANS additions (calm time, baseline-delta, range selector) | None |
-| `GooseSwift/BreatheView.swift` | Breathe HRV-biofeedback screen | HAP-01 (`buzz(loops:)`) |
-| `GooseSwift/IntervalTimerView.swift` | Interval timer with strap haptic cues | HAP-01 (`buzz(loops:)`) |
-| `GooseSwift/MetricExplorerView.swift` | Arbitrary metric key browsing | `metricSeries` table (DATA-01) |
+Seven new features land in v15.0. Five are pure additions to existing seams (new enum variants, new bridge methods, new SQLite tables). Two require cross-layer wiring that touches more than one module. None require changes to the BLETransport protocol contract or the bridge JSON-RPC envelope. The r2d2 pool, BridgeRouter domain routing, and store domain split from v12.0–v14.0 all remain intact.
 
 ---
 
-## Recommended Build Order — Dependency Graph
+## Existing Architecture Recap (do not re-research)
 
 ```
-BLE5-01 (R22 Rust parser)
-    |-- feeds metric pipeline for WHOOP 5.0 users
-BLE5-02 (v18 historical decode + stale-clock)
-    |-- completes WHOOP 5.0 historical offload
-BLE5-03 (GooseBLEHistoricalManager)
-    |-- depends on BLE5-01/02 for full test coverage; also depends on ARCH-01 for mocks
-BLE5-04 (GooseBLEDataValidator)
-    |-- independent of BLE5-01/02/03 -- can build in parallel with Wave 2
-ARCH-01 (protocol layer + mocks)
-    |-- unblocks unit tests for BLE5-03, DATA-02, HAP-01+
-HAP-01 (buzz primitive -- GooseBLEClient+Commands.swift)
-    |-- HAP-02 (Breathe screen + GooseHapticService)
-    |-- HAP-03 (smart alarm UI, event-57 RE required first)
-    |-- HAP-04 (GooseWakeWindowManager -- after HAP-03 event-57 and RE SetAlarmInfoCommandPacketRev4)
-DATA-01 (4 SQLite tables: metricSeries -> journal -> workout -> appleDaily)
-    |-- DATA-03 Screen 1: Stress additions (independent of DATA-01, build first)
-    |-- DATA-03 Screen 2: Manual Workout Entry (needs workout table)
-    |-- DATA-03 Screen 3: Trends Dashboard (needs metricSeries table)
-DATA-02 (GooseStrainAccumulator)
-    |-- independent; depends on WhoopDataSignalPipeline (already exists)
-DATA-04 (GooseHRDecimator)
-    |-- fully independent; add only after Instruments profile confirms render issue
-FEAT-01 (Coach VOW -- Rust bridge.rs + GooseCoachVOWView)
-    |-- depends on existing bridge metrics; no new tables needed for v1
-FEAT-02 (NoopApp: Breathe, Interval Timer, Metric Explorer)
-    |-- Breathe/Intervals depend on HAP-01; MetricExplorer depends on DATA-01 metricSeries
-FEAT-03 (GooseNotificationService)
-    |-- independent; uses PassiveActivityDetector callbacks + sleep sync + BLE battery
-```
+BLE bytes
+  → CoreBluetoothBLETransport (CBCentralManagerDelegate, CBPeripheralDelegate)
+  → GooseNotificationEvent / GooseCommandWriteEvent callbacks
+  → GooseAppModel (onNotification, onRawNotificationWithContext)
+  → CaptureFrameWriteQueue (NSLock, serial writeQueue)
+  → bridge "capture.import_frame_batch" (Rust, sync, background queue)
+  → GooseStore / CaptureStore → goose.sqlite
 
-### Recommended Phase Wave Order
+On-demand metrics:
+  HealthDataStore → bridge "metrics.*" (async Task.detached)
+  → GooseStore / MetricsStore → SQLite
 
-**Wave 1 — Foundation (no dependencies, highest user impact)**
-1. BLE5-01: R22 parser (Rust only, ~1 day) — fixes WHOOP 5.0 users seeing zero metrics
-2. DATA-01: 4 SQLite tables, implementation order: metricSeries, journal, workout, appleDaily
-3. ARCH-01: Protocol layer + mocks (Phase 1 protocols, Phase 2 mocks, Phase 3 tests together — only if test target can be added)
+Upload:
+  GooseAppModel+Upload → GooseUploadService
+  → POST /v1/ingest-frames (raw BLE frames)
+  → POST /v1/ingest-decoded (decoded streams)
 
-**Wave 2 — Protocol completeness + buzz prerequisite**
-4. BLE5-02: v18 decode + stale-clock (Rust only, ~1 day) — completes WHOOP 5.0 historical offload
-5. HAP-01: `buzz(loops:)` primitive — 2 hours; gates all HAP-02/03/04 and FEAT-02 Breathe/Intervals
-6. BLE5-03: GooseBLEHistoricalManager — depends on ARCH-01 mocks for tests
-7. BLE5-04: GooseBLEDataValidator — insertable independently after BLE5-03 refactor settles
-
-**Wave 3 — Features (parallel, all Wave 1+2 gates met)**
-8. HAP-02: GooseHapticService + Breathe screen
-9. HAP-03: Smart alarm UI (BTSnoop session to capture event-57 required before implementation)
-10. HAP-04: GooseWakeWindowManager (after HAP-03 event-57 resolved; RE SetAlarmInfoCommandPacketRev4)
-11. DATA-02: GooseStrainAccumulator
-12. FEAT-01: Coach VOW (Rust method + SwiftUI card)
-13. FEAT-03: GooseNotificationService
-
-**Wave 4 — Polish**
-14. DATA-03: Stress additions, Manual Workout Entry (workout table), Trends Dashboard (metricSeries)
-15. FEAT-02: NoopApp Breathe + Interval Timer + Metric Explorer (metricSeries table)
-16. DATA-04: GooseHRDecimator (only after Instruments profile confirms render problem)
-
----
-
-## Data Flow
-
-### New Real-Time Path — Strain Accumulator
-
-```
-BLE notification (HR sample via 0x0022)
-    |
-GooseBLEClient.onLiveHeartRate callback
-    |
-WhoopDataSignalPipeline (realtimeVitalsQueue)
-    |-- HeartRateSamplePipeline -> HeartRateSeriesStore (existing)
-    |-- GooseStrainAccumulator.onSample() (new DATA-02)
-            |
-        Task { @MainActor in appModel.liveSessionStrain = updated }
-            |
-        SwiftUI workout view (live strain card updates)
-```
-
-### New Historical Path — WHOOP 5.0 V18
-
-```
-BLE notification (WHOOP 5.0 historical frame on 0x0022)
-    |
-GooseBLEClient (subscription unchanged)
-    |
-GooseBLEHistoricalManager (new BLE5-03, receives frame via callback)
-    |
-GooseBLEDataValidator.validate() (new BLE5-04)
-    |-- if invalid: log warn + increment discardedFrameCount; drop
-    |-- if valid:
-CaptureFrameWriteQueue -> GooseRustBridge
-    |
-Rust bridge.rs -> protocol.rs.parse_v18_body() (new BLE5-02)
-    |
-store.rs inserts: skin_temp_samples / rr_interval_samples /
-                  step_counter_samples / gravity2_samples
-```
-
-### New BLE Command Path — Haptics
-
-```
-User action (Breathe screen inhale cue)
-    | @MainActor
-GooseHapticService.sendBreatheInhale() (new HAP-02)
-    | must dispatch off @MainActor
-GooseBLEClient.buzz(loops: 1) (new HAP-01, added to Commands extension)
-    | coreBluetoothQueue via writeValue
-activePeripheral.writeValue(puffinFrame, for: commandCharacteristic, type: .withoutResponse)
-```
-
-### New Journal/Workout Entry Path
-
-```
-User action (journal tag tap / manual workout save)
-    | @MainActor SwiftUI view
-Task.detached { bridge.request(method: "journal.upsert", args: [...]) }
-    | background thread -- never @MainActor inline
-GooseRustBridge.request() -> bridge.rs dispatch arm (new DATA-01)
-    |
-store.rs -> journal / workout / appleDaily / metricSeries table
-    |
-goose.sqlite
+Bridge routing (bridge/mod.rs → domain files):
+  metrics.* / metric_series.* / exercise.* / biometrics.* / calibration.* / diagnostics.*
+    → bridge/metrics.rs
+  sleep.* / overnight.* / health_sync.*
+    → bridge/sleep.rs
+  capture.* / protocol.* / historical_sync.* / sync.*
+    → bridge/capture.rs
+  activity.* / workout.* / apple_daily.* / journal.* / timeline.*
+    → bridge/activity.rs
+  debug.* / commands.* / settings.* / storage.* / store.* / export.* /
+  upload.* / privacy.* / ui_coverage.* / device.* / local_health.* / validation.*
+    → bridge/debug.rs
 ```
 
 ---
 
-## Integration Points — Threading Analysis
+## Feature 1: v20/v21/v26 Decode (#172, #173)
 
-### HAP-01: buzz(loops:) Command — Threading Risk: MEDIUM
+### What changes
 
-The existing `writeAlarmCommand()` and `writeClockCommand()` in `GooseBLEClient+Commands.swift` already include a main-thread dispatch guard:
+**Rust — protocol.rs**
+
+`DataPacketBodySummary` gains two new variants:
+
+```rust
+V20V21OpticalMultiChannel {
+    // v20: 8-channel PPG sample burst; v21: same layout, different gain config
+    channel_count: u8,
+    sample_count: Option<u16>,
+    channels: Vec<I16SeriesSummary>, // one per active channel
+    flags: Option<u16>,
+    warnings: Vec<String>,
+},
+V26PpgWaveform {
+    // 24 Hz raw PPG waveform samples
+    sample_rate_hz: u8,              // confirmed 24 from protocol observation
+    sample_count: Option<u16>,
+    samples: I16SeriesSummary,       // single green-channel stream
+    warnings: Vec<String>,
+},
+```
+
+`parse_data_packet_body_summary` gains two new match arms:
+
+```rust
+20 | 21 => parse_v20v21_optical_body(payload),
+26 => parse_v26_ppg_waveform_body(payload),
+```
+
+This eliminates `unhandled_packet_k_20`, `unhandled_packet_k_21`, and `unhandled_packet_k_26` warnings from the capture pipeline. The `Unknown { packet_k }` catch-all arm remains for any future unrecognised values.
+
+**BRIDGE_METHODS constant (bridge/mod.rs)**
+
+Add the new methods in sorted order and register corresponding dispatch arms. The `bridge_methods_constant_matches_dispatcher` test enforces this at compile time — the build will fail if entries are added to `BRIDGE_METHODS` without a matching arm, or vice versa.
+
+New methods:
+- `"biometrics.insert_v20v21_batch"` → bridge/metrics.rs (MetricsStore)
+- `"biometrics.insert_v26_batch"` → bridge/metrics.rs (MetricsStore)
+- `"biometrics.v20v21_between"` → bridge/metrics.rs (query range)
+- `"biometrics.v26_between"` → bridge/metrics.rs (query range)
+
+**Rust — store (extension of MetricsStore)**
+
+V20/V21 are multi-channel arrays; V26 is a single 24 Hz waveform. Neither maps cleanly to the existing scalar tables (spo2_samples, resp_samples, etc.). Add to `store/metrics.rs` (MetricsStore) because these are optical biometric channels, consistent with where `insert_v24_batch` / `v24_between` live:
+
+```sql
+-- schema v24 migration
+CREATE TABLE IF NOT EXISTS optical_channel_samples (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts REAL NOT NULL,
+    device_id TEXT NOT NULL,
+    packet_k INTEGER NOT NULL,   -- 20, 21, or 26
+    channel_index INTEGER NOT NULL,
+    sample_index INTEGER NOT NULL,
+    value INTEGER NOT NULL,      -- i16 cast to INTEGER
+    synced INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_optical_channel_ts
+    ON optical_channel_samples(device_id, packet_k, ts);
+```
+
+Storing one row per sample allows the existing `synced` / upload-cursor logic to apply without special-casing. For V26 waveform bursts the `channel_index` is always 0; for V20/V21 it identifies the PPG channel.
+
+**Swift — no new component**
+
+`CaptureFrameWriteQueue` calls `capture.import_frame_batch` which already parses packet bodies and persists via the Rust store. Once the Rust variants exist, raw V20/V21/V26 frames flow through the existing pipeline automatically. No Swift-side changes required unless the UI wants to surface channel data — that would be a `HealthDataStore+OpticalChannels.swift` extension calling `biometrics.v20v21_between`.
+
+### Build order
+
+1. Add variants to `DataPacketBodySummary` and parse functions in `protocol.rs`
+2. Add `optical_channel_samples` table in `store/mod.rs` (schema v24 migration)
+3. Add insert/query methods on `MetricsStore` in `store/metrics.rs`
+4. Register bridge methods in `bridge/mod.rs` and add arms to `bridge/metrics.rs`
+5. Update `BRIDGE_METHODS` constant (compile-time test enforces correctness)
+6. Swift UI (optional, subsequent phase): `HealthDataStore+OpticalChannels.swift`
+
+---
+
+## Feature 2: Harvard Sleep Need Model (#164)
+
+### What changes
+
+**Rust — new function in metrics domain**
+
+New public function: `compute_sleep_need(labels: &[SleepCorrectionLabel], strain: &GooseStrainResult) -> SleepNeedResult`
+
+```rust
+pub struct SleepNeedResult {
+    pub base_need_minutes: f64,      // age-adjusted baseline (Harvard model)
+    pub ewma_debt_minutes: f64,      // 7-night EWMA of sleep deficit
+    pub strain_adjustment_minutes: f64, // Banister TRIMP → additional need
+    pub total_need_minutes: f64,     // base + ewma_debt + strain_adjustment
+    pub confidence: String,          // "high" / "medium" / "low"
+    pub nights_used: usize,
+}
+```
+
+Inputs come from two existing bridge methods:
+- `sleep.list_correction_labels` → already in `bridge/sleep.rs` → `SleepStore`
+- `metrics.goose_strain_v1` → already in `bridge/metrics.rs` → `MetricsStore`
+
+The new function belongs in a new file `src/sleep_need.rs` (not in metric_features.rs which is already very large) and is exposed via a new bridge method.
+
+**BRIDGE_METHODS / bridge/sleep.rs**
+
+New method: `"sleep.compute_need"` → bridge/sleep.rs
+
+```rust
+"sleep.compute_need" => {
+    // args: { database_path, date, age_years }
+    // 1. load correction labels via SleepStore
+    // 2. load strain result via MetricsStore
+    // 3. call compute_sleep_need()
+    // 4. return SleepNeedResult as JSON
+}
+```
+
+This goes in `bridge/sleep.rs` because it is fundamentally a sleep metric (sleep debt + need), not a strain metric, even though it consumes strain as an input.
+
+**Swift — HealthDataStore+Sleep.swift (extension)**
+
+Add one async method:
 
 ```swift
-guard Thread.isMainThread else {
-  DispatchQueue.main.async { [weak self] in self?.writeAlarmCommand(kind) }
-  return
+func loadSleepNeed(date: Date) async -> SleepNeedResult?
+```
+
+This calls `bridge.request(method: "sleep.compute_need", args: [...])` on a background task, then publishes to a `@Published var sleepNeed: SleepNeedResult?` on `HealthDataStore`.
+
+No new Swift type or component needed — consistent with how all other metric results are surfaced.
+
+### Build order
+
+1. `src/sleep_need.rs` — core algorithm
+2. Schema: no new table needed (reads from existing `sleep_correction_labels` + existing metric tables)
+3. Register `"sleep.compute_need"` in `BRIDGE_METHODS` and `bridge/sleep.rs`
+4. `HealthDataStore+Sleep.swift` — add `loadSleepNeed` + `@Published var sleepNeed`
+5. SwiftUI: add Sleep Need card to Sleep V2 dashboard (reads `healthStore.sleepNeed`)
+
+---
+
+## Feature 3: GET_FF_VALUE / Feature Flag Discovery (#165)
+
+### What changes
+
+**Context**
+
+`GET_FF_VALUE` (command number 128 = 0x80) is already registered in `CoreBluetoothBLETransport.swift` as a debug research command (`id: "get_feature_flag_value"`, commandNumber: 128). The plumbing to send it via `sendDebugResearchCommand` exists. What v15.0 adds is: sending it automatically post-handshake with known flag keys and parsing the response into `DeviceCapabilities`.
+
+**Swift — CoreBluetoothBLETransport+Commands.swift (modified)**
+
+Post-handshake hook: after `sendClientHello()` succeeds and capabilities are resolved, call a new private method `discoverFeatureFlags()`. This method sends command 128 with each known flag key hex. The response arrives as a `CommandResponse` notification and is routed through the existing notification pipeline.
+
+No new component. The existing `CoreBluetoothBLETransport+HistoricalHandlers.swift` already shows the pattern for handling async command responses.
+
+**Swift — CoreBluetoothBLETransport+Parsing.swift (modified)**
+
+In the `CommandResponse` arm of the notification parser, add a case for command 128 that extracts the flag value byte and calls a new private method `applyFeatureFlag(key:value:)`.
+
+**Rust — capabilities.rs (modified)**
+
+Extend `DeviceCapabilities` with optional feature-flag fields:
+
+```rust
+pub struct DeviceCapabilities {
+    // existing fields unchanged
+    pub wire_protocol: String,
+    pub historical_sync: String,
+    pub battery_via_r22: bool,
+    pub battery_via_event48: bool,
+    pub battery_via_cmd26: bool,
+    pub r22_realtime: bool,
+    // new optional fields (None = not yet discovered or not supported)
+    pub feature_flags: Option<FeatureFlagSet>,
+}
+
+pub struct FeatureFlagSet {
+    pub discovered_at: String,          // ISO8601 timestamp
+    pub flags: Vec<FeatureFlagEntry>,
+}
+
+pub struct FeatureFlagEntry {
+    pub key_hex: String,
+    pub value: u8,
+    pub name: Option<String>,           // human-readable if key is known
 }
 ```
 
-`buzz(loops:)` must include the same guard. `GooseHapticService` may schedule a `Timer` for Breathe session pacing — that timer must fire on the main run loop (schedule via `@MainActor` context), not a background `RunLoop.current`. If the timer fires on a background thread and calls `buzz()` without the guard, the guard catches it but silently adds latency. Preferred: schedule the Breathe timer from `@MainActor` so the guard never triggers.
+The `device.capabilities` bridge method already serialises `DeviceCapabilities` to JSON. Adding `feature_flags: Option<FeatureFlagSet>` to the struct is backward-compatible: `None` serialises to `null` and old callers ignore the field.
 
-### BLE5-03: GooseBLEHistoricalManager — Threading Risk: HIGH
+**Swift — BLETransport.swift (not modified)**
 
-`GooseBLEHistoricalManager` must coordinate with `GooseBLEClient` state (`isHistoricalSyncing`, `connectionState`, `activePeripheral`). These are `@Observable` properties mutated from both `coreBluetoothQueue` and `@MainActor`.
+`connectedCapabilities: DeviceCapabilities?` already exists on the protocol. The new feature-flag fields appear in the JSON response from `device.capabilities` — Swift decodes them as a `Codable` struct. No protocol change needed.
 
-The manager must not read `GooseBLEClient` internal state directly from a non-main thread. All reads must come from callbacks already dispatched to main (`onHistoricalSyncProgress`, `onConnectionStateChange`), or the manager must be `@MainActor` itself.
+**Where does the command go?**
 
-If `GooseBLEHistoricalManager` owns a sync-timeout `DispatchWorkItem`, that work item must check state via a @MainActor-dispatched closure, not directly. Otherwise it races with `coreBluetoothQueue` mutations.
+`CoreBluetoothBLETransport+Commands.swift` — same file as other post-handshake commands (`readStrapClock`, `refreshBatteryLevel`). The trigger point is the existing `onCapabilitiesUpdated` callback path: after capabilities are resolved, `GooseAppModel` already receives a callback; the transport itself can initiate feature-flag discovery as a follow-on step from its own `sendClientHello` completion path.
 
-After ARCH-01: the manager depends on `GooseBLEManaging` protocol only. State is communicated back via existing callbacks that `GooseBLEClient` already dispatches to main — do not add new direct property reads.
+### Build order
 
-### DATA-02: GooseStrainAccumulator — Threading Risk: MEDIUM
+1. Extend `DeviceCapabilities` in `capabilities.rs` (Rust) — backward compatible
+2. `CoreBluetoothBLETransport+Commands.swift` — add `discoverFeatureFlags()` post-handshake call
+3. `CoreBluetoothBLETransport+Parsing.swift` — parse cmd-128 response, call `applyFeatureFlag`
+4. `CoreBluetoothBLETransport.swift` — update `connectedCapabilities` from decoded feature flags
+5. Update `GooseAppModel` / `bleState` if any feature flag gates a UI element
 
-`WhoopDataSignalPipeline` delivers samples on `realtimeVitalsQueue`. The accumulator computes incrementally on that queue (O(1) per sample). Publishing `liveSessionStrain` to `GooseAppModel` requires a main-actor hop:
+---
+
+## Feature 4: Body Composition History (#166)
+
+### What changes
+
+**New SQLite table (schema v24 migration)**
+
+```sql
+CREATE TABLE IF NOT EXISTS body_composition_entries (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts REAL NOT NULL,                   -- Unix timestamp of measurement
+    source TEXT NOT NULL,               -- "manual" | "healthkit" | "whoop"
+    weight_kg REAL,
+    body_fat_pct REAL,
+    lean_mass_kg REAL,
+    bmi REAL,
+    device_id TEXT,
+    synced INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_body_comp_ts
+    ON body_composition_entries(ts DESC);
+```
+
+**Rust — new domain store file**
+
+Body composition is neither sleep, capture, nor activity. Given the existing pattern (sleep.rs, metrics.rs, capture.rs, activity.rs are all sizeable domain files), a new `store/body_composition.rs` is cleaner than adding to `store/mod.rs`.
+
+Methods needed:
+- `insert_body_composition_entry(input: &BodyCompositionInput) -> GooseResult<()>`
+- `list_body_composition_entries(since: f64, limit: usize) -> GooseResult<Vec<BodyCompositionRow>>`
+
+**BRIDGE_METHODS / bridge domain**
+
+Body composition fits in the `metrics` domain (biometric measurement, consistent with `biometrics.*`):
+
+```
+"body_comp.upsert"  → bridge/metrics.rs
+"body_comp.list"    → bridge/metrics.rs
+```
+
+Add routing in `bridge/mod.rs`:
+
+```rust
+if method.starts_with("body_comp.") {
+    return metrics::dispatch_metrics(&request);
+}
+```
+
+**Swift — new HealthDataStore extension**
+
+`HealthDataStore+BodyComposition.swift`:
+- `func loadBodyCompositionHistory() async -> [BodyCompositionEntry]`
+- `@Published var bodyCompositionEntries: [BodyCompositionEntry] = []`
+
+**HealthKit integration**
+
+`GooseAppModel+HealthKitExport.swift` already handles HealthKit write for HR/HRV/SpO2/sleep. Add body weight (`HKQuantityTypeIdentifierBodyMass`) write there. HealthKit import for initial backfill can go in the same file.
+
+### Build order
+
+1. `store/body_composition.rs` — new module with table DDL and CRUD methods
+2. `store/mod.rs` — add `mod body_composition`, schema v24 migration, delegate methods
+3. `bridge/mod.rs` — register `body_comp.*` routing and add to `BRIDGE_METHODS`
+4. `bridge/metrics.rs` — add `body_comp.upsert` and `body_comp.list` arms
+5. `HealthDataStore+BodyComposition.swift` — new extension
+6. `GooseAppModel+HealthKitExport.swift` — add HealthKit weight write/import
+7. `BodyCompositionViews.swift` + SwiftUI wiring in More or Health tab
+
+---
+
+## Feature 5: Stealth Mode (#167)
+
+### What changes
+
+Stealth mode is a per-metric UserDefaults toggle that replaces a metric value with "—" in dashboards. It is purely a presentation-layer feature — no Rust changes needed.
+
+**Swift — new helper type (GooseStealthMode.swift)**
 
 ```swift
-// Inside GooseStrainAccumulator (realtimeVitalsQueue)
-func accumulate(sample: WhoopDataSignalSample) {
-  // O(1) Banister TRIMP increment
-  accumulatedStrain += deltaStrain(sample)
-  let snapshot = accumulatedStrain
-  Task { @MainActor in appModel.liveSessionStrain = snapshot }
+enum GooseStealthMode {
+    static func isHidden(metric: String) -> Bool {
+        UserDefaults.standard.bool(forKey: "goose.stealth.\(metric)")
+    }
+
+    static func setHidden(_ hidden: Bool, metric: String) {
+        UserDefaults.standard.set(hidden, forKey: "goose.stealth.\(metric)")
+    }
+
+    // Canonical metric keys
+    static let hrv = "hrv"
+    static let recovery = "recovery"
+    static let strain = "strain"
+    static let sleep = "sleep"
+    static let spo2 = "spo2"
 }
 ```
 
-One `Task { @MainActor in }` per BLE sample (1/s) is acceptable. Do not coalesce unless profiling shows actor-hop overhead.
+**Where does it live architecturally?**
 
-### ARCH-01: Protocol Layer — Threading Risk: LOW
+`GooseStealthMode` is a stateless utility — no integration with `GooseAppModel` or `HealthDataStore` needed. Views call `GooseStealthMode.isHidden(metric:)` directly in their body. This is correct because:
+- Stealth state is user preference (UserDefaults), not biometric data
+- `GooseAppModel` should not know about presentation hiding
+- SwiftUI views already conditionally render based on UserDefaults elsewhere (e.g., HealthKit write toggle)
 
-Adding protocol conformances is purely additive. The protocols must document the threading contract inherited from the concrete types: callers must not call `GooseRustBridging.request()` from `@MainActor` inline; `GooseBLEManaging.buzz()` dispatches to main internally.
+No `@Published` state needed because stealth is read at render time from UserDefaults (synchronous, cheap). The view observes its own `@State` toggle state for the settings screen.
 
-Mock implementations in the test target must explicitly state they run on the caller's thread — `GooseBLEClientMock` does not simulate `coreBluetoothQueue`. Test assertions must not rely on background-queue timing.
+**Settings UI**
 
-### FEAT-03: GooseNotificationService — Threading Risk: LOW
+A new section in `MoreView` or `MorePrivacyView` child sheet with per-metric toggles. Each toggle calls `GooseStealthMode.setHidden(_:metric:)`.
 
-`UNUserNotificationCenter` is safe from any thread. Implement as a Swift `actor` to serialize the battery notification reschedule sequence (read drain rate -> compute crossing time -> cancel old -> schedule new). Sleep summary and workout notifications are fire-and-forget and don't need serialization.
+### Build order
 
-The battery drain-rate computation reads SQLite via Rust bridge — must not happen on `@MainActor`. Call via `Task.detached` or via an existing `HealthDataStore` async method.
-
-### BLE5-04: GooseBLEDataValidator — Threading Risk: LOW
-
-`CaptureFrameWriteQueue` runs on `captureFrameRowBuildQueue`. `GooseBLEDataValidator` is a pure `struct` called inline in that queue — inherently safe. If a discarded-frame counter needs to be observable from the UI, expose it via `Task { @MainActor in }`, not a shared mutable property.
+1. `GooseStealthMode.swift` — static helper with canonical metric keys
+2. Update dashboard views to call `GooseStealthMode.isHidden(metric:)` before rendering values
+3. Add stealth toggles in More settings UI
 
 ---
 
-## Architectural Patterns
+## Feature 6: PIP Realtime Pipeline (#168)
 
-### Pattern 1: @MainActor Coordinator + Background Queue Dispatch
+### What changes
 
-All UI-observable state lives on `@MainActor`. Background work dispatches results back via `Task { @MainActor in }` or `DispatchQueue.main.async`. Every new v10.0 component that publishes to `GooseAppModel` or `HealthDataStore` must follow this. Applies to: `GooseStrainAccumulator`, `GooseHapticService`, `GooseWakeWindowManager`, `GooseNotificationService`.
+The PIP pipeline captures realtime BLE frames separately from the historical capture pipeline and uploads them to a dedicated server endpoint.
+
+**Rust — new SQLite table (schema v24 migration)**
+
+```sql
+CREATE TABLE IF NOT EXISTS realtime_frames (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts REAL NOT NULL,
+    device_id TEXT NOT NULL,
+    frame_hex TEXT NOT NULL,
+    packet_type INTEGER,
+    synced INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_realtime_frames_device_ts
+    ON realtime_frames(device_id, ts);
+CREATE INDEX IF NOT EXISTS idx_realtime_frames_synced
+    ON realtime_frames(synced, ts);
+```
+
+A separate `realtime_frames` table (not a `frame_source` column on `raw_evidence`) keeps the upload cursor simpler and avoids scanning historical frames during realtime upload queries.
+
+**Bridge methods (capture domain)**
+
+```
+"capture.insert_realtime_frame_batch"  → bridge/capture.rs
+"capture.realtime_frames_pending"      → bridge/capture.rs
+"capture.mark_realtime_synced"         → bridge/capture.rs
+```
+
+Already routed by the `capture.*` prefix — no routing change in `bridge/mod.rs` needed beyond adding to `BRIDGE_METHODS`.
+
+**Swift — new RealtimePIPQueue class (not a modification of CaptureFrameWriteQueue)**
+
+`CaptureFrameWriteQueue` is tightly coupled to `capture.import_frame_batch` which runs the full parse + SQLite pipeline (raw_evidence + decoded_frames). Realtime PIP frames need a lighter path: store the raw hex immediately without full parse overhead, then upload.
+
+Decision: **new `RealtimePIPQueue` class**, parallel to `CaptureFrameWriteQueue`. Reasons:
+- Different bridge method
+- Different storage table
+- Different upload endpoint
+- Existing queue's `maxQueuedRows` / backpressure logic must not be affected
+
+**Swift — GooseAppModel integration**
+
+`GooseAppModel` routes notifications in `GooseAppModel+NotificationPipeline.swift`. Add a parallel path for realtime packet types (R22RealtimeData = 0x10, RealtimeData = 40, RealtimeRawData = 43):
 
 ```swift
-// New GooseHapticService call site in GooseAppModel (already @MainActor):
-func startBreatheSession() {
-  hapticService.begin()  // schedules Timer on main run loop internally
+// In GooseAppModel+NotificationPipeline.swift (modified)
+if isRealtimePIPEligible(event) {
+    realtimePIPQueue.enqueue(rows: [pipRow], completion: { _ in })
 }
-
-// Inside GooseHapticService (@MainActor):
-func begin() {
-  Timer.scheduledTimer(withTimeInterval: inhaleSeconds, repeats: true) { [weak self] _ in
-    self?.ble.buzz(loops: 1)  // ble is GooseBLEManaging; buzz dispatches internally
-  }
-}
+// Existing path continues unchanged:
+captureWriteQueue.enqueue(rows: frameRows, completion: { ... })
 ```
 
-### Pattern 2: Protocol-over-Concrete for Testable Services
+**Swift — upload path**
 
-New service components depend on `GooseBLEManaging` and `GooseRustBridging` protocols, never on concrete types. `GooseBLEHistoricalManager` takes `any GooseBLEManaging` at init. `CaptureFrameWriteQueue` (post-refactor) takes `any GooseRustBridging`. No file outside `GooseBLEClient*.swift` casts to the concrete `GooseBLEClient` type.
+Extend `GooseUploadService` with a `uploadRealtimeFrames(deviceID:since:)` method. Triggered from `GooseAppModel+Upload.swift` after each `RealtimePIPQueue` flush.
 
-### Pattern 3: Rust Bridge as Stateless Service
+**Server — new endpoint**
 
-All new bridge calls for DATA-01 tables and FEAT-01 VOW follow the existing pattern: always pass `database_path`; never call from `@MainActor` inline; each caller either creates its own `GooseRustBridge()` instance or reuses one held by the owning class. The `GooseCoachVOWView` data should be fetched via a new `HealthDataStore+Coach.swift` extension that follows the async/await pattern from v7.0.
+`POST /v1/ingest-realtime` on the FastAPI server. Same frame JSON shape as `/v1/ingest-frames` but routes to a dedicated TimescaleDB hypertable.
 
-### Pattern 4: Sequential Migration Order for SQLite Tables
+### Data flow (PIP)
 
-`store.rs:run_migrations()` applies all migrations in a single function, guarded by the current schema version. Each new table is a new migration version increment. DATA-01 must not use `ALTER TABLE` on existing tables. Add new table migrations in order: `metricSeries` (version N), `journal` (N+1), `workout` (N+2), `appleDaily` (N+3). In-memory test fixtures must run all migrations before any test assertion.
+```
+BLE realtime frame (PacketType 0x10 / 40 / 43)
+  → CoreBluetoothBLETransport (onRawNotificationWithContext)
+  → GooseAppModel+NotificationPipeline (MODIFIED — parallel fork)
+    ├── CaptureFrameWriteQueue (existing, unchanged)
+    │     → capture.import_frame_batch → raw_evidence + decoded_frames
+    │     → GooseUploadService → POST /v1/ingest-frames
+    └── RealtimePIPQueue (NEW)
+          → capture.insert_realtime_frame_batch → realtime_frames (NEW table)
+          → GooseUploadService.uploadRealtimeFrames → POST /v1/ingest-realtime (NEW)
+```
 
----
+### Build order
 
-## Anti-Patterns
-
-### Anti-Pattern 1: Calling buzz() from a Background Timer Without Main-Thread Guard
-
-**What people do:** Schedule a `Timer` on `RunLoop.current` in a background thread inside `GooseHapticService.startBreatheSession()`, then call `ble.buzz(loops:)` directly when the timer fires.
-**Why it's wrong:** CoreBluetooth peripheral writes must originate from main or `coreBluetoothQueue`. The main-thread guard in `buzz()` catches this but silently adds per-buzz latency on every Breathe cycle (background -> main dispatch).
-**Do this instead:** Schedule the Breathe session `Timer` from `@MainActor` context. `GooseHapticService` is `@MainActor` or uses `DispatchQueue.main.async` for the timer callback.
-
-### Anti-Pattern 2: GooseBLEHistoricalManager Holding a Strong Reference to GooseBLEClient
-
-**What people do:** Store `let ble: GooseBLEClient` in the manager and read `ble.isHistoricalSyncing` or `ble.connectionState` directly.
-**Why it's wrong:** Defeats BLE5-03 decoupling; requires a real `CBCentralManager` to instantiate in tests; breaks ARCH-01 DI.
-**Do this instead:** Store `let ble: any GooseBLEManaging`. Historical state changes are communicated via `onHistoricalSyncProgress` and `onConnectionStateChange` callbacks — set these during init, clear on `deinit`.
-
-### Anti-Pattern 3: Writing to Journal/Workout Tables from @MainActor Inline
-
-**What people do:** Call `bridge.request(method: "journal.upsert", ...)` directly in a `@MainActor` button action.
-**Why it's wrong:** `GooseRustBridge.request()` is synchronous and blocks the caller. A cold SQLite write can take 5-30ms — on `@MainActor` this drops frames.
-**Do this instead:** Always wrap in `Task.detached` or call via an `async` method on `HealthDataStore` that dispatches internally. This is the pattern established in v7.0 async migration.
-
-### Anti-Pattern 4: Adding Protocol Conformance Without Tests
-
-**What people do:** Extract `GooseBLEManaging` and `GooseRustBridging` as protocols without creating a test target to use the mocks.
-**Why it's wrong:** The seed is explicit: protocols without tests are dead code. ARCH-01 is only justified when test targets exist.
-**Do this instead:** Build ARCH-01 Phase 1 (protocols) + Phase 2 (mocks) + Phase 3 (tests for `PassiveActivityDetector` and `CaptureFrameWriteQueue`) in a single phase. If the test target cannot be added, defer ARCH-01 entirely.
-
-### Anti-Pattern 5: Decimating HR Samples at Ingest
-
-**What people do:** Filter HR samples before storing them in `HeartRateSeriesStore` to reduce memory.
-**Why it's wrong:** `HeartRateSeriesStore` already has `maxSamples = 100_000` + `prune()`. Memory is not the primary problem. Decimating at ingest permanently discards data needed for HRV computation and accurate chart zoom-in.
-**Do this instead:** `GooseHRDecimator` operates only on the slice passed to chart views (view-side projection), not on the stored series. LTTB is fast enough to run at chart render time.
+1. `store/mod.rs` — add `realtime_frames` table in schema v24 migration
+2. `store/capture.rs` — add insert/query/mark-synced methods for realtime_frames
+3. `bridge/mod.rs` — register 3 new `capture.*` methods in `BRIDGE_METHODS`
+4. `bridge/capture.rs` — add dispatch arms for the three new methods
+5. `RealtimePIPQueue.swift` — new Swift class
+6. `GooseAppModel+NotificationPipeline.swift` — add parallel PIP enqueue path
+7. `GooseUploadService` — add `uploadRealtimeFrames` method
+8. `GooseAppModel+Upload.swift` — trigger realtime upload after PIP flush
+9. FastAPI server — `POST /v1/ingest-realtime` endpoint + integration test
 
 ---
 
-## Scaling Considerations
+## Feature 7: ALG-HRV-04 / ALG-SLP-04 Real-Data Validation
 
-This is a single-user personal device app. Scale concerns are per-session data volume, not concurrent users.
+### What changes
 
-| Concern | Current | v10.0 Risk | Mitigation |
-|---------|---------|------------|------------|
-| HR samples in memory | 100k cap + prune | `GooseStrainAccumulator` adds per-sample computation on `realtimeVitalsQueue` | Accumulate incrementally (O(1) per sample, not O(n)) |
-| SQLite migration time | Schema v19, ~100ms cold start | 4 new tables in DATA-01 | All 4 tables in one `run_migrations()` transaction; no schema version regression risk |
-| Breathe session timer precision | N/A | Paced haptic requires ~100ms accuracy | Use `Timer` on main run loop; avoid `DispatchQueue.asyncAfter` chaining for pacing |
-| Notification scheduling | OnboardingModels.swift requests permission | 3 notification types, 1 actor | `GooseNotificationService` actor serializes battery reschedule; UNUserNotificationCenter handles OS queuing |
+These are validation gates (hardware-gated since v5.0), not new features. The architecture is already in place:
+- `src/sleep_validation.rs` — all validation logic
+- `Rust/core/tests/` — integration test directory (47 existing files)
+- `goose-sleep-v1-release-gate` binary — existing release gate binary
+
+**Rust — two new integration test files**
+
+- `tests/hrv_overnight_validation.rs` — loads a real overnight fixture (anonymised JSON), calls `rmssd_segment_aware`, asserts delta ≤ 1 ms vs Python reference output
+- `tests/sleep_staging_overnight_validation.rs` — loads a real overnight fixture, calls `metrics.sleep_staging`, asserts ≥ 70% epoch concordance with human labels
+
+**Fixture handling**
+
+Existing fixtures in `Rust/core/tests/fixtures/` use JSON. Real-data fixtures must be anonymised before commit (strip device_uuid, shift timestamps). The existing `goose-capture-sanitize` binary handles anonymisation.
+
+**No new bridge methods or Swift changes.** Validation runs entirely in `cargo test`.
+
+### Build order
+
+1. Capture real overnight session (hardware gate now unblocked with WHOOP 5)
+2. Anonymise via `goose-capture-sanitize`
+3. Add anonymised fixture JSON to `Rust/core/tests/fixtures/`
+4. Write `tests/hrv_overnight_validation.rs`
+5. Write `tests/sleep_staging_overnight_validation.rs`
+6. `cargo test` — gate passes when assertions hold
+7. Update `ALG-HRV-04` and `ALG-SLP-04` in PROJECT.md as validated
 
 ---
 
-## Sources
+## Component Change Summary
 
-- Seed files in `.planning/seeds/` (2026-06-11): R22 wire format from hardware capture (#92), v18 field layout from NoopApp/WhoopProtocol cross-reference, alarm payloads confirmed on real MG hardware, journal schema from hardware observation, service-layer DI rationale from WHOOP class inventory
-- Project history: `.planning/PROJECT.md` — v9.0 architecture baseline (StateMachine, BondingManager, NetworkMonitor, HRSanitizer confirmed shipped)
-- Codebase inspection: `GooseBLEClient.swift`, `GooseAppModel.swift`, `GooseBLEClient+Commands.swift`, `GooseAppModel+BandFirstSync.swift`, `Rust/core/src/protocol.rs` (PACKET_TYPE constants, `packet_type_name` dispatch table), `GooseSwift/HeartRateSeriesStores.swift` (maxSamples, prune, NSLock pattern)
-- Protocol analysis: `smart-alarm-strap-haptic.md` — puffin frame format + buzz payload confirmed on real MG hardware; `whoop5-r22-packet-support.md` — BLE HCI capture from issue #92 (darylbleach)
-- Protocol analysis: `advanced-haptic-breathe-primitive.md` — ObjC class inventory (WhoopBiotelemetry framework); `wake-window-alarm.md` — WhoopSleepCoach class names (WakeWindow, SmartAlarmTriggerManager, SetAlarmInfoCommandPacketRev4)
+| Feature | Component | Change Type |
+|---------|-----------|-------------|
+| v20/v21/v26 decode | `protocol.rs` `DataPacketBodySummary` | Modified — 2 new variants |
+| v20/v21/v26 decode | `protocol.rs` `parse_data_packet_body_summary` | Modified — 2 new match arms |
+| v20/v21/v26 decode | `store/mod.rs` | Modified — new table, schema v24 |
+| v20/v21/v26 decode | `store/metrics.rs` | Modified — new insert/query methods |
+| v20/v21/v26 decode | `bridge/mod.rs` BRIDGE_METHODS | Modified — 4 new entries |
+| v20/v21/v26 decode | `bridge/metrics.rs` | Modified — 4 new arms |
+| Harvard sleep need | `src/sleep_need.rs` | New file |
+| Harvard sleep need | `bridge/mod.rs` BRIDGE_METHODS | Modified — 1 new entry |
+| Harvard sleep need | `bridge/sleep.rs` | Modified — 1 new arm |
+| Harvard sleep need | `HealthDataStore+Sleep.swift` | Modified — 1 new method + @Published |
+| GET_FF_VALUE | `capabilities.rs` | Modified — extended DeviceCapabilities |
+| GET_FF_VALUE | `CoreBluetoothBLETransport+Commands.swift` | Modified — post-handshake call |
+| GET_FF_VALUE | `CoreBluetoothBLETransport+Parsing.swift` | Modified — cmd-128 response arm |
+| Body composition | `store/body_composition.rs` | New file |
+| Body composition | `store/mod.rs` | Modified — new module + table + migration |
+| Body composition | `bridge/mod.rs` BRIDGE_METHODS + routing | Modified |
+| Body composition | `bridge/metrics.rs` | Modified — new arms |
+| Body composition | `HealthDataStore+BodyComposition.swift` | New file |
+| Body composition | `BodyCompositionViews.swift` | New file |
+| Body composition | `GooseAppModel+HealthKitExport.swift` | Modified — weight write/import |
+| Stealth mode | `GooseStealthMode.swift` | New file |
+| Stealth mode | Dashboard views | Modified — conditional rendering |
+| Stealth mode | More settings UI | Modified — toggle section |
+| PIP pipeline | `store/mod.rs` | Modified — realtime_frames table |
+| PIP pipeline | `store/capture.rs` | Modified — new insert/query/sync methods |
+| PIP pipeline | `bridge/mod.rs` BRIDGE_METHODS | Modified — 3 new entries |
+| PIP pipeline | `bridge/capture.rs` | Modified — 3 new arms |
+| PIP pipeline | `RealtimePIPQueue.swift` | New file |
+| PIP pipeline | `GooseAppModel+NotificationPipeline.swift` | Modified — parallel PIP path |
+| PIP pipeline | `GooseUploadService` | Modified — uploadRealtimeFrames |
+| PIP pipeline | `GooseAppModel+Upload.swift` | Modified — realtime trigger |
+| PIP pipeline | FastAPI server | New endpoint |
+| ALG validation | `Rust/core/tests/` | 2 new test files |
+| ALG validation | `Rust/core/tests/fixtures/` | 2 new fixture files |
 
 ---
-*Architecture research for: Goose iOS biometric platform — v10.0 component integration*
-*Researched: 2026-06-12*
+
+## Build Order (Cross-Feature, Dependency-Ordered)
+
+**Wave 1 — Rust protocol + schema (no Swift dependencies)**
+1. `protocol.rs` — V20V21 and V26 variants + parse functions
+2. `store/mod.rs` — schema v24 migration (batch all new tables: `optical_channel_samples`, `realtime_frames`, `body_composition_entries`)
+3. `store/metrics.rs` — optical channel insert/query
+4. `store/capture.rs` — realtime frames insert/query/sync
+5. `store/body_composition.rs` — new module with CRUD
+6. `src/sleep_need.rs` — Harvard model algorithm
+7. `capabilities.rs` — extend `DeviceCapabilities` with `feature_flags`
+
+**Wave 2 — Bridge registration (depends on Wave 1)**
+8. `bridge/mod.rs` — update `BRIDGE_METHODS` with all new entries; add `body_comp.*` routing
+9. `bridge/metrics.rs` — V20V21/V26 biometric arms + body_comp arms
+10. `bridge/capture.rs` — realtime frame arms
+11. `bridge/sleep.rs` — `sleep.compute_need` arm
+12. `cargo test` — compile-time `bridge_methods_constant_matches_dispatcher` must pass before any Swift work
+
+**Wave 3 — Swift plumbing (depends on Wave 2)**
+13. `HealthDataStore+Sleep.swift` — `loadSleepNeed` + `@Published var sleepNeed`
+14. `HealthDataStore+BodyComposition.swift` — new extension
+15. `GooseStealthMode.swift` — new stateless helper
+16. `RealtimePIPQueue.swift` — new class
+17. `CoreBluetoothBLETransport+Commands.swift` — `discoverFeatureFlags()` post-handshake
+18. `CoreBluetoothBLETransport+Parsing.swift` — cmd-128 response arm
+19. `GooseAppModel+NotificationPipeline.swift` — parallel PIP enqueue path
+20. `GooseAppModel+Upload.swift` — realtime upload trigger
+21. `GooseAppModel+HealthKitExport.swift` — body weight HealthKit write
+
+**Wave 4 — SwiftUI + validation**
+22. `BodyCompositionViews.swift` — entry form + history list
+23. Dashboard views — `GooseStealthMode.isHidden(metric:)` conditional rendering
+24. More settings UI — stealth toggles + body composition entry point
+25. Real overnight capture anonymisation + fixture prep
+26. `tests/hrv_overnight_validation.rs`
+27. `tests/sleep_staging_overnight_validation.rs`
+
+**Wave 5 — Server**
+28. FastAPI `POST /v1/ingest-realtime` endpoint
+29. Server integration test
+
+---
+
+## Data Flow Changes
+
+### New: V20/V21/V26 optical channel storage
+
+```
+BLE R17/V20/V21/V26 frame (existing notification path, unchanged)
+  → CaptureFrameWriteQueue → capture.import_frame_batch
+    → parse_data_packet_body_summary:
+        20 | 21 → parse_v20v21_optical_body (NEW match arm)
+        26      → parse_v26_ppg_waveform_body (NEW match arm)
+    → insert into optical_channel_samples (NEW table via MetricsStore)
+```
+
+### New: Harvard sleep need computation
+
+```
+HealthDataStore.loadSleepNeed(date:) (NEW Swift method)
+  → Task.detached → bridge "sleep.compute_need" (NEW method)
+    → SleepStore.list_correction_labels (existing)
+    → MetricsStore.goose_strain_v1 (existing)
+    → compute_sleep_need() in sleep_need.rs (NEW)
+  → @Published sleepNeed: SleepNeedResult? (NEW property)
+  → SwiftUI Sleep V2 dashboard
+```
+
+### New: PIP realtime pipeline
+
+```
+BLE realtime frame (PacketType 0x10 / 40 / 43)
+  → GooseAppModel+NotificationPipeline (MODIFIED — parallel fork)
+    ├── CaptureFrameWriteQueue (unchanged)
+    │     → capture.import_frame_batch → raw_evidence + decoded_frames
+    │     → POST /v1/ingest-frames
+    └── RealtimePIPQueue (NEW)
+          → capture.insert_realtime_frame_batch → realtime_frames (NEW)
+          → POST /v1/ingest-realtime (NEW)
+```
+
+### New: Feature flag discovery
+
+```
+sendClientHello() success
+  → discoverFeatureFlags() (NEW, CoreBluetoothBLETransport+Commands.swift)
+    → sendDebugResearchCommand id "get_feature_flag_value" cmd 128
+  → CommandResponse notification
+  → CoreBluetoothBLETransport+Parsing.swift cmd-128 arm (NEW)
+    → applyFeatureFlag(key:value:)
+    → connectedCapabilities.feature_flags updated (MODIFIED struct)
+  → onCapabilitiesUpdated() callback → GooseAppModel
+```
+
+---
+
+## No Architectural Regressions
+
+- `BLETransport` protocol: no changes to existing methods or properties
+- `GooseRustBridge` FFI: no changes (new methods use existing JSON-RPC envelope)
+- `BridgeRouter` domain routing: additive only (`body_comp.*` added; all other prefixes unchanged)
+- `r2d2` connection pool: no changes (new methods use `checkout_bridge_conn` like existing ones)
+- `CaptureFrameWriteQueue`: not modified — PIP uses a new parallel class
+- Schema migrations: additive only (new tables in a single v24 migration; no column renames or drops)
+- `BRIDGE_METHODS` constant: compile-time test `bridge_methods_constant_matches_dispatcher` prevents drift
+- `DataPacketBodySummary::Unknown` catch-all: preserved; new variants are added before it

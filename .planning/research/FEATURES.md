@@ -1,276 +1,233 @@
-# Feature Research — v10.0 Protocol Parity, Haptics & Feature Completeness
+# Feature Landscape — v15.0
 
-**Domain:** WHOOP-style health/fitness iOS companion app (BLE biometric capture)
-**Researched:** 2026-06-12
-**Confidence:** HIGH — all claims verified against live codebase; seed "missing" claims cross-checked
-with grep/ls before being accepted.
-
----
-
-## Codebase Verification Notes
-
-Before this document was written, all seed claims of "missing" or "not yet implemented" were
-verified against the live codebase. Key findings:
-
-| Seed claim | Verified status |
-|---|---|
-| `buzz(loops:)` not yet in Swift | CONFIRMED ABSENT — no 0x13 / RUN_HAPTIC_PATTERN in any Swift file |
-| Breathe / Interval Timer screens absent | CONFIRMED ABSENT — no BreathingView or IntervalTimerView file |
-| GooseBLEHistoricalManager absent | CONFIRMED ABSENT — file does not exist |
-| GooseBLEDataValidator absent | CONFIRMED ABSENT — file does not exist |
-| Service layer protocols absent | CONFIRMED ABSENT — GooseBLEManaging/GooseRustBridging/GooseAppServicing do not exist |
-| GooseStrainAccumulator absent | CONFIRMED ABSENT — no liveSessionStrain or GooseStrainAccumulator |
-| GooseHRDecimator absent | CONFIRMED ABSENT — no LTTB / decimation layer in HeartRateSeriesStores.swift |
-| metricSeries / appleDaily tables absent | CONFIRMED ABSENT — not in store.rs |
-| Long-range Trends Dashboard absent | CONFIRMED ABSENT — no HealthTrendsDashboardView |
-| Manual Workout Entry sheet absent | CONFIRMED ABSENT — no ManualWorkoutSheet or ManualWorkout file |
-| GooseWakeWindowManager absent | CONFIRMED ABSENT — file does not exist |
-| GooseCoachVOWView / vow_message absent | CONFIRMED ABSENT — no VOW in Swift or Rust |
-| WHOOP CSV importer absent | CONFIRMED ABSENT — no CSV import file |
-| R22 packet parsing absent | CONFIRMED ABSENT — type 0x10 not handled in Rust parser |
-| v18 historical decode absent | CONFIRMED — v18 silently grouped with v7/9/12 in NormalHistory arm (protocol.rs:567) |
-| Alarm SET/GET/RUN Swift infra | CONFIRMED PRESENT — AlarmCommandKind enum + writeAlarmCommand() exist |
-| StressV2OverviewPage | CONFIRMED PRESENT — HealthRecoveryStressViews.swift exists |
-| UNUserNotificationCenter permission | CONFIRMED PRESENT in onboarding — but no NotificationScheduler for sleep/workout/battery events |
-| GooseBLEBondingManager, GooseNetworkMonitor, GooseHRSanitizer | CONFIRMED PRESENT (v9.0 delivered) |
+**Domain:** Self-hosted WHOOP biometric platform (iOS Swift + Rust core + Android Kotlin)
+**Researched:** 2026-06-21
+**Scope:** New capabilities only — existing features (BLE, v18/v24 decode, dashboards, Coach, Android v14.0) are out of scope.
 
 ---
 
-## Feature Landscape
+## Summary
 
-### Table Stakes (Users Expect These)
+v15.0 has ten distinct feature areas spanning three categories: WHOOP 5.0 protocol decoding, algorithm improvements, and UX/infrastructure. The protocol features (#172, #173) are table stakes for WHOOP 5.0 users because without them large classes of recorded data appear as `Unknown { packet_k }` and are discarded. The algorithm improvement (#164) and the hardware-gated validations (ALG-HRV-04, ALG-SLP-04) are differentiators — they increase metric fidelity, but the app is not broken without them. The remaining features (body composition, stealth mode, PIP pipeline, feature-flag discovery, CAPSENSE-01, HAP-04) range from useful-but-optional to high-risk and RE-gated.
 
-Features that a serious WHOOP companion app must have. Missing any of these makes the app
-feel like a prototype.
+Build order recommendation:
+1. Protocol decode (#172, #173) — unblocks stored data; pure Rust, no Swift changes
+2. GET_FF_VALUE (#165) — small BLE command + capabilities; no schema migration
+3. Harvard sleep need model (#164) — algorithm-only, builds on existing `sleep_need_minutes` scalar
+4. Body composition (#166) — schema migration v24, new SwiftUI entry sheet
+5. Stealth mode (#167) — UserDefaults toggles, view-layer only, no data changes
+6. PIP realtime pipeline (#168) — new table + server endpoint; moderate scope
+7. ALG-HRV-04 / ALG-SLP-04 — hardware gate; run overnight, compare vs Python reference
+8. CAPSENSE-01 — hardware gate; BLE scan + UUID capture required
+9. HAP-04 — RE gate; BTSnoop + Ghidra decompilation required before any code
+
+---
+
+## Table Stakes
+
+Features users expect once a WHOOP 5.0 device is connected. Missing = captured data silently discarded, dashboards show stale/missing values.
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| Real-time HR + HRV during live capture | Core BLE data flow; already exists | — | Already shipped |
-| Recovery / Strain / Sleep dashboards | Core biometric outputs; already exists | — | Already shipped |
-| WHOOP 5.0 R22 packet metrics | WHOOP 5.0 users get no metrics today (issue #92) | LOW | Rust-only fix; BLE subscription already correct |
-| v18 historical per-second decode | WHOOP 5.0 historical offload is silently discarded | MEDIUM | protocol.rs + historical_sync.rs; stale-clock dedup included |
-| Real-time strain accumulation during workout | WHOOP shows live strain; Goose shows stale value | MEDIUM | Swift-side accumulator; formula already in Rust |
-| iOS local notifications (sleep summary, workout, battery) | Users need in-context alerts without opening app | MEDIUM | UNUserNotificationCenter auth already in onboarding; need NotificationScheduler actor |
-| Stress / ANS view enhancements | StressV2OverviewPage exists; "Calm Time" stat + Δ-baseline tiles + range selector missing | LOW | Additive only to existing screen — 0.5 days |
-| Manual Workout Entry | False positives/negatives in passive detection; users need correction | MEDIUM | Depends on `workout` table |
-| SQLite schema: journal + workout + appleDaily + metricSeries | Foundation for correlation, sport log, HealthKit provenance, Metric Explorer | MEDIUM | Pure Rust schema migration; no BLE/algorithm work |
+| #172 v20/v21 multi-channel optical decode | Every WHOOP 5.0 packet-47 sync produces v20/v21 frames; currently logged as `unhandled_packet_k_20` warnings | High | 2140B / 1244B payloads; presence bytes; i32/i16 arrays; two variants with different layouts |
+| #173 v26 24 Hz PPG waveform decode | Type-47 v26 appears in realtime stream; without decode, PPG waveform data is silently dropped | Medium | 88B payload; fixed layout; 24x LE-i16 at offsets [27:74]; simpler than v20/v21 |
+| ALG-HRV-04 / ALG-SLP-04 real overnight validation | Algorithm correctness promise made since v5.0; hardware gate finally lifted | Medium | Requires real WHOOP 5.0 + Python reference pipeline; delta <= 1 ms HRV, >= 70% staging concordance |
 
-### Differentiators (Competitive Advantage)
+---
 
-Features not expected by default but that significantly raise the value of Goose over
-generic BLE logger alternatives.
+## Differentiators
+
+Features that set Goose apart. Not required to function, but meaningfully improve the product.
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| Haptic buzz primitive (`buzz(loops:)` cmd 0x13) | Hardware-confirmed; unlocks 4 downstream features | LOW | ~2 hours; confirmed on real MG hardware via NOOP RE |
-| Breathe screen with strap haptic cues | HRV biofeedback with live R-R; phone + strap in sync | MEDIUM | Port from NOOP BreathingView; replace StrandDesign with Goose components |
-| Interval Timer with silent haptic cues | Gym-silent HIIT timer; WHOOP 5.0 differentiator | MEDIUM | Port from NOOP IntervalTimerView |
-| Smart alarm + wake-window engine | Strap fires alarm autonomously; phone-side window manager | HIGH | Alarm infra exists (AlarmCommandKind); wake-window SetAlarmInfoCommandPacketRev4 needs RE |
-| Coach VOW messages | Contextual coaching nudges from bridge data; local, no server | MEDIUM | Rule-based message selector in Rust; new CoachVOWView in Swift |
-| GooseBLEHistoricalManager | Decoupled historical sync — bugs don't kill active connection | MEDIUM | Architectural; enables testing via service-layer DI |
-| Swift BLE data validator | Corrupt frames gated before Rust/SQLite; silent discard + diagnostics | LOW | New GooseBLEDataValidator struct; ~1 day |
-| Long-range Trends Dashboard | Unified multi-metric, multi-range view; YearHeatStrip heatmap | MEDIUM | Requires metricSeries table; NOOP TrendsView reference |
-| WHOOP CSV import | Official WHOOP export ZIP → Goose SQLite; tolerance for 4.0/5.0/MG header variants | MEDIUM | Port from NOOP WhoopExportImporter; bridge methods for import |
-| Protocol-based service layer + mocks | Unit tests for BLE, sync, health pipeline without real hardware | MEDIUM | GooseBLEManaging + GooseRustBridging protocols; mock implementations |
-| HR sample decimation (LTTB) | Chart render performance for long sessions; window-adaptive | LOW | Only justified after Instruments confirms a real problem |
+| #164 Harvard sleep need model | Per-user dynamic sleep target (age + 5-night EWMA debt + prior strain) vs. hardcoded 480 min | Medium | `sleep_need_minutes` scalar already feeds Recovery and Sleep scores; model replaces the constant with a computed value; needs SQLite persistence of nightly debt |
+| #165 GET_FF_VALUE (0x80) feature flag read | Passive capability discovery without RE assumptions; populates `DeviceCapabilities` dynamically | Low | Command number 128 already in `CommandDefinition` registry; needs BLE send-after-HELLO sequence + response parser |
+| #166 Body composition history | Weight, BMI, body fat %, muscle mass, water % with manual/HealthKit/scale source tagging; time-series view | Medium | Schema migration v24 (new table); SwiftUI entry sheet; HealthKit weight read already partially in `apple_daily`; no Rust algorithm needed |
+| #167 Stealth mode | Per-metric UserDefaults toggle hides values in dashboards with "--"; Coach still receives raw data | Low | View-layer substitution; no data model or algorithm change; UserDefaults key per metric; does not affect export or server upload |
+| #168 PIP realtime pipeline | Tag real-time BLE frames as `FRAME_SOURCE_REALTIME`, store in separate `realtime_frames` table, POST to new `/v1/ingest-realtime` endpoint | Medium | New SQLite table (schema v24 or v25); new server FastAPI route; adds upload path separate from historical sync; needed for sub-second server observability |
+| CAPSENSE-01 cap sense UUID discovery | On-wrist detection via capacitive sense characteristic; parity with official WHOOP app | High | Currently gated on real BLE scan to identify UUID; `cmd 0x54` (off-wrist via optical) already implemented as BLE-02 in v14.0; CAPSENSE uses a different GATT characteristic |
+| HAP-04 wake-window engine | Smart alarm delivers haptic buzz within a user-configured optimal window before alarm time | High | Gated on BTSnoop capture of `STRAP_DRIVEN_ALARM_EXECUTED` + Ghidra decompile of `SetAlarmInfoCommandPacketRev4`; stub `GooseWakeWindowManager` exists; `HAP-03` smart alarm UI (v10.0) is the prerequisite |
 
-### Anti-Features (Commonly Requested, Often Problematic)
+---
 
-| Feature | Why Requested | Why Problematic | Alternative |
-|---------|---------------|-----------------|-------------|
-| AdvancedHaptic / HapticHeartbeat paced mode | WHOOP has it; sounds compelling | `HapticsPatternType` values unknown — needs RE session with live WHOOP 5.0 running `get_all_haptics_pattern`; blocks shipping Breathe | Ship Breathe with `buzz(loops:)` cues first; plan AdvancedHaptic as v11.0 after RE |
-| Windowed wake-window SetAlarmInfoCommandPacketRev4 | True smart alarm (lightest-sleep firing) | Wire layout unknown; `STRAP_DRIVEN_ALARM_EXECUTED` event not yet observed; RE prerequisite before any implementation | Ship single-shot alarm UI first; windowed alarm after BTSnoop RE session |
-| Apple Health XML export importer | Seems like a richer import | Goose already uses HealthKit API — XML importer would be a regression from live queries | Expand HealthKitFullImporter to write to appleDaily table instead |
-| CoachEverywhere floating overlay | WHOOP shows coach messages across all screens | Intrusive; high implementation cost; no clear user request | Coach VOW card pinned to top of Coach tab only |
-| Server-side VOW message delivery | More dynamic content | Requires APNs + server infrastructure; out of scope | Local rule-based message selector in Rust |
-| Frequency-domain HRV / DFA alpha1 | Adds clinical depth | WHOOP itself does not expose LF/HF; no user-visible impact for WHOOP parity goal | Defer to post-v10.0 as a differentiator, not table stakes |
-| Full Metric Explorer + Correlation Engine (NOOP Tier 3) | Power user analytics | 7–10 days effort; blocks shipping simpler features | Plan as dedicated v11.0 milestone after metricSeries table exists |
+## Anti-Features
+
+Features to explicitly NOT build in v15.0.
+
+| Anti-Feature | Why Avoid | What to Do Instead |
+|--------------|-----------|-------------------|
+| Full optical signal processing (SpO2 from v20/v21 channels) | Requires calibration data from WHOOP hardware that is not accessible; produces uncalibrated numbers that could mislead users | Store raw channel arrays in SQLite; tag as `uncalibrated`; expose in Debug view only |
+| SET_FEATURE_FLAG_VALUE (cmd 120) | Writing feature flags risks device firmware state changes; no validated use case | Read-only via GET_FF_VALUE (cmd 128); log results; never write |
+| Body composition algorithms (lean mass from impedance) | No bioimpedance sensor in WHOOP devices; any derived numbers would be fabrications | Accept source values from HealthKit or manual entry; no computation |
+| Realtime server dashboard / alerts | Out of scope per PROJECT.md; requires significant server-side work | PIP pipeline (#168) delivers the data stream; server-side consumers are a separate future project |
+| Stealth mode for Coach context | Coach must retain full raw data access to give useful recommendations | The toggle applies display-layer only; Coach provider always receives unmasked values |
 
 ---
 
 ## Feature Dependencies
 
 ```
-HAP-01: buzz(loops:) primitive
-    ├──unlocks──> HAP-02: Breathe screen (inhale/exhale haptic cues)
-    ├──unlocks──> FEAT-02a: Interval Timer (WORK/REST/done haptic cues)
-    └──unlocks──> HAP-03: Smart alarm UI feedback (notification buzz on arm/cancel)
-
-HAP-03: Smart alarm (single-shot, infra already exists)
-    └──extends──> HAP-04: Wake-window engine
-                      └──blocked by──> RE: SetAlarmInfoCommandPacketRev4 layout
-                      └──blocked by──> RE: STRAP_DRIVEN_ALARM_EXECUTED event parse
-
-BLE5-01: R22 packet parsing (Rust)
-    └──enables──> Metrics for WHOOP 5.0 users streaming 0x10
-
-BLE5-02: v18 historical decode (Rust)
-    └──enables──> Full historical offload for WHOOP 5.0 users
-
-BLE5-03: GooseBLEHistoricalManager
-    └──depends on──> ARCH-01: GooseBLEManaging protocol (for testability)
-
-ARCH-01: Service layer protocols
-    └──enables──> BLE5-03: GooseBLEHistoricalManager (mockable)
-    └──enables──> Unit tests for CaptureFrameWriteQueue, PassiveActivityDetector
-
-DATA-01a: metricSeries table
-    └──unblocks──> DATA-03b: Long-range Trends Dashboard (range queries)
-
-DATA-01b: workout table
-    └──unblocks──> DATA-03c: Manual Workout Entry sheet
-    └──unblocks──> FEAT-02d: WHOOP CSV import (workout rows)
-
-DATA-01c: journal table
-    └──extends──> FEAT-01: Coach VOW messages (behaviour tag context)
-    └──unblocks──> Correlation Engine (v11.0+)
-
-DATA-01d: appleDaily table
-    └──unblocks──> HealthKitFullImporter provenance separation
-
-DATA-02: Realtime strain accumulation
-    └──depends on──> WhoopDataSignalPipeline (already exists; must publish per-sample HR)
-
-FEAT-03: iOS local notifications
-    └──depends on──> syncBandSleepHistory() (sleep summary trigger — already exists)
-    └──depends on──> PassiveActivityDetector .finished (workout trigger — already exists)
-    └──soft depends──> BLE battery GATT (battery table already populated)
-
-DATA-04: HR decimation
-    └──conditional──> Only after Instruments confirms render cost is real
+HAP-03 (v10.0, done) --> HAP-04 (wake-window)
+BLE-02 (v14.0, done) --> CAPSENSE-01 (different UUID, same on-wrist semantic)
+#172 v20/v21 decode --> body in SQLite --> potential future optical-derived metrics
+#173 v26 decode --> realtime PPG store --> PIP realtime pipeline (#168)
+GET_FF_VALUE (#165) --> DeviceCapabilities enrichment --> optional guards on v20/v21 decode
+sleep_need_minutes constant (exists) --> Harvard model (#164) replaces with computed value
+#164 Harvard model --> Recovery score input (existing pipeline accepts it as a scalar)
+Schema v23 (current) --> v24 migration (body composition + realtime_frames tables, can coexist)
+ALG-HRV-04 / ALG-SLP-04 --> real WHOOP 5.0 device required (unblocked since v14.0)
 ```
 
-### Dependency Notes
+---
 
-- **HAP-01 is the single highest-leverage primitive**: 4 features unblock from one ~15-line function.
-  It must be the first task in any haptic phase.
+## Per-Feature Deep Dive
 
-- **HAP-03 and HAP-04 are split by RE risk**: HAP-03 (single-shot alarm UI) builds on the
-  existing `AlarmCommandKind` + `writeAlarmCommand()` infrastructure that is already fully
-  implemented. HAP-04 (wake-window) is blocked by a genuine RE gap
-  (`SetAlarmInfoCommandPacketRev4` layout unknown) and observation of `STRAP_DRIVEN_ALARM_EXECUTED`.
-  Do not bundle HAP-03 and HAP-04 in the same phase.
+### #172 — v20/v21 WHOOP 5.0 Multi-Channel Optical Decode
 
-- **ARCH-01 (service layer) has an important constraint** from the seed: protocols are only
-  justified when test targets exist to use them. Build Phase 1 (protocols) + Phase 2 (mocks) +
-  Phase 3 (at least 2 test cases) atomically — do not ship protocols alone.
+**Expected Behavior:**
+`parse_data_packet_body_summary` currently falls to `Unknown { packet_k }` for `packet_k = 20` or `21`. After this feature: two new `DataPacketBodySummary` variants (`V20MultiChannel`, `V21MultiChannel`) are returned; their channel arrays are persisted to a new `optical_channels` SQLite table; a bridge method surfaces them for the Debug view.
 
-- **DATA-01 (4 tables) should ship as a single Rust migration** to keep schema version consistent.
-  Build order within DATA-01: metricSeries first (unblocks Trends), then journal, then workout,
-  then appleDaily.
+v20 payload is 2140B; v21 is 1244B. Both carry a presence bitmap followed by i32 (v20) or i16 (v21) per-channel arrays. `COMM-04`-style WHY comments required at every byte offset.
 
-- **BLE5-01 and BLE5-02 are independent** of each other and of the haptic tree — they can be
-  done in any order and have no shared prerequisites.
-
-- **FEAT-03 (iOS notifications)** has the UNUserNotificationCenter permission already in onboarding.
-  What is missing is the `NotificationScheduler` actor that wires the three trigger points. No
-  new background modes needed.
+**Complexity:** High
+**Dependencies:** None (pure Rust protocol change)
+**Risk:** Medium. Payload layout is hardware-verified per ROADMAP backlog note. Risk is misreading presence-byte semantics for channels that are conditionally present. Need at least two distinct captures (different optical states) to verify the presence bitmap interpretation.
+**Lowest-effort path:** Add the two enum variants, parse the presence byte, store raw channel bytes as a hex blob initially, add the WHY comments. Defer per-channel structured parsing to a follow-up.
 
 ---
 
-## Build Order (Phase Sequencing Recommendations)
+### #173 — v26 WHOOP 5.0 24 Hz PPG Waveform Decode
 
-Based on dependencies and risk profile:
+**Expected Behavior:**
+`packet_k = 26` in `parse_data_packet_body_summary` currently produces `Unknown`. After this feature: `DataPacketBodySummary::V26PpgWaveform { channel: u8, samples: Vec<i16> }` (24 samples x LE-i16 at offsets [27:74]). Channel index (1-26) identifies which LED/photodiode channel the waveform belongs to. Persist to a `ppg_waveform_samples` table (device_id, ts, channel, sample_idx, value_raw).
 
-### Wave 1 — Protocol gaps (no RE risk, pure Rust, unblocks WHOOP 5.0 users)
-- BLE5-01: R22 packet parsing
-- BLE5-02: v18 historical decode + stale-clock dedup
-
-These are the highest-impact fixes for existing users. Independent. Can be done in parallel.
-
-### Wave 2 — HAP-01 buzz primitive + immediate haptic features
-- HAP-01: `buzz(loops:)` via cmd 0x13 (~2 hours)
-- HAP-02: Breathe screen (depends on HAP-01)
-- FEAT-02a: Interval Timer (depends on HAP-01)
-
-HAP-01 is a prerequisite for HAP-02, FEAT-02a, and the alarm feedback in HAP-03. Ship it first.
-
-### Wave 3 — Data foundation + screens
-- DATA-01: 4 SQLite tables (journal, workout, appleDaily, metricSeries) — pure Rust migration
-- DATA-02: Realtime strain accumulation — Swift-side accumulator during workout
-- DATA-03a: Stress view delta additions (Calm Time tile, Δ-baseline, range selector)
-- DATA-03c: Manual Workout Entry sheet (depends on workout table from DATA-01b)
-- DATA-03b: Long-range Trends Dashboard (depends on metricSeries from DATA-01a)
-
-### Wave 4 — Coaching + notifications + structural features
-- FEAT-01: Coach VOW messages (depends on bridge data; enhanced by journal table)
-- FEAT-03: iOS local notifications (NotificationScheduler actor)
-- BLE5-03: GooseBLEHistoricalManager (decoupling; enhanced by ARCH-01 protocols)
-- BLE5-04: Swift BLE data validator (GooseBLEDataValidator)
-- ARCH-01: Protocol-based service layer + mocks + 2 test cases
-
-### Wave 5 — HAP-03/04 alarm (RE-gated)
-- HAP-03: Smart alarm UI using existing infrastructure (alarm confirmation/cancel in Sleep Coach)
-- HAP-04: Wake-window engine — only after BTSnoop RE session confirms SetAlarmInfoCommandPacketRev4
-
-### Defer to v11.0+
-- FEAT-02b: YearHeatStrip heatmap (0.5 days, but not blocking anything in v10.0)
-- FEAT-02c: WHOOP CSV import (meaningful effort; not user-blocking)
-- FEAT-02d: Metric Explorer + Correlation Engine (NOOP Tier 3; 7–10 days)
-- DATA-04: HR decimation (conditional on Instruments evidence)
-- AdvancedHaptic / HapticHeartbeat pattern system (RE prerequisite)
+**Complexity:** Medium
+**Dependencies:** None (pure Rust; layout hardware-verified at 88B)
+**Risk:** Low. Fixed-size payload with no presence bits; simpler than v20/v21. The 24x2-byte array fits within the existing `I16SeriesSummary` pattern used by `R17OpticalOrLabradorFiltered`.
 
 ---
 
-## Feature Prioritization Matrix
+### #164 — Harvard Sleep Need Model
 
-| Feature | User Value | Implementation Cost | Priority |
-|---------|------------|---------------------|----------|
-| BLE5-01: R22 parsing | HIGH — fixes WHOOP 5.0 users entirely | LOW — Rust only | P1 |
-| BLE5-02: v18 historical decode | HIGH — fixes WHOOP 5.0 historical offload | MEDIUM — 2 Rust files + test | P1 |
-| HAP-01: buzz primitive | HIGH — unblocks 4 features | LOW — ~2 hours | P1 |
-| HAP-02: Breathe screen | HIGH — flagship haptic feature | MEDIUM — NOOP port + adaptation | P1 |
-| DATA-01: 4 SQLite tables | HIGH — foundation for 5+ features | MEDIUM — pure Rust migration | P1 |
-| DATA-02: Realtime strain | HIGH — live workout UX gap | MEDIUM — new Swift actor | P1 |
-| FEAT-03: iOS notifications | HIGH — passive alerts without app open | MEDIUM — NotificationScheduler actor | P1 |
-| FEAT-01: Coach VOW messages | MEDIUM — coaching UX upgrade | MEDIUM — Rust decision tree + Swift view | P2 |
-| DATA-03: Stress/Trends/Manual Workout | MEDIUM — visible screens | MEDIUM — 5 days total | P2 |
-| FEAT-02a: Interval Timer | MEDIUM — gym use case | MEDIUM — NOOP port | P2 |
-| HAP-03: Smart alarm UI | MEDIUM — existing infra just needs UI | LOW — UI only on top of existing infra | P2 |
-| BLE5-03: BLEHistoricalManager | MEDIUM — maintainability + testability | MEDIUM — refactor | P2 |
-| BLE5-04: BLE data validator | MEDIUM — data integrity | LOW — new struct, ~1 day | P2 |
-| ARCH-01: Service layer + mocks | MEDIUM — enables unit tests | MEDIUM — protocols + mocks + 2 tests | P2 |
-| HAP-04: Wake-window engine | HIGH value, HIGH risk | HIGH — RE gate | P3 (RE blocked) |
-| DATA-04: HR decimation | LOW — mitigated by existing prune() | LOW | P3 (conditional) |
-| FEAT-02c: WHOOP CSV import | MEDIUM — power user import | MEDIUM — NOOP port | P3 |
+**Expected Behavior:**
+Replaces the hardcoded `sleep_need_minutes: 480.0` constant in `SleepFeatureScoreOptions` and `RecoveryFeatureScoreOptions` with a computed value from a new `compute_sleep_need` Rust function.
 
-**Priority key:**
-- P1: Must have for v10.0 — unblocks users or unlocks a cluster of other features
-- P2: Should have in v10.0 — meaningful value addition
-- P3: Defer — either RE-blocked, conditional, or better as v11.0
+Formula: `base_hours(age) + ewma_debt_adjustment(5-night history) + activity_factor(prior_day_strain)`.
+
+- Age-adjusted baseline: literature table mapping age bracket to hours (18-25: 8.0h, 26-64: 7.5h, 65+: 7.0h).
+- 5-night EWMA debt: `debt_hours = sum(sleep_need - actual_sleep) x ewma_weight` using alpha 0.0483 (matching existing baseline engine).
+- Activity factor: prior-day strain >= 15 adds +0.25h; >= 10 adds +0.1h.
+- Bridge input: `age_years`, past 5 nights of `actual_sleep_minutes` from `external_sleep_sessions`, prior strain from `daily_recovery_metrics`.
+- Output struct: `SleepNeedResult { needed_hours, base_hours, debt_adjustment_hours, activity_factor_hours }`.
+- `sleep_need_minutes` passed into existing score pipeline unchanged in type; only its source changes.
+
+**Complexity:** Medium
+**Dependencies:** `external_sleep_sessions` table (exists since v7.0); `daily_recovery_metrics` for prior strain (exists); age/sex input from user profile (needs a new Swift UI field in More settings if not already present).
+**Risk:** Low algorithmically. Medium integration risk: the bridge method must pull 5 nights of data then call the model in one Rust function. Do not call the bridge 5x from Swift.
 
 ---
 
-## RE Prerequisites (Must Be Planned as Explicit Tasks)
+### #165 — GET_FF_VALUE (0x80) Feature Flag Read
 
-Two features require targeted reverse-engineering sessions before implementation can begin.
-These are not "research" in the GSD sense — they are concrete 30–60 min hardware sessions:
+**Expected Behavior:**
+After `GET_HELLO` exchange completes, Swift sends cmd `0x80` (decimal 128, already in `CommandDefinition` registry as `get_feature_flag_value`) with a flag index byte payload. Response carries flag index to value pairs; values are small integers or booleans. Rust logs each pair to a `device_feature_flags` table. `DeviceCapabilities` gains `feature_flags: HashMap<u8, u8>`. Bridge method: `capabilities.get_feature_flags(database_path, device_id)`. Results surfaced in Debug tab.
 
-### RE-01: STRAP_DRIVEN_ALARM_EXECUTED event parse (HAP-04 gate)
-- Arm alarm for T+2 min via existing `writeAlarmCommand()`
-- BTSnoop HCI capture with `/opt/homebrew/bin/tshark`
-- Identify inbound payload on handle `0x0022`/`0x0027` at alarm fire time
-- Map to `StrapDrivenAlarmSetEventPacketRev1/Rev3` field layout in `strap_events.rs`
+**Complexity:** Low
+**Dependencies:** `DeviceCapabilities` struct (exists); cmd 128 `CommandDefinition` (registered); `BLESessionCoordinator` (exists) triggers read post-auth.
+**Risk:** Low. Read-only; no firmware state change. Device ignores unknown flag indices gracefully per protocol observation. The main uncertainty is which specific flag indices are meaningful — log all observed values and document post-capture.
 
-### RE-02: SetAlarmInfoCommandPacketRev4 layout (HAP-04 gate)
-- Decompile `SetAlarmInfoCommandPacketRev4` in Ghidra
-- BTSnoop capture of WHOOP app setting a smart alarm (ground-truth bytes)
-- Find field offsets for `alarmMode` (Exact vs Range), `lowerTimeBound`, `upperTimeBound`, `enabled`
+---
 
-Both RE sessions should be planned as standalone phase tasks, not bundled into the
-implementation phases that depend on them.
+### #166 — Body Composition History
+
+**Expected Behavior:**
+New SQLite table `body_composition` with columns: id, device_id, date TEXT, weight_kg REAL, bmi REAL, body_fat_pct REAL, muscle_mass_kg REAL, water_pct REAL, source TEXT CHECK(source IN ('manual','healthkit','scale')), created_at, updated_at. SwiftUI `BodyCompositionEntrySheet` for manual entry. HealthKit import reads `HKQuantityTypeIdentifierBodyMass` and `HKQuantityTypeIdentifierBodyFatPercentage`. Weight_kg also written back to HealthKit. Trend chart in Health tab.
+
+**Complexity:** Medium
+**Dependencies:** Schema migration v24; HealthKit write entitlement (already granted); `apple_daily.weight_kg` provides a pre-existing source to backfill from.
+**Risk:** Low. No algorithm risk. Schema migration must be coordinated with any other v24 tables (#173, #168) so they land in a single migration increment.
+
+---
+
+### #167 — Stealth Mode
+
+**Expected Behavior:**
+`StealthSettings` type stores per-metric `Bool` in UserDefaults under keys like `goose.stealth.hrv`, `goose.stealth.recovery_score`, etc. In each dashboard view, a metric value is replaced with `Text("--")` when stealth is on. Settings screen in More tab with a "Coach still sees raw data" disclaimer. Coach `buildSystemPrompt()` always passes real numeric values. No server upload changes.
+
+**Complexity:** Low
+**Dependencies:** None. Pure view-layer change.
+**Risk:** Low. The only risk is missing a metric display location in a non-obvious view (e.g. Coach score summary grid, Home device card). A review pass over all views that display numeric metrics is sufficient.
+
+---
+
+### #168 — PIP Realtime Pipeline
+
+**Expected Behavior:**
+`FrameSource` enum gains `realtime` variant alongside `historical`. New SQLite table `realtime_frames` (id, device_id, ts REAL, frame_hex TEXT, packet_type INTEGER, parsed_summary_json TEXT, uploaded INTEGER DEFAULT 0). `CaptureFrameWriteQueue` routes realtime notification frames to `realtime_frames`; historical frames continue to `raw_evidence` / `decoded_frames`. New FastAPI endpoint `POST /v1/ingest-realtime` accepts `{ device_id, frames: [...] }` batches. Swift uploads every 5 s if server reachable. Bridge method: `pip.pending_realtime(database_path, device_id, limit)`.
+
+**Complexity:** Medium
+**Dependencies:** Schema v24 (coordinate with #166, #173); existing upload watermark pattern (exists since v9.0); `CaptureFrameWriteQueue` routing point in `GooseAppModel+NotificationPipeline.swift`.
+**Risk:** Medium. The routing decision (realtime vs. historical) must be made at the BLE notification handler level and propagated correctly through the write queue. If frames are incorrectly tagged, historical sync data lands in the wrong table and is unreachable by the existing decode pipeline.
+
+---
+
+### ALG-HRV-04 / ALG-SLP-04 — Real Overnight Cross-Validation
+
+**Expected Behavior:**
+Wear real WHOOP 5.0 overnight for >= 5 nights. Extract RR intervals and motion data from SQLite. Run through Rust `compute_rmssd` and `classify_sleep_stage`. Compare HRV delta (<= 1 ms) against `pyhrv` reference on same intervals. Compare staging concordance (>= 70%) against WHOOP app's reported stages. Fix any discovered bugs. Promote requirements to Validated.
+
+**Complexity:** Medium (execution complexity; algorithms already written)
+**Dependencies:** Real WHOOP 5.0 device (unblocked since v14.0); Python reference at `~/Documents/my-whoop/server/ingest/app/analysis/`; existing `goose-local-health-validation-suite` binary.
+**Risk:** Medium. Algorithms have run on synthetic fixtures only since v5.0. Real overnight data may expose BLE gap handling edge cases or staging edge cases near wake/sleep boundaries.
+
+---
+
+### CAPSENSE-01 — Cap Sense UUID Discovery
+
+**Expected Behavior:**
+During BLE enumeration, scan all characteristics. Identify the cap sense characteristic by observing which characteristic changes when the band is donned/removed. Subscribe to it. Parse on/off byte. Publish `isOnWrist: Bool` via `BLETransport`. `DeviceCapabilities` gains `capsense_uuid: Option<String>`.
+
+**Complexity:** High
+**Dependencies:** Real WHOOP 5.0 device; BLE-02 optical off-wrist (v14.0) provides fallback. UUID must be documented in `.planning/research/whoop-re/` before any Swift code is written.
+**Risk:** High. UUID unknown. Discovery requires full characteristic enumeration and behavioral observation — cannot be done in simulator. Risk of false identification if another characteristic also changes state at donning time.
+
+---
+
+### HAP-04 — Wake-Window Engine
+
+**Expected Behavior:**
+`GooseWakeWindowManager` implements: given alarm time + configured window (default 30 min), compute optimal wake point from sleep stage transitions. Send `SetAlarmInfoCommandPacketRev4` via BLE. Device buzzes at computed time.
+
+**Complexity:** High
+**Dependencies:** HAP-03 smart alarm UI (done, v10.0); BTSnoop capture of `STRAP_DRIVEN_ALARM_EXECUTED`; Ghidra decompile of `SetAlarmInfoCommandPacketRev4` field layout.
+**Risk:** High. Fully RE-gated. The stub file `GooseWakeWindowManager.swift` explicitly blocks implementation until both prerequisites are documented in `.planning/research/whoop-re/SetAlarmInfoCommandPacketRev4.md`. Writing any functional code before the Ghidra analysis is complete risks sending a malformed command that corrupts alarm state on the device.
+
+---
+
+## MVP Recommendation for v15.0
+
+Prioritize (in order):
+
+1. **#172 v20/v21 decode** — highest data-correctness impact; every WHOOP 5.0 sync session produces these packets
+2. **#173 v26 decode** — simpler payload; complements realtime use case
+3. **ALG-HRV-04 / ALG-SLP-04** — closes the oldest open gate; directly improves metric trust
+4. **#164 Harvard sleep need model** — meaningful algorithm improvement; low risk
+5. **#165 GET_FF_VALUE** — small effort, enriches DeviceCapabilities permanently
+6. **#166 Body composition** — new data domain; schema migration batched with #173 table
+
+Defer to later v15.x or v16.0:
+
+- **CAPSENSE-01** — hardware discovery work; BLE-02 optical off-wrist already covers the functional gap
+- **HAP-04** — RE prerequisites must be completed first; do not rush
+- **#167 Stealth mode** — pure polish; does not affect any data flow
+- **#168 PIP realtime** — upload infrastructure works today; realtime sub-5s delivery is a nice-to-have
 
 ---
 
 ## Sources
 
-- Live codebase grep verification: `GooseSwift/`, `Rust/core/src/` — 2026-06-12
-- Seed files: `.planning/seeds/*.md` — 16 seeds reviewed
-- NOOP reverse-engineering findings in seeds (hardware-confirmed on MG): `HapticPayloads.swift`, `BreathingView.swift`, `IntervalTimerView.swift`
-- Ghidra analysis of WHOOP 5.37.0 IPA (2026-06-11): `WhoopSleepCoach`, `WhoopVow`, `WhoopLocalNotifications`, `WHPBLEProcessDataValidator` classes
-- Issue #92 (darylbleach): BTSnoop capture confirming R22 type 0x10 on WHOOP 5.0
-- `.planning/PROJECT.md` — v10.0 active requirements list
-
----
-*Feature research for: WHOOP iOS companion app — v10.0 protocol parity, haptics, feature completeness*
-*Researched: 2026-06-12*
+- Codebase analysis: `Rust/core/src/protocol.rs`, `capabilities.rs`, `commands.rs`, `metric_features.rs`, `store/mod.rs`
+- `.planning/PROJECT.md` — requirements and deferred gate history
+- `.planning/ROADMAP.md` — backlog table with priority and deferral rationale
+- `GooseSwift/GooseWakeWindowManager.swift` — HAP-04 stub and gate conditions
