@@ -986,8 +986,9 @@ Plans:
 
 **Plans**:
 
-- [ ] 111-01-PLAN.md — Protocol offset WHY comments in Rust (COMM-04)
-- [ ] 111-02-PLAN.md — FFI safety contract comments at C and JNI entry points (COMM-05)
+2/2 plans complete
+
+- [x] 111-02-PLAN.md — FFI safety contract comments at C and JNI entry points (COMM-05)
 
 ---
 
@@ -1029,7 +1030,7 @@ Plans:
 | 108 | 1/1 | Complete   | 2026-06-21 |
 | 109 | 1/1 | Complete   | 2026-06-21 |
 | 110 | 3/3 | Complete   | 2026-06-21 |
-| 111 | v14.0 | Pending | — |
+| 111 | 2/2 | Complete   | 2026-06-21 |
 
 ## Backlog
 
@@ -1080,6 +1081,8 @@ Promoted to Phase 18: Coach Multi-Provider.
 **Depends on:** Phase 59
 **Plans:** 1/1 plans complete
 Plans:
+
+- [x] 111-01-PLAN.md
 
 - [x] 110-01-PLAN.md
 
