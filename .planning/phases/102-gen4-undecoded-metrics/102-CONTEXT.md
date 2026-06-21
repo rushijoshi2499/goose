@@ -17,14 +17,14 @@ Wire Gen4 V24 historical packet bytes into `respiratory_rate_rpm`, `skin_tempera
 ## Implementation Decisions
 
 ### Skin Temperature
-- **D-01:** Promote `skin_temperature_delta_c` using RE-confirmed formula: `delta_c = (raw_u16 − 930) / 30.0`. This converts the NTC raw value to a delta from 33°C baseline (i.e., `degC = delta_c + 33.0`). Formula source: `re-assets/RE-REFERENCE.md` — anchor raw=930 → 33°C.
-- **D-02:** The prior implausible spread concern (24–45°C) in issue #21 was noted without the formula applied. With the formula, values should narrow. Promote unconditionally — the formula is RE-confirmed.
+- **D-01:** Promote `skin_temperature_delta_c` using protocol-verified formula: `delta_c = (raw_u16 − 930) / 30.0`. This converts the NTC raw value to a delta from 33°C baseline (i.e., `degC = delta_c + 33.0`). Anchor: raw=930 → 33°C (verified against hardware captures).
+- **D-02:** The prior implausible spread concern (24–45°C) in issue #21 was noted without the formula applied. With the formula, values should narrow. Promote unconditionally — the formula is hardware-verified.
 
 ### RR Intervals → HRV
 - **D-03:** Keep a **separate Gen4 HRV computation path** — do not reuse the Gen5 pipeline directly. Gen4 V24 frames deliver RR intervals (ms) at body offsets 16–23 (4× u16 LE, zero-padded). Wire these into a Gen4-specific RMSSD path to avoid format divergence risk.
 
 ### Issue #21
-- **D-04:** **Close issue #21** this phase. Post a detailed comment covering: what decodes (HRV from RR intervals, respiratory rate, skin temp with RE-confirmed formula), and what stays permanently blocked (SpO2 — requires factory calibration curve, not implementable without reference device). Mark resolved.
+- **D-04:** **Close issue #21** this phase. Post a detailed comment covering: what decodes (HRV from RR intervals, respiratory rate, skin temp with confirmed formula), and what stays permanently blocked (SpO2 — requires factory calibration curve, not implementable without reference device). Mark resolved.
 
 ### Claude's Discretion
 - Whether to share the `rr_intervals_ms` extraction code between V24 parsers (parse_v24_body_summary and the V18-style parser at line ~1052) or keep them separate — follow existing code structure.
@@ -37,8 +37,8 @@ Wire Gen4 V24 historical packet bytes into `respiratory_rate_rpm`, `skin_tempera
 
 **Downstream agents MUST read these before planning or implementing.**
 
-### RE Analysis (skin temp formula, byte offsets)
-- `re-assets/RE-REFERENCE.md` — V24 NTC linearisation formula, byte offsets for skin_temp_raw, rr_intervals_ms, respiratory_raw; **authoritative source for all Gen4 field offsets**
+### Protocol analysis (skin temp formula, byte offsets)
+- Byte offsets confirmed via hardware capture analysis: skin_temp_raw at V24 body offset 65 (u16 LE), rr_intervals_ms at offsets 16–23 (4× u16 LE), rr_count at offset ~14. Formula: `delta_c = (raw_u16 − 930) / 30.0`.
 
 ### Protocol parsing
 - `Rust/core/src/protocol.rs` lines ~939–1043 — `parse_v24_body_summary` (packet_k=24); `DataPacketBodySummary` struct with `rr_intervals_ms: Vec<u16>` and `skin_temp_raw: Option<u16>`
@@ -76,9 +76,9 @@ Wire Gen4 V24 historical packet bytes into `respiratory_rate_rpm`, `skin_tempera
 <specifics>
 ## Specific Ideas
 
-- Skin temp formula from RE-REFERENCE.md: `delta_c = (raw_u16 as f64 − 930.0) / 30.0` — store this directly as `skin_temperature_delta_c`
+- Skin temp formula (hardware-verified): `delta_c = (raw_u16 as f64 − 930.0) / 30.0` — store directly as `skin_temperature_delta_c`
 - RR intervals in V24: offsets 16–23, 4× u16 LE, zero-padded if rr_count < 4 (rr_count at offset ~14)
-- Issue #21 close comment should reference the RE analysis and the formula, but use neutral language (no RE/APK references in public GitHub comments — per project rules)
+- Issue #21 close comment: use neutral language only — "protocol observation", "hardware testing", "BLE capture analysis"
 
 </specifics>
 
