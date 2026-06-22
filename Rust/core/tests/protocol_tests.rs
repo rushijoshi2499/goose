@@ -1,7 +1,7 @@
 use goose_core::protocol::{
     COMMAND_GET_HELLO, DataPacketBodySummary, DeviceType, FrameAccumulator, I16SeriesSummary,
     PacketType, ParsedPayload, build_v5_command_frame, build_v5_payload_frame, parse_frame,
-    parse_frame_hex, parse_v26_ppg_body_for_test,
+    parse_frame_hex, parse_v20v21_optical_body_for_test, parse_v26_ppg_body_for_test,
 };
 
 const GET_HELLO_FRAME: &str = "aa0108000001e67123019101363e5c8d";
@@ -1069,4 +1069,145 @@ fn test_v26_ppg_short_payload_returns_unknown() {
         Some(DataPacketBodySummary::Unknown { packet_k: 26 }) => {}
         other => panic!("expected Unknown {{ packet_k: 26 }}, got {other:?}"),
     }
+}
+
+// ─── v20 optical multi-channel tests ─────────────────────────────────────────
+
+/// Build a synthetic v20 payload (2143B = 3-byte header + 2140B body).
+/// `active_blocks`: bitmask of which of the 5 blocks have presence byte 0x19.
+/// All i32 samples in active blocks are filled with `sample_value`.
+fn build_v20_payload(active_blocks: u8, sample_value: i32) -> Vec<u8> {
+    // 3-byte header + 2140B body
+    let total = 3 + 2140;
+    let mut payload = vec![0u8; total];
+    // Header: packet_type=0x2f(47), packet_k=20, status=0
+    payload[0] = 0x2f;
+    payload[1] = 20;
+    payload[2] = 0x00;
+
+    // Block presence byte offsets in body (relative to payload[3]):
+    // body offsets 26, 448, 870, 1292, 1714
+    let presence_body_offsets: [usize; 5] = [26, 448, 870, 1292, 1714];
+    let sample_bytes = sample_value.to_le_bytes();
+
+    for (block_num, &body_offset) in presence_body_offsets.iter().enumerate() {
+        let payload_offset = 3 + body_offset;
+        if (active_blocks >> block_num) & 1 == 1 {
+            payload[payload_offset] = 0x19; // active
+            // Fill 100 i32 samples (2 sub-channels × 50 samples) starting at payload_offset+1
+            let data_start = payload_offset + 1;
+            for i in 0..100 {
+                let off = data_start + i * 4;
+                if off + 4 <= payload.len() {
+                    payload[off..off + 4].copy_from_slice(&sample_bytes);
+                }
+            }
+        } else {
+            payload[payload_offset] = 0x00; // inactive
+        }
+    }
+    payload
+}
+
+#[test]
+fn test_v20_three_active_blocks_yields_six_channels() {
+    // Blocks 0, 1, 2 active (bitmask 0b00000111); blocks 3 and 4 inactive.
+    let payload = build_v20_payload(0b00000111, 42_i32);
+
+    let (result, warnings) = parse_v20v21_optical_body_for_test(20, &payload);
+    assert!(
+        warnings.is_empty(),
+        "expected no warnings for 3 active blocks, got: {warnings:?}"
+    );
+
+    match result {
+        Some(DataPacketBodySummary::V20V21OpticalMultiChannel {
+            version,
+            channels,
+            warnings: variant_warnings,
+        }) => {
+            assert_eq!(version, 20);
+            assert_eq!(
+                channels.len(),
+                6,
+                "expected 6 OpticalChannel entries (3 blocks × 2 sub-channels)"
+            );
+            assert!(variant_warnings.is_empty());
+
+            // Verify channel indices: 0,1 from block 0; 2,3 from block 1; 4,5 from block 2
+            let indices: Vec<u8> = channels.iter().map(|c| c.index).collect();
+            assert_eq!(indices, vec![0, 1, 2, 3, 4, 5]);
+
+            // Each sub-channel must have exactly 50 i32 samples all equal to 42
+            for ch in &channels {
+                let samples = ch.samples_i32.as_ref().expect("samples_i32 must be Some");
+                assert_eq!(samples.len(), 50, "each sub-channel must have 50 samples");
+                assert!(
+                    samples.iter().all(|&s| s == 42),
+                    "all samples should be 42, got: {samples:?}"
+                );
+                assert!(ch.samples_i16.is_none(), "samples_i16 must be None for v20");
+            }
+        }
+        other => panic!("expected V20V21OpticalMultiChannel, got {other:?}"),
+    }
+}
+
+#[test]
+fn test_v20_payload_too_short_warns_no_panic() {
+    // 10-byte payload — body is only 7 bytes; no block presence byte can be read.
+    let short_payload = vec![0x2f_u8, 20, 0x00, 0, 0, 0, 0, 0, 0, 0];
+
+    let (result, warnings) = parse_v20v21_optical_body_for_test(20, &short_payload);
+    // Must not panic; all 5 blocks emit presence_missing warnings.
+    assert!(
+        !warnings.is_empty(),
+        "expected warnings for short payload, got none"
+    );
+    // Result must still be Some (variant with empty channels) — not None.
+    match result {
+        Some(DataPacketBodySummary::V20V21OpticalMultiChannel { channels, .. }) => {
+            assert!(channels.is_empty(), "no channels should be decoded from a 10B payload");
+        }
+        other => panic!("expected V20V21OpticalMultiChannel, got {other:?}"),
+    }
+}
+
+#[test]
+fn test_v20_mixed_presence_returns_only_active_channels() {
+    // Blocks 0 and 3 active (bitmask 0b00001001); blocks 1, 2, 4 inactive.
+    let payload = build_v20_payload(0b00001001, 7_i32);
+
+    let (result, warnings) = parse_v20v21_optical_body_for_test(20, &payload);
+    assert!(
+        warnings.is_empty(),
+        "expected no warnings for valid mixed-presence payload, got: {warnings:?}"
+    );
+
+    match result {
+        Some(DataPacketBodySummary::V20V21OpticalMultiChannel { channels, .. }) => {
+            // Only blocks 0 and 3 are active → 4 channels total.
+            assert_eq!(
+                channels.len(),
+                4,
+                "expected 4 channels (blocks 0 and 3 × 2 sub-channels)"
+            );
+            let indices: Vec<u8> = channels.iter().map(|c| c.index).collect();
+            // Block 0 → indices 0,1; Block 3 → indices 6,7
+            assert_eq!(indices, vec![0, 1, 6, 7]);
+        }
+        other => panic!("expected V20V21OpticalMultiChannel, got {other:?}"),
+    }
+}
+
+#[test]
+fn test_v20_empty_payload_returns_none_with_warning() {
+    let payload: Vec<u8> = vec![0x2f, 20, 0x00]; // header only, body empty
+
+    let (result, warnings) = parse_v20v21_optical_body_for_test(20, &payload);
+    assert!(
+        warnings.iter().any(|w| w.contains("empty")),
+        "expected empty payload warning, got: {warnings:?}"
+    );
+    assert!(result.is_none(), "expected None for empty payload");
 }
