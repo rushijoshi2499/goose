@@ -825,7 +825,9 @@ Plans:
   2. The hardcoded `480.0` constant in `SleepFeatureScoreOptions` and `RecoveryFeatureScoreOptions` is replaced with a bridge call to `sleep.compute_need`; `age_years: Option<u8>` is accepted in the options struct
   3. `bridge_methods_constant_matches_dispatcher` test passes; `cargo test --locked` passes clean
 
-**Plans**: TBD
+**Plans**: 2 plans
+- [ ] 114-01-PLAN.md — sleep_need.rs algorithm module: compute_sleep_need + compute_sleep_need_with_store + SleepNeedResult (SLP-NEED-01, Wave 1)
+- [ ] 114-02-PLAN.md — sleep.compute_need bridge method + replace hardcoded 480.0 at 4 call sites (SLP-NEED-02, Wave 2)
 
 ---
 
