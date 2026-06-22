@@ -10,8 +10,8 @@
 
 ### Optical Protocol Decode (#172, #173)
 
-- [ ] **OPT-01**: `DataPacketBodySummary::V20V21OpticalMultiChannel` variant + parse arms for packet_k 20 and 21 in `protocol.rs`; presence-byte logic (0x19=active, 0x00=empty) for v20 5-channel blocks; 3×100-sample i16 arrays for v21; WHY comments at all byte offsets (closes #172)
-- [ ] **OPT-02**: `DataPacketBodySummary::V26PpgWaveform` variant + parse arm for packet_k 26; 24×LE-i16 at offsets [27:74]; `ppg_channel: u8` gated 1–26; WHY comments; integration test with synthetic 88B payload (closes #173)
+- [x] **OPT-01**: `DataPacketBodySummary::V20V21OpticalMultiChannel` variant + parse arms for packet_k 20 and 21 in `protocol.rs`; presence-byte logic (0x19=active, 0x00=empty) for v20 5-channel blocks; 3×100-sample i16 arrays for v21; WHY comments at all byte offsets (closes #172)
+- [x] **OPT-02**: `DataPacketBodySummary::V26PpgWaveform` variant + parse arm for packet_k 26; 24×LE-i16 at offsets [27:74]; `ppg_channel: u8` gated 1–26; WHY comments; integration test with synthetic 88B payload (closes #173)
 - [ ] **OPT-03**: `optical_channel_samples` SQLite table (schema v24); bridge methods `biometrics.insert_v20v21_batch` + `biometrics.insert_v26_batch` + range query methods; `BRIDGE_METHODS` constant updated; `cargo test --locked` passes clean
 - [ ] **OPT-04**: Android `WhoopBleClient` routing for packet_k 20/21/26 — frames forwarded to `GooseBridge.safeHandle()` (parity with iOS) (#172/#173)
 

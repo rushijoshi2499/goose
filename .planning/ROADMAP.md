@@ -1050,7 +1050,7 @@ Plans:
 | 109 | 1/1 | Complete   | 2026-06-21 |
 | 110 | 3/3 | Complete   | 2026-06-21 |
 | 111 | 2/2 | Complete    | 2026-06-21 |
-| 112 | 2/2 | Complete   | 2026-06-22 |
+| 112 | 2/2 | Complete    | 2026-06-22 |
 | 113 | 0/0 | Not started | — |
 | 114 | 0/0 | Not started | — |
 | 115 | 0/0 | Not started | — |
