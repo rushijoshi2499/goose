@@ -682,7 +682,12 @@ impl GooseStore {
             .lock()
             .map_err(|_| GooseError::message("store mutex poisoned"))?;
         validate_non_negative("limit_bytes", limit_bytes)?;
-        let before_bytes = self.raw_evidence_payload_bytes()?;
+        // Use conn directly to avoid re-locking self.conn (non-reentrant mutex deadlock).
+        let before_bytes: i64 = conn.query_row(
+            "SELECT COALESCE(SUM(LENGTH(payload_hex) / 2), 0) FROM raw_evidence WHERE payload_hex != ''",
+            [],
+            |row| row.get(0),
+        )?;
         if before_bytes <= limit_bytes {
             return Ok(RawEvidencePayloadRetentionReport {
                 limit_bytes,
@@ -724,7 +729,11 @@ impl GooseStore {
             )? as i64;
         }
 
-        let after_bytes = self.raw_evidence_payload_bytes()?;
+        let after_bytes: i64 = conn.query_row(
+            "SELECT COALESCE(SUM(LENGTH(payload_hex) / 2), 0) FROM raw_evidence WHERE payload_hex != ''",
+            [],
+            |row| row.get(0),
+        )?;
         Ok(RawEvidencePayloadRetentionReport {
             limit_bytes,
             before_bytes,
