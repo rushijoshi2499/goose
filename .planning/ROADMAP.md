@@ -863,7 +863,8 @@ Plans:
   2. `body_composition.upsert` and `body_composition.history_between` bridge methods are registered in `BRIDGE_METHODS` and the dispatcher; `cargo test --locked` passes with at least one test per method
   3. `source` column accepts only 'manual', 'healthkit', or 'scale' (CHECK constraint); inserting an invalid source returns an error, not a panic
 
-**Plans**: TBD
+**Plans**: 1 plan
+- [ ] 116-01-PLAN.md — Store methods + bridge module (body_composition.upsert / history_between) + BRIDGE_METHODS wiring + round-trip tests
 
 ---
 
