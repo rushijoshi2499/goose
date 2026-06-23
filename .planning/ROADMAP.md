@@ -757,7 +757,7 @@ Known deferred: hardware-gated BLE tests; real-device MG sync validation; ARCH-0
 
 - [x] **Phase 112: Optical Protocol Decode (v20/v21/v26)** — Rust parse variants for WHOOP 5.0 bulk sensor streams and 24 Hz PPG waveform (completed 2026-06-22)
 - [x] **Phase 113: Optical Schema & Bridge** — schema v24 for optical_channel_samples + device_feature_flags + body_composition_history + realtime_frames (single migration batch) plus bridge methods and cargo test gate (completed 2026-06-22)
-- [ ] **Phase 114: Harvard Sleep Need Model** — sleep_need.rs algorithm + replace hardcoded 480 constant
+- [x] **Phase 114: Harvard Sleep Need Model** — sleep_need.rs algorithm + replace hardcoded 480 constant (completed 2026-06-23)
 - [ ] **Phase 115: Feature Flag Discovery** — GET_FF_VALUE BLE command + DeviceCapabilities.feature_flags + device_feature_flags table
 - [ ] **Phase 116: Body Composition Rust Layer** — body_composition_history table + bridge methods
 - [ ] **Phase 117: Android Optical Routing** — WhoopBleClient packet_k 20/21/26 forwarding for Android parity
@@ -825,9 +825,10 @@ Plans:
   2. The hardcoded `480.0` constant in `SleepFeatureScoreOptions` and `RecoveryFeatureScoreOptions` is replaced with a bridge call to `sleep.compute_need`; `age_years: Option<u8>` is accepted in the options struct
   3. `bridge_methods_constant_matches_dispatcher` test passes; `cargo test --locked` passes clean
 
-**Plans**: 2 plans
-- [ ] 114-01-PLAN.md — sleep_need.rs algorithm module: compute_sleep_need + compute_sleep_need_with_store + SleepNeedResult (SLP-NEED-01, Wave 1)
-- [ ] 114-02-PLAN.md — sleep.compute_need bridge method + replace hardcoded 480.0 at 4 call sites (SLP-NEED-02, Wave 2)
+**Plans**: 2/2 plans complete
+
+- [x] 114-01-PLAN.md — sleep_need.rs algorithm module: compute_sleep_need + compute_sleep_need_with_store + SleepNeedResult (SLP-NEED-01, Wave 1)
+- [x] 114-02-PLAN.md — sleep.compute_need bridge method + replace hardcoded 480.0 at 4 call sites (SLP-NEED-02, Wave 2)
 
 ---
 
@@ -1057,7 +1058,7 @@ Plans:
 | 111 | 2/2 | Complete    | 2026-06-21 |
 | 112 | 2/2 | Complete    | 2026-06-22 |
 | 113 | 0/1 | Complete    | 2026-06-22 |
-| 114 | 0/0 | Not started | — |
+| 114 | 2/2 | Complete   | 2026-06-23 |
 | 115 | 0/0 | Not started | — |
 | 116 | 0/0 | Not started | — |
 | 117 | 0/0 | Not started | — |
