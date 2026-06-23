@@ -120,6 +120,7 @@ struct MoreAboutView: View {
       Section("Runtime") {
         MoreInfoRow(title: "Device", value: model.ble.activeDeviceName, systemImage: "sensor.tag.radiowaves.forward", status: model.ble.connectionState == "ready" ? .ready : .pending)
         MoreInfoRow(title: "Hello", value: model.helloSummary, systemImage: "hand.wave", status: model.helloSummary.hasPrefix("GET_HELLO") ? .ready : .pending)
+        MoreInfoRow(title: "Feature Flags", value: featureFlagsSummary, systemImage: "flag", status: featureFlagsSummary == "None discovered" ? .pending : .ready)
       }
 
       Section("License") {
@@ -140,6 +141,15 @@ struct MoreAboutView: View {
     let short = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0"
     let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "0"
     return "\(short) (\(build))"
+  }
+
+  private var featureFlagsSummary: String {
+    guard let flags = model.ble.connectedCapabilities?.featureFlags, !flags.isEmpty else {
+      return "None discovered"
+    }
+    return flags.sorted(by: { $0.key < $1.key })
+      .map { String(format: "0x%02X → 0x%02X", $0.key, $0.value) }
+      .joined(separator: ", ")
   }
 }
 
