@@ -5,8 +5,8 @@ milestone_name: Protocol Depth, Algorithms & UX
 current_phase: 115
 current_phase_name: GET_FF_VALUE
 status: planning
-stopped_at: Phase 114 context gathered
-last_updated: "2026-06-23T00:35:50.445Z"
+stopped_at: Phase 115 context gathered
+last_updated: "2026-06-23T19:44:14.417Z"
 last_activity: 2026-06-23
 last_activity_desc: Phase 114 complete, transitioned to Phase 115
 progress:
@@ -124,9 +124,9 @@ Items deferred from previous milestones:
 
 ## Session Continuity
 
-Last session: 2026-06-22T22:29:33.924Z
-Stopped at: Phase 114 context gathered
-Resume file: .planning/phases/114-harvard-sleep-need-model/114-CONTEXT.md
+Last session: 2026-06-23T19:44:14.410Z
+Stopped at: Phase 115 context gathered
+Resume file: .planning/phases/115-feature-flag-discovery-get-ff-value/115-CONTEXT.md
 Next action: /gsd-discuss-phase 112
 
 ## Operator Next Steps
