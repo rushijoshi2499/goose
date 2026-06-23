@@ -6,14 +6,14 @@ current_phase: 115
 current_phase_name: GET_FF_VALUE
 status: planning
 stopped_at: Phase 115 context gathered
-last_updated: "2026-06-23T19:44:14.417Z"
+last_updated: "2026-06-23T20:33:33.045Z"
 last_activity: 2026-06-23
 last_activity_desc: Phase 114 complete, transitioned to Phase 115
 progress:
   total_phases: 15
   completed_phases: 3
-  total_plans: 5
-  completed_plans: 5
+  total_plans: 7
+  completed_plans: 6
   percent: 20
 ---
 
@@ -61,6 +61,9 @@ Recent decisions affecting current work:
 - v14.0 scope: P2/P3 issues (#164 Harvard sleep, #165 feature flags, #166 body composition, #167 stealth mode, #168 PIP upload) deferred to v15.0
 - SEED-003/004 status: largely completed in v12.0 (phases 83-91) — bridge/ directory exists, store/ split done, BLESessionCoordinator actor live, DeviceCatalog wired; only 38 unwraps remain (ARCH-11 in Phase 110)
 - MG detection: `peripheral.name?.lowercased().contains(" mg")` used in v13.0; advertisement byte layout unconfirmed (D-03); Phase 109 to harden
+- [Phase ?]: GET_FF_VALUE (cmd 0x80) wired into BLE handshake after sendGetBodyLocationAndStatus on every reconnect with 3s timeout fallback (FF-01, D-01, D-02)
+- [Phase ?]: DeviceCapabilities uses custom Decodable init(from:) with decodeIfPresent so feature_flags absence defaults to empty dict (D-02)
+- [Phase ?]: pendingFeatureFlagDeviceID captured at send time to guard disconnect race in GET_FF_VALUE response handler (T-115-03)
 
 ### Roadmap Evolution
 
@@ -114,6 +117,7 @@ Items deferred from previous milestones:
 | Phase 110 P02 | 20 min | 1 tasks | 1 files |
 | Phase 110 P03 | 3 min | 2 tasks | 0 files |
 | Phase 112 P112-02 | 12 min | 2 tasks | 6 files |
+| Phase 115 P01 | 26 min | 2 tasks | 6 files |
 
 ## Quick Tasks Completed
 
@@ -124,7 +128,7 @@ Items deferred from previous milestones:
 
 ## Session Continuity
 
-Last session: 2026-06-23T19:44:14.410Z
+Last session: 2026-06-23T20:33:22.557Z
 Stopped at: Phase 115 context gathered
 Resume file: .planning/phases/115-feature-flag-discovery-get-ff-value/115-CONTEXT.md
 Next action: /gsd-discuss-phase 112

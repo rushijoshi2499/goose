@@ -28,8 +28,8 @@
 
 ### Feature Flag Discovery (#165)
 
-- [ ] **FF-01**: `GET_FF_VALUE` (cmd 0x80) sent by Swift after `GET_HELLO` handshake; 3-second timeout with fallback to `DeviceKind`-derived `DeviceCapabilities` if no response (closes #165)
-- [ ] **FF-02**: Response parsed → `DeviceCapabilities.feature_flags: [UInt8: UInt8]`; raw index→value stored without semantic name claims; exposed in Debug tab
+- [x] **FF-01**: `GET_FF_VALUE` (cmd 0x80) sent by Swift after `GET_HELLO` handshake; 3-second timeout with fallback to `DeviceKind`-derived `DeviceCapabilities` if no response (closes #165)
+- [x] **FF-02**: Response parsed → `DeviceCapabilities.feature_flags: [UInt8: UInt8]`; raw index→value stored without semantic name claims; exposed in Debug tab
 - [x] **FF-03**: `device_feature_flags` SQLite table (schema v24); bridge method `capabilities.get_feature_flags`; `BRIDGE_METHODS` updated
 
 ### Body Composition History (#166)
