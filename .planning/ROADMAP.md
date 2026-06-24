@@ -760,7 +760,7 @@ Known deferred: hardware-gated BLE tests; real-device MG sync validation; ARCH-0
 - [x] **Phase 114: Harvard Sleep Need Model** — sleep_need.rs algorithm + replace hardcoded 480 constant (completed 2026-06-23)
 - [x] **Phase 115: Feature Flag Discovery** — GET_FF_VALUE BLE command + DeviceCapabilities.feature_flags + device_feature_flags table (completed 2026-06-23)
 - [x] **Phase 116: Body Composition Rust Layer** — body_composition_history table + bridge methods (completed 2026-06-24)
-- [ ] **Phase 117: Android Optical Routing** — WhoopBleClient packet_k 20/21/26 forwarding for Android parity
+- [x] **Phase 117: Android Optical Routing** — WhoopBleClient packet_k 20/21/26 forwarding for Android parity (completed 2026-06-24)
 - [ ] **Phase 118: PIP Realtime Queue** — RealtimePIPQueue Swift class + realtime_frames table bridge consumer
 - [ ] **Phase 119: Stealth Mode** — GooseStealthMode + StealthMask + CoachLocalToolContext filter
 - [ ] **Phase 120: Sleep Need UI** — Sleep dashboard dynamic need display (replaces static "8h recommended")
@@ -880,8 +880,9 @@ Plans:
   2. The existing Android CI APK build (`android-core.yml`) compiles without new warnings or errors after the routing change
   3. Unit test or log assertion confirms that a synthetic v20/v21/v26 frame received by `FrameReassembler` reaches the bridge call
 
-**Plans**: 1 plan
-- [ ] 117-01-PLAN.md — Add optical enable commands (107/108) to Gen5/MG handshake + JVM routing tests
+**Plans**: 1/1 plans complete
+
+- [x] 117-01-PLAN.md — Add optical enable commands (107/108) to Gen5/MG handshake + JVM routing tests
 
 ---
 
@@ -1068,7 +1069,7 @@ Plans:
 | 114 | 2/2 | Complete    | 2026-06-23 |
 | 115 | 2/2 | Complete    | 2026-06-23 |
 | 116 | 1/1 | Complete    | 2026-06-24 |
-| 117 | 0/1 | Planned | — |
+| 117 | 1/1 | Complete   | 2026-06-24 |
 | 118 | 0/0 | Not started | — |
 | 119 | 0/0 | Not started | — |
 | 120 | 0/0 | Not started | — |
