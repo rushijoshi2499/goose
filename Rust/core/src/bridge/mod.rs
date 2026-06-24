@@ -28,6 +28,7 @@ use crate::{
 };
 
 mod activity;
+mod body_composition;
 mod capabilities;
 mod capture;
 mod debug;
@@ -71,6 +72,8 @@ pub const BRIDGE_METHODS: &[&str] = &[
     "biometrics.optical_between",
     "biometrics.spo2_from_raw",
     "biometrics.v24_between",
+    "body_composition.history_between",
+    "body_composition.upsert",
     "calibration.apply",
     "calibration.evaluate_dataset",
     "calibration.evaluate_stored_labels",
@@ -530,6 +533,10 @@ fn handle_bridge_request_inner(request: BridgeRequest) -> BridgeResponse {
     //   metrics domain: metrics.*, metric_series.*, exercise.*, biometrics.*,
     //                   battery.* (handled above), calibration.*, openwhoop.*,
     //                   diagnostics.*
+    if method.starts_with("body_composition.") {
+        return body_composition::dispatch_body_composition(&request);
+    }
+
     if method.starts_with("capabilities.") {
         return capabilities::dispatch_capabilities(&request);
     }
@@ -1087,9 +1094,9 @@ mod tests {
     use super::*;
 
     /// Guard against drift between [`BRIDGE_METHODS`] and the actual dispatch arms
-    /// across all 5 domain files.
+    /// across all 6 domain files.
     ///
-    /// Reads all 6 domain files via `include_str!` (compile-time, zero runtime I/O)
+    /// Reads all 7 domain files via `include_str!` (compile-time, zero runtime I/O)
     /// and scans for Rust match arm lines of the form `"namespace.method" =>` or the
     /// multi-line variant where the method name is alone on its line followed by `|`
     /// or `=>` on the next. mod.rs is excluded from the scan because the test block
@@ -1105,6 +1112,7 @@ mod tests {
         // mod.rs is intentionally excluded — scanning it would pick up quoted
         // strings from comments and docstrings in the test block itself.
         let domain_source = concat!(
+            include_str!("body_composition.rs"),
             include_str!("capabilities.rs"),
             include_str!("metrics.rs"),
             include_str!("sleep.rs"),

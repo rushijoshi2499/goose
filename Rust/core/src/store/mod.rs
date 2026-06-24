@@ -1057,6 +1057,17 @@ pub struct FeatureFlagRow {
     pub discovered_at: String,
 }
 
+/// BODY-01: One row from body_composition_history.
+pub struct BodyCompositionRow {
+    pub date: String,
+    pub source: String,
+    pub weight_kg: Option<f64>,
+    pub bmi: Option<f64>,
+    pub body_fat_pct: Option<f64>,
+    pub muscle_mass_kg: Option<f64>,
+    pub water_pct: Option<f64>,
+}
+
 fn configure_read_write_connection(conn: &Connection) -> GooseResult<()> {
     conn.execute_batch(
         r#"
@@ -1987,6 +1998,65 @@ impl GooseStore {
             params![session_id, burst_index, bytes_received, duration_ms, missing_packets, sequence_gaps, result],
         )?;
         Ok(())
+    }
+
+    /// BODY-01: Upsert one row into body_composition_history.
+    /// Uses INSERT OR REPLACE on UNIQUE(source, date) — a second call with the
+    /// same (source, date) pair replaces the existing row with the new values.
+    pub fn upsert_body_composition(
+        &self,
+        date: &str,
+        source: &str,
+        weight_kg: Option<f64>,
+        bmi: Option<f64>,
+        body_fat_pct: Option<f64>,
+        muscle_mass_kg: Option<f64>,
+        water_pct: Option<f64>,
+    ) -> GooseResult<()> {
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|_| GooseError::message("store mutex poisoned"))?;
+        conn.execute(
+            "INSERT OR REPLACE INTO body_composition_history \
+             (date, source, weight_kg, bmi, body_fat_pct, muscle_mass_kg, water_pct) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            params![date, source, weight_kg, bmi, body_fat_pct, muscle_mass_kg, water_pct],
+        )?;
+        Ok(())
+    }
+
+    /// BODY-01: Return all body composition rows in the inclusive date range
+    /// [start_date, end_date], across ALL sources, ordered by date ascending (D-01).
+    pub fn body_composition_history_between(
+        &self,
+        start_date: &str,
+        end_date: &str,
+    ) -> GooseResult<Vec<BodyCompositionRow>> {
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|_| GooseError::message("store mutex poisoned"))?;
+        let mut stmt = conn.prepare(
+            "SELECT date, source, weight_kg, bmi, body_fat_pct, muscle_mass_kg, water_pct \
+             FROM body_composition_history \
+             WHERE date >= ?1 AND date <= ?2 \
+             ORDER BY date ASC",
+        )?;
+        let rows = stmt
+            .query_map(params![start_date, end_date], |row| {
+                Ok(BodyCompositionRow {
+                    date: row.get(0)?,
+                    source: row.get(1)?,
+                    weight_kg: row.get(2)?,
+                    bmi: row.get(3)?,
+                    body_fat_pct: row.get(4)?,
+                    muscle_mass_kg: row.get(5)?,
+                    water_pct: row.get(6)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(rows)
     }
 
     pub(super) fn ensure_overnight_mirror_tables(&self) -> GooseResult<()> {
