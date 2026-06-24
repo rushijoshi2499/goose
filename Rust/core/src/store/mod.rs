@@ -7,6 +7,7 @@ use std::{
 mod activity;
 mod capture;
 mod metrics;
+mod realtime;
 mod sleep;
 
 use rusqlite::{Connection, OpenFlags, params};
@@ -1947,7 +1948,8 @@ impl GooseStore {
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 device_uuid TEXT NOT NULL,
                 frame_hex TEXT NOT NULL,
-                captured_at TEXT NOT NULL DEFAULT 'realtime_pip',
+                captured_at TEXT NOT NULL,
+                source TEXT NOT NULL DEFAULT 'realtime_pip',
                 synced INTEGER NOT NULL DEFAULT 0
             );
             CREATE INDEX IF NOT EXISTS idx_realtime_frames_device_captured
@@ -1965,6 +1967,7 @@ impl GooseStore {
         self.ensure_daily_recovery_metric_multi_row_source_kind()?;
         self.ensure_step_counter_sample_columns()?;
         self.ensure_synced_columns()?;
+        self.ensure_realtime_source_column()?;
         Ok(())
     }
 
@@ -2900,6 +2903,21 @@ impl GooseStore {
             if !columns.contains("synced") {
                 conn.execute(&format!("ALTER TABLE {table} ADD COLUMN {synced_ddl}"), [])?;
             }
+        }
+        Ok(())
+    }
+
+    fn ensure_realtime_source_column(&self) -> GooseResult<()> {
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|_| GooseError::message("store mutex poisoned"))?;
+        let columns = Self::table_columns_from_conn(&conn, "realtime_frames")?;
+        if !columns.contains("source") {
+            conn.execute(
+                "ALTER TABLE realtime_frames ADD COLUMN source TEXT NOT NULL DEFAULT 'realtime_pip'",
+                [],
+            )?;
         }
         Ok(())
     }
