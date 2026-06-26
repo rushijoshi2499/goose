@@ -5,10 +5,11 @@ enum CoachLocalToolContext {
   static func build(
     healthStore: HealthDataStore,
     appModel: GooseAppModel,
-    healthState: HealthState
+    healthState: HealthState,
+    mask: StealthMask = .none
   ) -> [String: Any] {
     let tools: [String: Any] = [
-      "load_stats": loadStats(healthStore: healthStore, appModel: appModel),
+      "load_stats": loadStats(healthStore: healthStore, appModel: appModel, mask: mask),
       "get_activities": activities(appModel: appModel, healthState: healthState),
       "get_capture_sessions": captureSessions(appModel: appModel, healthState: healthState),
       "get_raw_session_data": rawSessionData(healthStore: healthStore, appModel: appModel, healthState: healthState),
@@ -23,7 +24,8 @@ enum CoachLocalToolContext {
 
   private static func loadStats(
     healthStore: HealthDataStore,
-    appModel: GooseAppModel
+    appModel: GooseAppModel,
+    mask: StealthMask
   ) -> [String: Any] {
     [
       "readiness": [
@@ -33,10 +35,10 @@ enum CoachLocalToolContext {
         "packet_score_next_action": healthStore.packetDerivedScoreNextActionSummary(),
       ],
       "scores": [
-        "sleep": healthStore.sleepFeatureScoreSummary(),
-        "recovery": healthStore.recoveryFeatureScoreSummary(),
-        "strain": healthStore.strainFeatureScoreSummary(),
-        "stress": healthStore.stressFeatureScoreSummary(),
+        "sleep": mask.isHidden("sleep") ? "hidden_by_user" : healthStore.sleepFeatureScoreSummary(),
+        "recovery": mask.isHidden("recovery") ? "hidden_by_user" : healthStore.recoveryFeatureScoreSummary(),
+        "strain": mask.isHidden("strain") ? "hidden_by_user" : healthStore.strainFeatureScoreSummary(),
+        "stress": mask.isHidden("stress") ? "hidden_by_user" : healthStore.stressFeatureScoreSummary(),
       ],
       "score_provenance": [
         "sleep": healthStore.packetScoreProvenanceSummary("sleep"),
@@ -44,7 +46,7 @@ enum CoachLocalToolContext {
         "strain": healthStore.packetScoreProvenanceSummary("strain"),
         "stress": healthStore.packetScoreProvenanceSummary("stress"),
       ],
-      "vitals": vitals(healthStore: healthStore, appModel: appModel),
+      "vitals": vitals(healthStore: healthStore, appModel: appModel, mask: mask),
       "status": [
         "packet_inputs": healthStore.packetInputStatus,
         "packet_scores": healthStore.packetScoreStatus,
@@ -56,7 +58,8 @@ enum CoachLocalToolContext {
 
   private static func vitals(
     healthStore: HealthDataStore,
-    appModel: GooseAppModel
+    appModel: GooseAppModel,
+    mask: StealthMask
   ) -> [[String: Any]] {
     var rows = healthStore.healthMonitorSnapshots(
       restingHeartRateEstimateBPM: appModel.ble.restingHeartRateEstimateBPM,
@@ -65,6 +68,16 @@ enum CoachLocalToolContext {
       restingHeartRateEstimateSource: appModel.ble.restingHeartRateEstimateSource,
       allowLiveFallbacks: true
     ).map(snapshot)
+
+    // Apply stealth masking before live-HR insert to avoid index drift (STEALTH-02)
+    if mask.isHidden("hrv_rmssd"),
+       let i = rows.firstIndex(where: { ($0["id"] as? String) == "health-monitor" }) {
+      rows[i]["value"] = "hidden_by_user"
+    }
+    if mask.isHidden("resting_hr"),
+       let i = rows.firstIndex(where: { ($0["id"] as? String) == "resting-hr" }) {
+      rows[i]["value"] = "hidden_by_user"
+    }
 
     rows.insert(
       [
