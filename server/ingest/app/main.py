@@ -467,6 +467,34 @@ def ingest_frames(batch: IngestFramesBatch):
     return result
 
 
+# ── Realtime PIP frame upload models (POST /v1/ingest-realtime) ──────────────
+# The iOS RealtimePIPQueue posts:
+#   {"frames": [{"device_uuid": ..., "frame_hex": ..., "captured_at": ...}]}
+# captured_at is an ISO 8601 string; psycopg casts it to TIMESTAMPTZ automatically.
+
+class RealtimeFrame(BaseModel):
+    device_uuid: str
+    frame_hex: str = Field(..., pattern=r"^[0-9a-fA-F]+$")
+    captured_at: str
+
+
+class IngestRealtimeBatch(BaseModel):
+    frames: list[RealtimeFrame] = Field(..., max_length=5000)
+
+
+@app.post("/v1/ingest-realtime", dependencies=[Depends(require_auth)])
+def ingest_realtime(batch: IngestRealtimeBatch):
+    """Accept a batch of realtime PIP BLE frames from iOS and persist to realtime_frames.
+
+    Returns {"inserted": N, "skipped": M}. Idempotent: re-posting the same
+    frame (same device_uuid + captured_at + frame_hex) increments skipped."""
+    payload = batch.model_dump()
+    with psycopg.connect(cfg.db_dsn) as conn:
+        result = store.insert_realtime_frames_batch(conn, payload["frames"])
+        conn.commit()
+    return result
+
+
 @app.get("/v1/export/frames/{device_id}", dependencies=[Depends(require_auth)])
 def export_device_frames(
     device_id: str,

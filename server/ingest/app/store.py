@@ -70,6 +70,32 @@ def insert_raw_frames_batch(conn: psycopg.Connection, device_id: str, frames: li
     return {"inserted": inserted, "skipped": skipped}
 
 
+def insert_realtime_frames_batch(conn: psycopg.Connection, frames: list) -> dict:
+    """Insert a batch of realtime PIP frames (POST /v1/ingest-realtime).
+
+    Each frame is a dict with device_uuid, frame_hex, and captured_at (ISO 8601
+    string — psycopg casts it to TIMESTAMPTZ automatically).
+
+    Returns {"inserted": N, "skipped": M}. ON CONFLICT DO NOTHING makes
+    re-posting an identical frame a no-op (idempotent). The caller is
+    responsible for committing the transaction."""
+    inserted = 0
+    skipped = 0
+    with conn.cursor() as cur:
+        for f in frames:
+            cur.execute(
+                """INSERT INTO realtime_frames (device_uuid, frame_hex, captured_at)
+                   VALUES (%s, %s, %s)
+                   ON CONFLICT (device_uuid, captured_at, frame_hex) DO NOTHING""",
+                (f["device_uuid"], f["frame_hex"], f["captured_at"]),
+            )
+            if cur.rowcount > 0:
+                inserted += 1
+            else:
+                skipped += 1
+    return {"inserted": inserted, "skipped": skipped}
+
+
 def upsert_streams(conn: psycopg.Connection, device_id: str, streams: dict) -> dict:
     counts = {"hr": 0, "rr": 0, "events": 0, "battery": 0,
               "spo2": 0, "skin_temp": 0, "resp": 0, "gravity": 0}
