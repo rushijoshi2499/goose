@@ -103,6 +103,11 @@
       "gemini",
       "codex",
       "claude"
-    ]
+    ],
+    "models": {
+      "claude": "claude-opus-4-8@default",
+      "gemini": "google/gemini-3.5-flash",
+      "codex": "gpt-5.1-codex-max"
+    }
   }
 }

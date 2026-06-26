@@ -3,7 +3,7 @@
 
 **Goose — Self-Hosted Biometric Platform**
 
-Fork of `b-nnett/goose`: iOS app (SwiftUI + Rust core) that reads biometric data from WHOOP devices via BLE and persists it to a self-hosted server.
+iOS app (SwiftUI + Rust core) that reads biometric data from WHOOP devices via BLE and persists it to a self-hosted server.
 
 **Core Value:** Users must be able to capture WHOOP data on iPhone and have it automatically persisted on their personal server — without depending on external infrastructure.
 
