@@ -956,7 +956,10 @@ Plans:
   2. HealthKit import reads `HKQuantityTypeIdentifierBodyMass` and `HKQuantityTypeIdentifierBodyFatPercentage`; rows are written with source='healthkit' using INSERT OR REPLACE
   3. A weight sparkline or trend chart in the Health tab renders at least 7 days of history when data is present; the chart is absent (not crashed) when no data exists
 
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 121-01-PLAN.md — HealthDataStore+BodyComposition, BodyCompositionEntrySheet, HealthBodyCompositionSection, HealthView wiring, pbxproj registration
+
 **UI hint**: yes
 
 ---
