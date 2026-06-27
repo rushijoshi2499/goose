@@ -3,6 +3,15 @@ import Foundation
 import SwiftUI
 import UIKit
 
+// MARK: - DynamicSleepNeed
+
+struct DynamicSleepNeed {
+  let totalNeedMinutes: Double
+  let baseNeedMinutes: Double
+  let debtAdjustmentMinutes: Double
+  let strainAdjustmentMinutes: Double
+}
+
 extension HealthDataStore {
   func refreshPrimarySleepFromScoreReport() {
     guard let detail = Self.primarySleepDetail(fromSleepReport: packetScoreReports["sleep"]) else {
@@ -334,6 +343,36 @@ extension HealthDataStore {
     df.locale = Locale(identifier: "en_US_POSIX")
     return df
   }()
+
+  // SLP-NEED-03: Fetch dynamic sleep need from the sleep.compute_need Rust bridge.
+  // Result stored in the base class body property dynamicSleepNeed (plain var, @Observable).
+  func runDynamicSleepNeed() async {
+    let db = databasePath
+    var bridgeArgs: [String: Any] = ["database_path": db]
+    if let ageDouble = hkUserAge() {
+      let ageUInt8 = UInt8(min(max(ageDouble, 0), 120))
+      bridgeArgs["age_years"] = ageUInt8
+    }
+    // prior_strain intentionally omitted — Rust serde default is nil (D-03).
+    do {
+      let report = try await bridge.requestAsync(method: "sleep.compute_need", args: bridgeArgs)
+      guard let total = Self.doubleValue(report["total_need_minutes"]) else {
+        self.dynamicSleepNeed = nil
+        return
+      }
+      let base = Self.doubleValue(report["base_need_minutes"])
+      let debt = Self.doubleValue(report["debt_adjustment_minutes"])
+      let strain = Self.doubleValue(report["strain_adjustment_minutes"])
+      self.dynamicSleepNeed = DynamicSleepNeed(
+        totalNeedMinutes: total,
+        baseNeedMinutes: base ?? 450,
+        debtAdjustmentMinutes: debt ?? 0,
+        strainAdjustmentMinutes: strain ?? 0
+      )
+    } catch {
+      self.dynamicSleepNeed = nil
+    }
+  }
 
   private func buildImportSummary(_ r: HealthKitFullImportResult) -> String {
     var parts: [String] = []

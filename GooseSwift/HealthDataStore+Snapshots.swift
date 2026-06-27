@@ -1029,7 +1029,7 @@ extension HealthDataStore {
     return f
   }()
 
-  private func hkUserAge() -> Double? {
+  func hkUserAge() -> Double? {
     guard let dob = UserDefaults.standard.string(forKey: OnboardingStorage.dateOfBirth),
           !dob.isEmpty else { return nil }
     guard let date = Self.dobFormatter.date(from: dob) else { return nil }

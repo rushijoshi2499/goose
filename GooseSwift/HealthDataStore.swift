@@ -108,6 +108,10 @@ final class HealthDataStore {
   // Stored here (extensions cannot add stored properties to @Observable classes).
   var imuStepCountResult: IMUStepCountResult?
 
+  // Dynamic sleep need from sleep.compute_need bridge (SLP-NEED-03).
+  // Stored here because Swift extensions cannot add stored properties to @Observable classes.
+  var dynamicSleepNeed: DynamicSleepNeed?
+
   // Trends 7-day series cache (DATA-03)
   // Stored here because Swift extensions cannot add stored properties to @Observable classes.
   var recoveryTrendPoints: [(date: String, value: Double)] = []
@@ -324,6 +328,7 @@ final class HealthDataStore {
 
   func refreshSleepAfterBandSync(packetCount: Int) async {
     bandSleepImportStatus = "Band sync captured \(packetCount) packets | extracting sleep inputs..."
+    await runDynamicSleepNeed()   // FIRST — must precede all score callers (SLP-NEED-03)
     await runPacketInputs()
     await runSleepScore()
     await runSleepStaging()
