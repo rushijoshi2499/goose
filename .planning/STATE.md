@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v15.0
 milestone_name: Protocol Depth, Algorithms & UX
-current_phase: 122
-current_phase_name: Stealth UI
+current_phase: 123
+current_phase_name: VAL-HRV-04, VAL-SLP-04
 status: completed
 stopped_at: Phase 118 context gathered
-last_updated: "2026-06-27T23:11:01.361Z"
+last_updated: "2026-06-27T23:32:52.250Z"
 last_activity: 2026-06-27
-last_activity_desc: Phase 121 complete, transitioned to Phase 122
+last_activity_desc: Phase 122 complete, transitioned to Phase 123
 progress:
   total_phases: 15
   completed_phases: 11
@@ -28,10 +28,10 @@ See: .planning/PROJECT.md (updated 2026-06-21)
 
 ## Current Position
 
-Phase: 122 — Stealth UI
+Phase: 123 — Real-Device Algorithm Validation (VAL-HRV-04, VAL-SLP-04)
 Plan: Not started
 Status: Phase 120 complete — all plans done
-Last activity: 2026-06-27 — Phase 121 complete, transitioned to Phase 122
+Last activity: 2026-06-27 — Phase 122 complete, transitioned to Phase 123
 
 ## Performance Metrics
 

@@ -1091,7 +1091,7 @@ Plans:
 | 119 | 1/1 | Complete    | 2026-06-26 |
 | 120 | 1/1 | Complete    | 2026-06-27 |
 | 121 | 1/1 | Complete    | 2026-06-27 |
-| 122 | 1/1 | Complete   | 2026-06-27 |
+| 122 | 1/1 | Complete    | 2026-06-27 |
 | 123 | 0/0 | Not started | — |
 | 124 | 0/0 | Not started | — |
 | 125 | 0/0 | Not started | — |
