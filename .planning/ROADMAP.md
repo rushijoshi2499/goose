@@ -764,7 +764,7 @@ Known deferred: hardware-gated BLE tests; real-device MG sync validation; ARCH-0
 - [x] **Phase 118: PIP Realtime Queue** — RealtimePIPQueue Swift class + realtime_frames table bridge consumer (completed 2026-06-26)
 - [x] **Phase 119: Stealth Mode** — GooseStealthMode + StealthMask + CoachLocalToolContext filter (completed 2026-06-26)
 - [x] **Phase 120: Sleep Need UI** — Sleep dashboard dynamic need display (replaces static "8h recommended") (completed 2026-06-27)
-- [ ] **Phase 121: Body Composition UI** — BodyCompositionEntrySheet + HealthKit weight import + trend chart
+- [x] **Phase 121: Body Composition UI** — BodyCompositionEntrySheet + HealthKit weight import + trend chart (completed 2026-06-27)
 - [ ] **Phase 122: Stealth UI** — Settings toggle list + dashboard "—" rendering
 - [ ] **Phase 123: Real-Device Algorithm Validation** — ≥7 real WHOOP 5 overnight sessions for HRV and sleep staging
 - [ ] **Phase 124: PIP Server Endpoint** — POST /v1/ingest-realtime + TimescaleDB hypertable
@@ -956,9 +956,10 @@ Plans:
   2. HealthKit import reads `HKQuantityTypeIdentifierBodyMass` and `HKQuantityTypeIdentifierBodyFatPercentage`; rows are written with source='healthkit' using INSERT OR REPLACE
   3. A weight sparkline or trend chart in the Health tab renders at least 7 days of history when data is present; the chart is absent (not crashed) when no data exists
 
-**Plans**: 1 plan
+**Plans**: 1/1 plans complete
 Plans:
-- [ ] 121-01-PLAN.md — HealthDataStore+BodyComposition, BodyCompositionEntrySheet, HealthBodyCompositionSection, HealthView wiring, pbxproj registration
+
+- [x] 121-01-PLAN.md — HealthDataStore+BodyComposition, BodyCompositionEntrySheet, HealthBodyCompositionSection, HealthView wiring, pbxproj registration
 
 **UI hint**: yes
 
@@ -1089,7 +1090,7 @@ Plans:
 | 118 | 3/3 | Complete    | 2026-06-26 |
 | 119 | 1/1 | Complete    | 2026-06-26 |
 | 120 | 1/1 | Complete    | 2026-06-27 |
-| 121 | 0/0 | Not started | — |
+| 121 | 1/1 | Complete   | 2026-06-27 |
 | 122 | 0/0 | Not started | — |
 | 123 | 0/0 | Not started | — |
 | 124 | 0/0 | Not started | — |

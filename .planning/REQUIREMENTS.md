@@ -35,8 +35,8 @@
 ### Body Composition History (#166)
 
 - [x] **BODY-01**: `body_composition_history` SQLite table (schema v24): weight_kg, bmi, body_fat_pct, muscle_mass_kg, water_pct, source CHECK('manual','healthkit','scale'); UNIQUE(source, date); bridge methods `body_composition.upsert` + `body_composition.history_between`; `BRIDGE_METHODS` updated (closes #166)
-- [ ] **BODY-02**: `BodyCompositionEntrySheet` SwiftUI form in Health tab — manual entry of weight, body fat %, muscle mass; saves via bridge on confirm
-- [ ] **BODY-03**: HealthKit import reads `HKQuantityTypeIdentifierBodyMass` + `HKQuantityTypeIdentifierBodyFatPercentage`; `INSERT OR REPLACE` for healthkit-sourced rows; trend chart in Health tab (optional weight sparkline)
+- [x] **BODY-02**: `BodyCompositionEntrySheet` SwiftUI form in Health tab — manual entry of weight, body fat %, muscle mass; saves via bridge on confirm
+- [x] **BODY-03**: HealthKit import reads `HKQuantityTypeIdentifierBodyMass` + `HKQuantityTypeIdentifierBodyFatPercentage`; `INSERT OR REPLACE` for healthkit-sourced rows; trend chart in Health tab (optional weight sparkline)
 
 ### Stealth Mode (#167)
 
