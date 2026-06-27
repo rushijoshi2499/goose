@@ -72,8 +72,44 @@ struct HealthMetricSnapshot: Identifiable {
   let systemImage: String
   let tint: Color
   let trend: HealthTrendModel
+  let stealthKey: String
+
+  init(
+    id: String,
+    route: HealthRoute,
+    group: HealthMetricGroup,
+    title: String,
+    value: String,
+    unit: String,
+    status: String,
+    freshness: String,
+    provenance: String,
+    source: HealthDataSource,
+    systemImage: String,
+    tint: Color,
+    trend: HealthTrendModel,
+    stealthKey: String = ""
+  ) {
+    self.id = id
+    self.route = route
+    self.group = group
+    self.title = title
+    self.value = value
+    self.unit = unit
+    self.status = status
+    self.freshness = freshness
+    self.provenance = provenance
+    self.source = source
+    self.systemImage = systemImage
+    self.tint = tint
+    self.trend = trend
+    self.stealthKey = stealthKey
+  }
 
   var displayValue: String {
+    if !stealthKey.isEmpty, GooseStealthMode.isHidden(metric: stealthKey) {
+      return "\u{2014}"
+    }
     guard !unit.isEmpty else {
       return value
     }
@@ -141,7 +177,8 @@ enum ScoreDateTimeline {
         source: snapshot.source,
         systemImage: snapshot.systemImage,
         tint: snapshot.tint,
-        trend: snapshot.trend
+        trend: snapshot.trend,
+        stealthKey: snapshot.stealthKey
       )
     }
     guard calendar.isDate(selectedDay, inSameDayAs: today) else {
@@ -166,7 +203,8 @@ enum ScoreDateTimeline {
           analysis: "No stored metric history exists for this selected date yet.",
           resources: snapshot.trend.resources,
           points: []
-        )
+        ),
+        stealthKey: snapshot.stealthKey
       )
     }
 
@@ -185,7 +223,8 @@ enum ScoreDateTimeline {
       source: snapshot.source,
       systemImage: snapshot.systemImage,
       tint: snapshot.tint,
-      trend: snapshot.trend
+      trend: snapshot.trend,
+      stealthKey: snapshot.stealthKey
     )
   }
 

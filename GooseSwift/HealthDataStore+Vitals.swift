@@ -613,7 +613,8 @@ extension HealthDataStore {
       source: source,
       systemImage: snapshot.systemImage,
       tint: snapshot.tint,
-      trend: trend
+      trend: trend,
+      stealthKey: snapshot.stealthKey
     )
   }
 }

@@ -1,7 +1,14 @@
 import Darwin
 import Foundation
+import OSLog
 import SwiftUI
 import UIKit
+
+// Dedicated logger for the packet score pipeline. The UI-facing status strings are
+// truncated to 96 chars via shortError(_:); this logger preserves the full error so
+// secondary failures behind a stuck "analysing collected data..." state are diagnosable
+// (issue #188 secondary finding).
+private let packetScoreLog = Logger(subsystem: "com.goose.app", category: "health.packet_scores")
 
 extension HealthDataStore {
   func runPacketScores() async {
@@ -57,6 +64,9 @@ extension HealthDataStore {
       self.packetScoreReports["stress"] = stressReport
       self.packetScoreStatus = "Bridge packet-derived scores recomputed"
     } catch {
+      // Log the full, untruncated error before falling back to the 96-char UI string
+      // so secondary score-pipeline failures are not silently masked (issue #188).
+      packetScoreLog.error("runPacketScores failed: \(String(describing: error), privacy: .public)")
       let shortErr = Self.shortError(error)
       self.packetScoreStatus = "Bridge score run blocked: \(shortErr)"
     }
@@ -245,7 +255,8 @@ extension HealthDataStore {
         source: .live("BLE heart rate stream"),
         systemImage: "heart.text.square",
         tint: .red,
-        trend: snapshots[index].trend
+        trend: snapshots[index].trend,
+        stealthKey: snapshots[index].stealthKey
       )
     }
     return snapshots
@@ -273,7 +284,8 @@ extension HealthDataStore {
           source: .unavailable("preview missing data"),
           systemImage: snapshot.systemImage,
           tint: snapshot.tint,
-          trend: HealthTrendModel(id: snapshot.trend.id, title: snapshot.trend.title, rangeLabel: "No data", summary: "No trend data", analysis: "No local data has been captured for this trend yet.", resources: snapshot.trend.resources, points: [])
+          trend: HealthTrendModel(id: snapshot.trend.id, title: snapshot.trend.title, rangeLabel: "No data", summary: "No trend data", analysis: "No local data has been captured for this trend yet.", resources: snapshot.trend.resources, points: []),
+          stealthKey: snapshot.stealthKey
         )
       }
     }
@@ -337,7 +349,8 @@ extension HealthDataStore {
       source: .unavailable("preview missing data"),
       systemImage: snapshot.systemImage,
       tint: snapshot.tint,
-      trend: HealthTrendModel(id: snapshot.trend.id, title: snapshot.trend.title, rangeLabel: "No data", summary: "No trend data", analysis: "No local data has been captured for this trend yet.", resources: snapshot.trend.resources, points: [])
+      trend: HealthTrendModel(id: snapshot.trend.id, title: snapshot.trend.title, rangeLabel: "No data", summary: "No trend data", analysis: "No local data has been captured for this trend yet.", resources: snapshot.trend.resources, points: []),
+      stealthKey: snapshot.stealthKey
     )
   }
 
@@ -371,7 +384,8 @@ extension HealthDataStore {
         source: .bridge("goose.sleep.v1"),
         systemImage: snapshot.systemImage,
         tint: snapshot.tint,
-        trend: snapshot.trend
+        trend: snapshot.trend,
+        stealthKey: snapshot.stealthKey
       )
     }
     if let primarySleepDetail {
@@ -390,7 +404,8 @@ extension HealthDataStore {
         source: primarySleepDetail.source,
         systemImage: snapshot.systemImage,
         tint: snapshot.tint,
-        trend: snapshot.trend
+        trend: snapshot.trend,
+        stealthKey: snapshot.stealthKey
       )
     }
     return snapshot
@@ -441,7 +456,8 @@ extension HealthDataStore {
         source: primarySleepDetail.source,
         systemImage: snapshot.systemImage,
         tint: snapshot.tint,
-        trend: snapshot.trend
+        trend: snapshot.trend,
+        stealthKey: snapshot.stealthKey
       )
     }
     if let output = Self.map(packetScoreReports["sleep"], "score_result", "output"),
@@ -459,7 +475,8 @@ extension HealthDataStore {
         source: .bridge("goose.sleep.v1"),
         systemImage: snapshot.systemImage,
         tint: snapshot.tint,
-        trend: snapshot.trend
+        trend: snapshot.trend,
+        stealthKey: snapshot.stealthKey
       )
     }
     return snapshot
@@ -485,7 +502,8 @@ extension HealthDataStore {
           source: .local("apple.health"),
           systemImage: snapshot.systemImage,
           tint: snapshot.tint,
-          trend: Self.emptyTrend(from: snapshot.trend, packetCount: 0)
+          trend: Self.emptyTrend(from: snapshot.trend, packetCount: 0),
+          stealthKey: snapshot.stealthKey
         )
       }
       return HealthMetricSnapshot(
@@ -501,7 +519,8 @@ extension HealthDataStore {
         source: .unavailable("recovery score not available"),
         systemImage: snapshot.systemImage,
         tint: snapshot.tint,
-        trend: Self.emptyTrend(from: snapshot.trend, packetCount: packetEvidenceFrameCount())
+        trend: Self.emptyTrend(from: snapshot.trend, packetCount: packetEvidenceFrameCount()),
+        stealthKey: snapshot.stealthKey
       )
     }
 
@@ -518,7 +537,8 @@ extension HealthDataStore {
       source: .bridge("goose.recovery.v0"),
       systemImage: snapshot.systemImage,
       tint: snapshot.tint,
-      trend: recoveryScoreTrend(base: snapshot.trend, currentScore: score)
+      trend: recoveryScoreTrend(base: snapshot.trend, currentScore: score),
+      stealthKey: snapshot.stealthKey
     )
   }
 

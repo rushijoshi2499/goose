@@ -246,7 +246,8 @@ struct HomeDashboardView: View {
       source: snapshot.source,
       systemImage: snapshot.systemImage,
       tint: snapshot.tint,
-      trend: snapshot.trend
+      trend: snapshot.trend,
+      stealthKey: snapshot.stealthKey
     )
   }
 

@@ -1007,7 +1007,8 @@ extension HealthDataStore {
     systemImage: String,
     tint: Color,
     trendValues: [Double],
-    range: String
+    range: String,
+    stealthKey: String = ""
   ) -> HealthMetricSnapshot {
     HealthMetricSnapshot(
       id: id,
@@ -1022,7 +1023,8 @@ extension HealthDataStore {
       source: source,
       systemImage: systemImage,
       tint: tint,
-      trend: trend(id, title: title, values: trendValues, range: range, summary: "\(status) | \(range)")
+      trend: trend(id, title: title, values: trendValues, range: range, summary: "\(status) | \(range)"),
+      stealthKey: stealthKey
     )
   }
 
