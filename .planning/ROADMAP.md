@@ -769,7 +769,7 @@ Known deferred: hardware-gated BLE tests; real-device MG sync validation; ARCH-0
 - [x] **Phase 123: Real-Device Algorithm Validation** — ≥7 real WHOOP 5 overnight sessions for HRV and sleep staging (completed 2026-06-28)
 - [x] **Phase 124: PIP Server Endpoint** — POST /v1/ingest-realtime + TimescaleDB hypertable (completed 2026-06-28)
 - [x] **Phase 125: Cap Sense UUID Discovery** — BLE scan to identify capacitive sense GATT UUID + subscribe (completed 2026-06-28)
-- [ ] **Phase 126: Wake-Window Engine (HAP-04)** — fill GooseWakeWindowManager stub (hardware+RE gated)
+- [x] **Phase 126: Wake-Window Engine (HAP-04)** — fill GooseWakeWindowManager stub (hardware+RE gated) (completed 2026-06-28)
 
 ### Phase Details
 
@@ -1099,8 +1099,8 @@ Plans:
 | 122 | 1/1 | Complete    | 2026-06-27 |
 | 123 | 1/1 | Complete    | 2026-06-28 |
 | 124 | 0/0 | Complete    | 2026-06-28 |
-| 125 | 1/1 | Complete   | 2026-06-28 |
-| 126 | 0/0 | Not started | — |
+| 125 | 1/1 | Complete    | 2026-06-28 |
+| 126 | 0/0 | Complete    | 2026-06-28 |
 
 ## Backlog
 
