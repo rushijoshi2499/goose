@@ -296,6 +296,7 @@ extension CoreBluetoothBLETransport: CBPeripheralDelegate {
     handleBatteryValue(value, characteristic: characteristic)
     handleBodyLocationValue(value, characteristic: characteristic)
     handleFeatureFlagValue(value, characteristic: characteristic)  // FF-01/FF-02
+    handleCapSenseEventValue(value, characteristic: characteristic)
 
     bleUIStateAggregator.publishLastSyncAt(event.capturedAt)
     record(
@@ -311,6 +312,47 @@ extension CoreBluetoothBLETransport: CBPeripheralDelegate {
     historicalManager.lastHandledWasHistoricalDataPacket = false
     if fanOutNotifications && !suppressNotification {
       onNotification?(event)
+    }
+  }
+
+  // CAPSENSE-01: Parse EVENTS_FROM_STRAP (fd4b0004 / PUFFIN 61080004) notifications for
+  // cap sense on-wrist state. Event types 10 (STRAP_DETECTED) and 11 (STRAP_REMOVED)
+  // arrive as UInt16 little-endian at bytes 2-3 of the event payload.
+  // SAFETY: shouldDispatchNotificationSideEffectsToMain pre-routes V5PacketType.event
+  // frames to main before handlePeripheralValueUpdate is called; the DispatchQueue.main.async
+  // below is a safe no-op when already on main and prevents a retain cycle via [weak self].
+  func handleCapSenseEventValue(_ value: Data, characteristic: CBCharacteristic) {
+    guard notificationCharacteristicIDs.contains(characteristic.uuid) else { return }
+    for frame in frames(in: value) {
+      guard let payload = payload(in: frame),
+            payload.count >= 4,
+            let packetType = payload.first,
+            packetType == V5PacketType.event else {
+        continue
+      }
+      let eventType = UInt16(payload[2]) | (UInt16(payload[3]) << 8)
+      switch eventType {
+      case 10: // STRAP_DETECTED
+        record(
+          source: "ble.capsense",
+          title: "cap_sense.event",
+          body: "eventType=10 STRAP_DETECTED isOnWrist=true"
+        )
+        DispatchQueue.main.async { [weak self] in
+          self?.isOnWrist = true
+        }
+      case 11: // STRAP_REMOVED
+        record(
+          source: "ble.capsense",
+          title: "cap_sense.event",
+          body: "eventType=11 STRAP_REMOVED isOnWrist=false"
+        )
+        DispatchQueue.main.async { [weak self] in
+          self?.isOnWrist = false
+        }
+      default:
+        break
+      }
     }
   }
 

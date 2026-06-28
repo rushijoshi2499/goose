@@ -263,6 +263,18 @@ private struct MoreDebugCaptureTab: View {
           status: packetMonitor.latestWhoopEventStatus == "No WHOOP events" ? .pending : .ready
         )
         MoreInfoRow(
+          title: "Cap Sense",
+          value: {
+            switch model.ble.isOnWrist {
+            case .some(true): return "On wrist (fd4b0004)"
+            case .some(false): return "Off wrist (fd4b0004)"
+            case nil: return "Unknown — no event received"
+            }
+          }(),
+          systemImage: "sensor.tag.radiowaves.forward",
+          status: model.ble.isOnWrist == nil ? .pending : .ready
+        )
+        MoreInfoRow(
           title: "Skin Temp Candidate",
           value: packetMonitor.latestSkinTemperatureCandidateStatus,
           systemImage: "thermometer",
