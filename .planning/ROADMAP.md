@@ -992,7 +992,8 @@ Plans:
   2. 4-class sleep staging concordance is ≥70% on all ≥7 real overnight sessions; results are documented as a validation artifact in `.planning/phases/123-*/`
   3. `cargo test --locked` passes with the new Rust fixture tests; no algorithm coefficients or constants were changed to force concordance
 
-**Plans**: TBD
+**Plans**: 1 plan
+- [ ] 123-01-PLAN.md — Add ≥6 HRV + ≥4 sleep synthetic fixtures; write 123-VALIDATION-ARTIFACT.md
 
 ---
 
