@@ -4,28 +4,28 @@ import CoreBluetooth
 
 final class GooseBLETypesTests: XCTestCase {
 
-  // MARK: - GooseBLEClient.generation(from:) helper tests
+  // MARK: - CoreBluetoothBLETransport.generation(from:) helper tests
 
   func testGenerationDerivation_gen4ServiceUUID() {
     let gen4ServiceUUID = CBUUID(string: "61080001-8d6d-82b8-614a-1c8cb0f8dcc6")
-    let generation = GooseBLEClient.generation(from: [gen4ServiceUUID])
+    let generation = CoreBluetoothBLETransport.generation(from: [gen4ServiceUUID])
     XCTAssertEqual(generation, "4.0", "61080001 service UUID should derive generation 4.0")
   }
 
   func testGenerationDerivation_gen5ServiceUUID() {
     let gen5ServiceUUID = CBUUID(string: "fd4b0001-cce1-4033-93ce-002d5875f58a")
-    let generation = GooseBLEClient.generation(from: [gen5ServiceUUID])
+    let generation = CoreBluetoothBLETransport.generation(from: [gen5ServiceUUID])
     XCTAssertEqual(generation, "5.0", "fd4b0001 service UUID should derive generation 5.0")
   }
 
   func testGenerationDerivation_unknownServiceUUID() {
     let unknownUUID = CBUUID(string: "00001800-0000-1000-8000-00805f9b34fb")
-    let generation = GooseBLEClient.generation(from: [unknownUUID])
+    let generation = CoreBluetoothBLETransport.generation(from: [unknownUUID])
     XCTAssertEqual(generation, "unknown", "Unknown service UUID should derive 'unknown'")
   }
 
   func testGenerationDerivation_emptyServiceList() {
-    let generation = GooseBLEClient.generation(from: [])
+    let generation = CoreBluetoothBLETransport.generation(from: [])
     XCTAssertEqual(generation, "unknown", "Empty service list should derive 'unknown'")
   }
 
@@ -33,7 +33,7 @@ final class GooseBLETypesTests: XCTestCase {
     let gen4UUID = CBUUID(string: "61080001-8d6d-82b8-614a-1c8cb0f8dcc6")
     let gen5UUID = CBUUID(string: "fd4b0001-cce1-4033-93ce-002d5875f58a")
     // Gen4 listed first — should return "4.0"
-    let generation = GooseBLEClient.generation(from: [gen4UUID, gen5UUID])
+    let generation = CoreBluetoothBLETransport.generation(from: [gen4UUID, gen5UUID])
     XCTAssertEqual(generation, "4.0", "Gen4 UUID first in list should derive 4.0")
   }
 
@@ -47,8 +47,8 @@ final class GooseBLETypesTests: XCTestCase {
       value: Data(),
       capturedAt: Date()
     )
-    XCTAssertEqual(event.rustDeviceType, "GEN4",
-      "Characteristic starting with 610800 should produce rustDeviceType GEN4")
+    XCTAssertEqual(event.wireProtocol, .gen4,
+      "Characteristic starting with 610800 should derive wireProtocol .gen4")
   }
 
   func testRustDeviceType_gen5CharacteristicPrefix() {
@@ -59,8 +59,8 @@ final class GooseBLETypesTests: XCTestCase {
       value: Data(),
       capturedAt: Date()
     )
-    XCTAssertEqual(event.rustDeviceType, "GOOSE",
-      "Characteristic starting with fd4b should produce rustDeviceType GOOSE")
+    XCTAssertEqual(event.wireProtocol, .gen5,
+      "Characteristic starting with fd4b should derive wireProtocol .gen5")
   }
 
   // MARK: - WearableDescriptor.genericHRMonitor tests (Phase 8 P02)
@@ -105,8 +105,8 @@ final class GooseBLETypesTests: XCTestCase {
       value: Data(),
       capturedAt: Date()
     )
-    XCTAssertEqual(event.rustDeviceType, "HR_MONITOR",
-      "Short-form characteristic UUID 2A37 must produce rustDeviceType HR_MONITOR")
+    XCTAssertEqual(event.wireProtocol, .hrMonitor,
+      "Short-form characteristic UUID 2A37 must derive wireProtocol .hrMonitor")
   }
 
   func test_rustDeviceType_2a37_lowercase_returnsHRMonitor() {
@@ -117,8 +117,8 @@ final class GooseBLETypesTests: XCTestCase {
       value: Data(),
       capturedAt: Date()
     )
-    XCTAssertEqual(event.rustDeviceType, "HR_MONITOR",
-      "Lowercase short-form 2a37 must produce rustDeviceType HR_MONITOR")
+    XCTAssertEqual(event.wireProtocol, .hrMonitor,
+      "Lowercase short-form 2a37 must derive wireProtocol .hrMonitor")
   }
 
   func test_rustDeviceType_2A37_full128bit_returnsHRMonitor() {
@@ -130,8 +130,8 @@ final class GooseBLETypesTests: XCTestCase {
       value: Data(),
       capturedAt: Date()
     )
-    XCTAssertEqual(event.rustDeviceType, "HR_MONITOR",
-      "Full 128-bit form 00002A37-... must produce rustDeviceType HR_MONITOR")
+    XCTAssertEqual(event.wireProtocol, .hrMonitor,
+      "Full 128-bit form 00002A37-... must derive wireProtocol .hrMonitor")
   }
 
   func test_rustDeviceType_610800_stillReturnsGEN4() {
@@ -142,8 +142,8 @@ final class GooseBLETypesTests: XCTestCase {
       value: Data(),
       capturedAt: Date()
     )
-    XCTAssertEqual(event.rustDeviceType, "GEN4",
-      "Gen4 610800-prefixed characteristic must still produce rustDeviceType GEN4")
+    XCTAssertEqual(event.wireProtocol, .gen4,
+      "Gen4 610800-prefixed characteristic must still derive wireProtocol .gen4")
   }
 
   func test_rustDeviceType_fd4b_stillReturnsGOOSE() {
@@ -154,8 +154,8 @@ final class GooseBLETypesTests: XCTestCase {
       value: Data(),
       capturedAt: Date()
     )
-    XCTAssertEqual(event.rustDeviceType, "GOOSE",
-      "Gen5 fd4b-prefixed characteristic must still produce rustDeviceType GOOSE")
+    XCTAssertEqual(event.wireProtocol, .gen5,
+      "Gen5 fd4b-prefixed characteristic must still derive wireProtocol .gen5")
   }
 
   // MARK: - DeviceCapabilities.featureFlags tests (Phase 115 — FF-01 / FF-02)

@@ -1,6 +1,7 @@
 import XCTest
 @testable import GooseSwift
 
+@MainActor
 final class CustomEndpointProviderTests: XCTestCase {
 
   // MARK: - COACH-04: CustomEndpointCoachProvider URL validation

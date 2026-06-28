@@ -1,6 +1,7 @@
 import XCTest
 @testable import GooseSwift
 
+@MainActor
 final class ClaudeProviderTests: XCTestCase {
 
   // MARK: - COACH-03: ClaudeCoachProvider SSE delta extraction
