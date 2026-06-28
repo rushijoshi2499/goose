@@ -13,7 +13,7 @@
         {
           "version": "15.2",
           "date": "2026-06-28",
-          "localizedDescription": "- fix(ble): subscribe Gen4 command characteristic for notify — Fixes #189\n- feat(128-02): log queryScore failures; observable uploadStatus pipeline; syncCompleteEvent wiring (A-06, A-07, A-08)\n- feat(128-02): lifecycle-collect all StateFlows in MainActivity; push resolved values to child screens; private bleClient (A-04, A-05)",
+          "localizedDescription": "- fix(ble): subscribe Gen4 command characteristic for notify — Fixes #189\n- fix(android): downgrade jni 0.22→0.21 — android_jni.rs uses 0.21 API",
           "downloadURL": "https://github.com/tigercraft4/goose/releases/download/v15.2/GooseSwift-v15.2-unsigned.ipa",
           "size": 12656802
         },
