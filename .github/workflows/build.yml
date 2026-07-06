@@ -1,0 +1,46 @@
+name: Build Goose IPA
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        run: |
+          curl https://sh.rustup.rs -sSf | sh -s -- -y
+          source $HOME/.cargo/env
+          rustup target add aarch64-apple-ios
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app
+
+      - name: Build Rust core
+        run: |
+          source $HOME/.cargo/env
+          cargo build --release
+
+      - name: Build iOS App
+        run: |
+          xcodebuild \
+            -project GooseSwift.xcodeproj \
+            -scheme GooseSwift \
+            -sdk iphoneos \
+            -configuration Release \
+            clean build
+
+      - name: Archive build output
+        run: |
+          mkdir output
+          cp -R ~/Library/Developer/Xcode/DerivedData/*/Build/Products/Release-iphoneos/*.app output/
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Goose-App
+          path: output
