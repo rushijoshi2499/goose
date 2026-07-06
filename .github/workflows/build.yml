@@ -11,11 +11,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Rust
+      - name: Build Rust core
         run: |
-          curl https://sh.rustup.rs -sSf | sh -s -- -y
-          source $HOME/.cargo/env
-          rustup target add aarch64-apple-ios
+         source $HOME/.cargo/env
+         cd Rust/core
+         cargo build --release
 
       - name: Select Xcode
         run: sudo xcode-select -s /Applications/Xcode.app
