@@ -1,47 +1,62 @@
-name: Build Goose IPA
+name: Build Goose iOS App
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
 
 jobs:
-  build:
-    runs-on: macos-14
+  build-ios:
+    runs-on: macos-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Build Rust core
+      - name: Install Rust
         run: |
-         source $HOME/.cargo/env
-         cd Rust/core
-         ls
-         cargo build --release
-
-      - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode.app
+          curl https://sh.rustup.rs -sSf | sh -s -- -y
+          source $HOME/.cargo/env
+          rustup target add aarch64-apple-ios
 
       - name: Build Rust core
         run: |
           source $HOME/.cargo/env
+          cd Rust/core
+          ls
           cargo build --release
 
-      - name: Build iOS App
+      - name: Select Xcode version
+        run: sudo xcode-select -s /Applications/Xcode.app
+
+      - name: Install dependencies (if any)
         run: |
-          xcodebuild \
+          if [ -f "Podfile" ]; then
+            sudo gem install cocoapods
+            pod install
+          fi
+
+      - name: Build iOS App (Archive)
+        run: |
+          xcodebuild clean archive \
             -project GooseSwift.xcodeproj \
             -scheme GooseSwift \
-            -sdk iphoneos \
             -configuration Release \
-            clean build
+            -archivePath build/Goose.xcarchive \
+            CODE_SIGNING_ALLOWED=NO
 
-      - name: Archive build output
+      - name: Export IPA
         run: |
-          mkdir output
-          cp -R ~/Library/Developer/Xcode/DerivedData/*/Build/Products/Release-iphoneos/*.app output/
+          mkdir -p build/ipa
 
-      - name: Upload artifact
+          xcodebuild -exportArchive \
+            -archivePath build/Goose.xcarchive \
+            -exportPath build/ipa \
+            -exportOptionsPlist ExportOptions.plist
+
+      - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
-          name: Goose-App
-          path: output
+          name: Goose-IPA
+          path: build/ipa
